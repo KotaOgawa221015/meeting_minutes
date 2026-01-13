@@ -3,138 +3,284 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ meeting.title }} - 録音中</title>
+    <title>AI議事録 - 録音中</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        .status {
+        .app {
             display: flex;
-            align-items: center;
+            height: 100vh;
+        }
+        
+        aside {
+            width: 260px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .participants {
+            margin-bottom: 40px;
+        }
+        .participants h4 {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .participants ul {
+            list-style: none;
+        }
+        .participants li {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            transition: all 0.3s;
+        }
+        .participants li.active {
+            background: rgba(255,255,255,0.25);
+            font-weight: 600;
+        }
+        .participants li.facilitator {
+            border-left: 4px solid #fbbf24;
+        }
+        .nav {
+            display: flex;
+            flex-direction: column;
             gap: 10px;
+        }
+        .nav a {
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .nav a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .nav a.active {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        header {
+            background: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header strong {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        header small {
             color: #666;
         }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn.primary {
+            background: #10b981;
+            color: white;
+        }
+        .btn.primary:hover {
+            background: #059669;
+        }
+        .btn.danger {
+            background: #ef4444;
+            color: white;
+        }
+        .btn.danger:hover {
+            background: #dc2626;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
         .recording-indicator {
-            width: 12px;
-            height: 12px;
+            display: inline-block;
+            width: 10px;
+            height: 10px;
             background: #ef4444;
             border-radius: 50%;
+            margin-right: 8px;
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
-        .main-content {
+        
+        .content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 400px;
             gap: 20px;
+            padding: 20px;
+            overflow: hidden;
+            height: calc(100vh - 90px);
         }
         .panel {
             background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .panel h2 {
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 1.3em;
-        }
-        .controls {
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
+            flex-direction: column;
+            overflow: hidden;
         }
-        button {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-start {
-            background: #10b981;
-            color: white;
-        }
-        .btn-start:hover { background: #059669; }
-        .btn-stop {
-            background: #ef4444;
-            color: white;
-        }
-        .btn-stop:hover { background: #dc2626; }
-        .btn-stop:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .transcript-area {
+        .panel-header {
+            padding: 15px 20px;
             background: #f9fafb;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 20px;
-            height: 400px;
-            overflow-y: auto;
-            font-size: 15px;
-            line-height: 1.6;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #333;
         }
-        .transcript-item {
-            margin-bottom: 15px;
-            padding: 10px;
-            background: white;
-            border-radius: 6px;
+        .panel-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .talk {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .bubble {
+            padding: 15px;
+            border-radius: 12px;
             border-left: 4px solid #667eea;
+            background: #f9fafb;
+        }
+        .bubble.human {
+            border-left-color: #3b82f6;
+        }
+        .bubble.ai {
+            border-left-color: #8b5cf6;
+            background: #faf5ff;
+        }
+        .bubble.facilitator {
+            border-left-color: #fbbf24;
+            background: #fffbeb;
+        }
+        .speaker {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
         .timestamp {
             color: #9ca3af;
-            font-size: 12px;
-            margin-bottom: 5px;
+            font-size: 11px;
+            margin-top: 5px;
         }
-        .audio-visualizer {
-            height: 100px;
+        
+        .right {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+        .right .panel {
+            flex-shrink: 0;
+        }
+        .right .panel-body ul {
+            list-style: none;
+        }
+        .right .panel-body li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .right .panel-body li:last-child {
+            border-bottom: none;
+        }
+        .right .panel-body p {
+            margin-bottom: 10px;
+        }
+        
+        .timer {
+            text-align: center;
+        }
+        .time {
+            font-size: 48px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .visualizer-container {
+            height: 80px;
             background: #f9fafb;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 20px;
+            padding: 10px;
+            margin-top: 15px;
         }
         canvas {
             width: 100%;
-            height: 80px;
+            height: 100%;
         }
-        .summary-section {
+        
+        .empty-state {
+            text-align: center;
+            color: #9ca3af;
+            padding: 40px 20px;
+        }
+        
+        .summary-detail {
             display: none;
             margin-top: 20px;
         }
-        .summary-section.active {
+        .summary-detail.active {
             display: block;
         }
         .summary-content {
             background: #f0fdf4;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             border-left: 4px solid #10b981;
+        }
+        .summary-content h4 {
+            margin-top: 15px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .summary-content h4:first-child {
+            margin-top: 0;
         }
         .action-item {
             background: #fef3c7;
@@ -143,53 +289,92 @@
             margin-bottom: 10px;
             border-left: 4px solid #f59e0b;
         }
-        .loader {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-        @media (max-width: 768px) {
-            .main-content {
+        
+        @media (max-width: 1024px) {
+            aside {
+                width: 200px;
+            }
+            .content {
                 grid-template-columns: 1fr;
+            }
+            .right {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+            .right .panel {
+                min-width: 300px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>{{ meeting.title }}</h1>
-            <div class="status">
-                <div class="recording-indicator" id="recordingIndicator" style="display: none;"></div>
-                <span id="statusText">準備完了</span>
+    <div class="app">
+        <aside>
+            <div class="logo">🤖 AI議事録</div>
+            <div class="participants">
+                <h4>参加者</h4>
+                <ul id="participantsList">
+                    <li class="facilitator active">🧭 AIファシリテーター</li>
+                </ul>
             </div>
-        </div>
+            <nav class="nav">
+                <a class="active">議事録</a>
+                <a>要約</a>
+                <a>タイムキーパー</a>
+            </nav>
+        </aside>
 
-        <div class="main-content">
-            <div class="panel">
-                <h2>🎤 録音コントロール</h2>
-                <div class="controls">
-                    <button class="btn-start" id="startBtn">録音開始</button>
-                    <button class="btn-stop" id="stopBtn" disabled>録音停止</button>
+        <main>
+            <header>
+                <div>
+                    <strong id="meetingTitle">定例ミーティング</strong><br />
+                    <small id="statusText">準備完了</small>
                 </div>
-                
-                <div class="audio-visualizer">
-                    <canvas id="visualizer"></canvas>
-                </div>
+                <button class="btn primary" id="startBtn">録音開始</button>
+            </header>
 
-                <div class="summary-section" id="summarySection">
-                    <h3>📝 議事録要約</h3>
-                    <div id="summaryContent" class="loader">要約を生成中...</div>
+            <div class="content">
+                <section class="panel">
+                    <div class="panel-header">📝 文字起こし（リアルタイム）</div>
+                    <div class="panel-body talk" id="transcriptArea">
+                        <div class="empty-state">録音を開始すると、ここに文字起こしが表示されます</div>
+                    </div>
+                    <div class="visualizer-container">
+                        <canvas id="visualizer"></canvas>
+                    </div>
+                </section>
+
+                <div class="right">
+                    <section class="panel">
+                        <div class="panel-header">🧭 AIファシリテーション</div>
+                        <div class="panel-body" id="facilitationContent">
+                            <p><strong>状態：</strong>待機中</p>
+                        </div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">📋 要約（リアルタイム）</div>
+                        <div class="panel-body" id="summaryContent">
+                            <ul id="summaryList">
+                                <li style="color: #9ca3af;">会議開始後、要約を生成します</li>
+                            </ul>
+                            <div class="summary-detail" id="summarySection"></div>
+                        </div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">⏱️ タイムキーパー</div>
+                        <div class="panel-body timer">
+                            <div class="time" id="timerDisplay">00:00</div>
+                            <div class="controls">
+                                <button class="btn" id="startTimerBtn">開始</button>
+                                <button class="btn danger" id="stopTimerBtn">停止</button>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
-
-            <div class="panel">
-                <h2>📄 リアルタイム文字起こし</h2>
-                <div class="transcript-area" id="transcriptArea">
-                    <p style="color: #9ca3af; text-align: center;">録音を開始すると、ここに文字起こしが表示されます</p>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
 
     <script>
@@ -202,16 +387,16 @@
         let audioContext = null;
         let analyser = null;
         let isRecording = false;
+        let timerInterval = null;
+        let timerSeconds = 0;
 
         const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
         const transcriptArea = document.getElementById('transcriptArea');
         const statusText = document.getElementById('statusText');
-        const recordingIndicator = document.getElementById('recordingIndicator');
         const summarySection = document.getElementById('summarySection');
-        const summaryContent = document.getElementById('summaryContent');
+        const startTimerBtn = document.getElementById('startTimerBtn');
+        const stopTimerBtn = document.getElementById('stopTimerBtn');
 
-        // WebSocket接続
         function connectWebSocket() {
             socket = new WebSocket(wsUrl);
 
@@ -242,7 +427,6 @@
             };
         }
 
-        // 録音開始
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -253,7 +437,6 @@
                     } 
                 });
 
-                // 音声可視化
                 setupVisualizer(stream);
 
                 mediaRecorder = new MediaRecorder(stream, {
@@ -262,7 +445,6 @@
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                        // Base64エンコードして送信
                         const reader = new FileReader();
                         reader.onloadend = () => {
                             const base64Audio = reader.result.split(',')[1];
@@ -275,15 +457,16 @@
                     }
                 };
 
-                // 500msごとにデータを送信
                 mediaRecorder.start(500);
                 isRecording = true;
 
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
+                startBtn.textContent = '録音停止';
+                startBtn.className = 'btn danger';
+                startBtn.onclick = stopRecording;
                 statusText.textContent = '録音中...';
-                recordingIndicator.style.display = 'block';
                 transcriptArea.innerHTML = '';
+                
+                startTimer();
 
             } catch (error) {
                 console.error('マイクアクセスエラー:', error);
@@ -291,19 +474,17 @@
             }
         }
 
-        // 録音停止
         function stopRecording() {
             if (mediaRecorder && isRecording) {
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 isRecording = false;
 
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
+                startBtn.textContent = '録音開始';
+                startBtn.className = 'btn primary';
+                startBtn.onclick = startRecording;
                 statusText.textContent = '録音停止 - 議事録を生成中...';
-                recordingIndicator.style.display = 'none';
 
-                // 停止信号を送信
                 socket.send(JSON.stringify({
                     type: 'stop_recording'
                 }));
@@ -312,32 +493,35 @@
             }
         }
 
-        // 文字起こし追加
         function addTranscript(text) {
             const item = document.createElement('div');
-            item.className = 'transcript-item';
+            item.className = 'bubble human';
+            
+            const speaker = document.createElement('div');
+            speaker.className = 'speaker';
+            speaker.textContent = '👤 参加者';
+            
+            const content = document.createElement('div');
+            content.textContent = text;
             
             const timestamp = document.createElement('div');
             timestamp.className = 'timestamp';
             timestamp.textContent = new Date().toLocaleTimeString('ja-JP');
             
-            const content = document.createElement('div');
-            content.textContent = text;
-            
-            item.appendChild(timestamp);
+            item.appendChild(speaker);
             item.appendChild(content);
+            item.appendChild(timestamp);
             
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
         }
 
-        // 要約表示
         function displaySummary(summary) {
             let html = '<div class="summary-content">';
             html += `<h4>📌 要約</h4><p>${summary.summary}</p>`;
             
             if (summary.key_points && summary.key_points.length > 0) {
-                html += '<h4 style="margin-top: 20px;">🔑 重要ポイント</h4><ul>';
+                html += '<h4>🔑 重要ポイント</h4><ul style="padding-left: 20px;">';
                 summary.key_points.forEach(point => {
                     html += `<li>${point}</li>`;
                 });
@@ -345,7 +529,7 @@
             }
             
             if (summary.action_items && summary.action_items.length > 0) {
-                html += '<h4 style="margin-top: 20px;">✅ アクションアイテム</h4>';
+                html += '<h4>✅ アクションアイテム</h4>';
                 summary.action_items.forEach(item => {
                     html += `<div class="action-item">
                         <strong>${item.task}</strong>
@@ -355,7 +539,7 @@
             }
             
             if (summary.decisions && summary.decisions.length > 0) {
-                html += '<h4 style="margin-top: 20px;">📋 決定事項</h4><ul>';
+                html += '<h4>📋 決定事項</h4><ul style="padding-left: 20px;">';
                 summary.decisions.forEach(decision => {
                     html += `<li>${decision}</li>`;
                 });
@@ -367,11 +551,10 @@
             html += `<a href="/meeting/${meetingId}/detail/" style="padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; display: inline-block;">詳細ページを見る</a>`;
             html += '</div>';
             
-            summaryContent.innerHTML = html;
+            summarySection.innerHTML = html;
             statusText.textContent = '議事録生成完了！';
         }
 
-        // 音声可視化
         function setupVisualizer(stream) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioContext.createAnalyser();
@@ -381,6 +564,9 @@
 
             const canvas = document.getElementById('visualizer');
             const canvasContext = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
 
@@ -400,7 +586,7 @@
                 for (let i = 0; i < bufferLength; i++) {
                     barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
                     
-                    const gradient = canvasContext.createLinearGradient(0, 0, 0, canvas.height);
+                    const gradient = canvasContext.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
                     gradient.addColorStop(0, '#667eea');
                     gradient.addColorStop(1, '#764ba2');
                     
@@ -414,14 +600,28 @@
             draw();
         }
 
-        // イベントリスナー
-        startBtn.addEventListener('click', startRecording);
-        stopBtn.addEventListener('click', stopRecording);
+        function startTimer() {
+            if (timerInterval) return;
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                document.getElementById('timerDisplay').textContent = 
+                    `${String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:${String(timerSeconds % 60).padStart(2, '0')}`;
+            }, 1000);
+        }
 
-        // ページロード時にWebSocket接続
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        startBtn.addEventListener('click', startRecording);
+        startTimerBtn.addEventListener('click', startTimer);
+        stopTimerBtn.addEventListener('click', stopTimer);
+
         connectWebSocket();
 
-        // ページ離脱時のクリーンアップ
         window.addEventListener('beforeunload', () => {
             if (isRecording) {
                 stopRecording();
@@ -429,6 +629,7 @@
             if (socket) {
                 socket.close();
             }
+            stopTimer();
         });
     </script>
 </body>
