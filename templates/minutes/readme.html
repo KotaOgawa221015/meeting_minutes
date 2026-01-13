@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>README - 会議議事録システム</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        p {
+            line-height: 1.6;
+            color: #666;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+        .back-link:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>会議議事録システム</h1>
+        <p>AIを活用した自動文字起こし・議事録生成システムです。</p>
+
+        <h2>機能</h2>
+        <ul>
+            <li>リアルタイム音声認識による文字起こし</li>
+            <li>AIによる議事録の自動要約</li>
+            <li>会議のステータス管理</li>
+            <li>議事録の詳細表示</li>
+        </ul>
+
+        <h2>使い方</h2>
+        <ol>
+            <li>「新しい会議を作成」ボタンをクリック</li>
+            <li>会議タイトルを入力</li>
+            <li>録音を開始して会議を開始</li>
+            <li>録音終了後、AIが自動で議事録を生成</li>
+        </ol>
+
+        <h2>技術仕様</h2>
+        <ul>
+            <li>バックエンド: Django</li>
+            <li>フロントエンド: HTML/CSS/JavaScript</li>
+            <li>データベース: SQLite</li>
+            <li>AI: Web Speech API + 独自処理</li>
+        </ul>
+
+        <a href="{% url 'index' %}" class="back-link">← トップに戻る</a>
+    </div>
+</body>
+</html>

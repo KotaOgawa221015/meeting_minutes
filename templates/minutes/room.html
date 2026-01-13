@@ -125,6 +125,20 @@
         .btn.danger:hover {
             background: #dc2626;
         }
+        .btn.back {
+            background: transparent;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn.back:hover {
+            background: #f3f4f6;
+        }
         .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
@@ -326,11 +340,14 @@
 
         <main>
             <header>
-                <div>
-                    <strong id="meetingTitle">定例ミーティング</strong><br />
-                    <small id="statusText">準備完了</small>
-                </div>
-                <button class="btn primary" id="startBtn">録音開始</button>
+                    <div>
+                        <strong id="meetingTitle">定例ミーティング</strong><br />
+                        <small id="statusText">準備完了</small>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <a href="{% url 'index' %}" class="btn back" id="backBtn">戻る</a>
+                        <button class="btn primary" id="startBtn">録音開始</button>
+                    </div>
             </header>
 
             <div class="content">
@@ -428,6 +445,7 @@
         }
 
         async function startRecording() {
+            if (isRecording) return;
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
@@ -475,6 +493,7 @@
         }
 
         function stopRecording() {
+            if (!isRecording) return;
             if (mediaRecorder && isRecording) {
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());

@@ -40,3 +40,17 @@ def meeting_detail(request, meeting_id):
         'summary': summary,
         'transcripts': meeting.transcripts.all()
     })
+
+
+def delete_meeting(request, meeting_id):
+    """会議削除"""
+    if request.method == 'DELETE':
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        meeting.delete()
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=405)
+
+
+def readme(request):
+    """READMEページ"""
+    return render(request, 'minutes/readme.html')
