@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ meeting.title }} - 録音中</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #666;
+        }
+        .recording-indicator {
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .panel h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3em;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-start {
+            background: #10b981;
+            color: white;
+        }
+        .btn-start:hover { background: #059669; }
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-stop:hover { background: #dc2626; }
+        .btn-stop:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .transcript-area {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .transcript-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        .timestamp {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .audio-visualizer {
+            height: 100px;
+            background: #f9fafb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        canvas {
+            width: 100%;
+            height: 80px;
+        }
+        .summary-section {
+            display: none;
+            margin-top: 20px;
+        }
+        .summary-section.active {
+            display: block;
+        }
+        .summary-content {
+            background: #f0fdf4;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+        }
+        .action-item {
+            background: #fef3c7;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid #f59e0b;
+        }
+        .loader {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ meeting.title }}</h1>
+            <div class="status">
+                <div class="recording-indicator" id="recordingIndicator" style="display: none;"></div>
+                <span id="statusText">準備完了</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>🎤 録音コントロール</h2>
+                <div class="controls">
+                    <button class="btn-start" id="startBtn">録音開始</button>
+                    <button class="btn-stop" id="stopBtn" disabled>録音停止</button>
+                </div>
+                
+                <div class="audio-visualizer">
+                    <canvas id="visualizer"></canvas>
+                </div>
+
+                <div class="summary-section" id="summarySection">
+                    <h3>📝 議事録要約</h3>
+                    <div id="summaryContent" class="loader">要約を生成中...</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📄 リアルタイム文字起こし</h2>
+                <div class="transcript-area" id="transcriptArea">
+                    <p style="color: #9ca3af; text-align: center;">録音を開始すると、ここに文字起こしが表示されます</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const meetingId = Number("{{ meeting.id }}");
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/meeting/${meetingId}/`;
+        
+        let socket = null;
+        let mediaRecorder = null;
+        let audioContext = null;
+        let analyser = null;
+        let isRecording = false;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const transcriptArea = document.getElementById('transcriptArea');
+        const statusText = document.getElementById('statusText');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const summarySection = document.getElementById('summarySection');
+        const summaryContent = document.getElementById('summaryContent');
+
+        // WebSocket接続
+        function connectWebSocket() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('WebSocket接続成功');
+                statusText.textContent = '接続完了 - 録音準備完了';
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'transcript') {
+                    addTranscript(data.text);
+                } else if (data.type === 'summary_complete') {
+                    displaySummary(data.summary);
+                } else if (data.type === 'error') {
+                    alert('エラー: ' + data.message);
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocketエラー:', error);
+                statusText.textContent = 'エラー: 接続に失敗しました';
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket接続終了');
+            };
+        }
+
+        // 録音開始
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    } 
+                });
+
+                // 音声可視化
+                setupVisualizer(stream);
+
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+                        // Base64エンコードして送信
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result.split(',')[1];
+                            socket.send(JSON.stringify({
+                                type: 'audio_chunk',
+                                audio: base64Audio
+                            }));
+                        };
+                        reader.readAsDataURL(event.data);
+                    }
+                };
+
+                // 500msごとにデータを送信
+                mediaRecorder.start(500);
+                isRecording = true;
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                statusText.textContent = '録音中...';
+                recordingIndicator.style.display = 'block';
+                transcriptArea.innerHTML = '';
+
+            } catch (error) {
+                console.error('マイクアクセスエラー:', error);
+                alert('マイクへのアクセスが拒否されました。ブラウザの設定を確認してください。');
+            }
+        }
+
+        // 録音停止
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                statusText.textContent = '録音停止 - 議事録を生成中...';
+                recordingIndicator.style.display = 'none';
+
+                // 停止信号を送信
+                socket.send(JSON.stringify({
+                    type: 'stop_recording'
+                }));
+
+                summarySection.classList.add('active');
+            }
+        }
+
+        // 文字起こし追加
+        function addTranscript(text) {
+            const item = document.createElement('div');
+            item.className = 'transcript-item';
+            
+            const timestamp = document.createElement('div');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString('ja-JP');
+            
+            const content = document.createElement('div');
+            content.textContent = text;
+            
+            item.appendChild(timestamp);
+            item.appendChild(content);
+            
+            transcriptArea.appendChild(item);
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+        }
+
+        // 要約表示
+        function displaySummary(summary) {
+            let html = '<div class="summary-content">';
+            html += `<h4>📌 要約</h4><p>${summary.summary}</p>`;
+            
+            if (summary.key_points && summary.key_points.length > 0) {
+                html += '<h4 style="margin-top: 20px;">🔑 重要ポイント</h4><ul>';
+                summary.key_points.forEach(point => {
+                    html += `<li>${point}</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            if (summary.action_items && summary.action_items.length > 0) {
+                html += '<h4 style="margin-top: 20px;">✅ アクションアイテム</h4>';
+                summary.action_items.forEach(item => {
+                    html += `<div class="action-item">
+                        <strong>${item.task}</strong>
+                        ${item.assignee ? ` - 担当: ${item.assignee}` : ''}
+                    </div>`;
+                });
+            }
+            
+            if (summary.decisions && summary.decisions.length > 0) {
+                html += '<h4 style="margin-top: 20px;">📋 決定事項</h4><ul>';
+                summary.decisions.forEach(decision => {
+                    html += `<li>${decision}</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            html += '</div>';
+            html += '<div style="margin-top: 20px; text-align: center;">';
+            html += `<a href="/meeting/${meetingId}/detail/" style="padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; display: inline-block;">詳細ページを見る</a>`;
+            html += '</div>';
+            
+            summaryContent.innerHTML = html;
+            statusText.textContent = '議事録生成完了！';
+        }
+
+        // 音声可視化
+        function setupVisualizer(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+
+            const canvas = document.getElementById('visualizer');
+            const canvasContext = canvas.getContext('2d');
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                if (!isRecording) return;
+                
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+
+                canvasContext.fillStyle = '#f9fafb';
+                canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+                    
+                    const gradient = canvasContext.createLinearGradient(0, 0, 0, canvas.height);
+                    gradient.addColorStop(0, '#667eea');
+                    gradient.addColorStop(1, '#764ba2');
+                    
+                    canvasContext.fillStyle = gradient;
+                    canvasContext.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+                    x += barWidth + 1;
+                }
+            }
+
+            draw();
+        }
+
+        // イベントリスナー
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+
+        // ページロード時にWebSocket接続
+        connectWebSocket();
+
+        // ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', () => {
+            if (isRecording) {
+                stopRecording();
+            }
+            if (socket) {
+                socket.close();
+            }
+        });
+    </script>
+</body>
+</html>

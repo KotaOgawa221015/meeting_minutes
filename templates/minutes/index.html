@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会議議事録システム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .action-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .meetings-list {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .meetings-list h2 {
+            margin-bottom: 25px;
+            color: #333;
+            font-size: 1.8em;
+        }
+        .meeting-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+        .meeting-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .meeting-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .meeting-meta {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        .meeting-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .status-recording {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-processing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .meeting-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+        .empty-state svg {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        .empty-state h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .empty-state p {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 議事録システム</h1>
+            <p>AIで自動文字起こし・要約</p>
+        </div>
+
+        <div class="action-bar">
+            <div>
+                <strong>会議一覧</strong>
+                <span style="color: #666; margin-left: 10px;">{{ meetings|length }}件の会議</span>
+            </div>
+            <a href="/create/" class="btn btn-primary">+ 新しい会議を作成</a>
+        </div>
+
+        <div class="meetings-list">
+            <h2>📋 最近の会議</h2>
+            
+            {% if meetings %}
+                {% for meeting in meetings %}
+                <div class="meeting-card">
+                    <div class="meeting-title">{{ meeting.title }}</div>
+                    <div class="meeting-meta">
+                        <span>
+                            📅 {{ meeting.created_at|date:"Y年m月d日 H:i" }}
+                        </span>
+                        <span>
+                            {% if meeting.status == 'recording' %}
+                                <span class="status-badge status-recording">🔴 録音中</span>
+                            {% elif meeting.status == 'processing' %}
+                                <span class="status-badge status-processing">⚙️ 処理中</span>
+                            {% elif meeting.status == 'completed' %}
+                                <span class="status-badge status-completed">✅ 完了</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="meeting-actions">
+                        {% if meeting.status == 'recording' %}
+                            <a href="/meeting/{{ meeting.id }}/" class="btn btn-primary btn-small">録音を再開</a>
+                        {% else %}
+                            <a href="/meeting/{{ meeting.id }}/detail/" class="btn btn-primary btn-small">議事録を見る</a>
+                        {% endif %}
+                        <a href="/meeting/{{ meeting.id }}/detail/" class="btn btn-secondary btn-small">詳細</a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3>まだ会議がありません</h3>
+                    <p>「新しい会議を作成」ボタンから最初の会議を始めましょう</p>
+                    <a href="/create/" class="btn btn-primary">最初の会議を作成</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
