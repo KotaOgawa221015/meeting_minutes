@@ -18,12 +18,13 @@
         }
         
         aside {
-            width: 260px;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            width: 280px;
+            background: #667eea;
             color: white;
             padding: 30px 20px;
             display: flex;
             flex-direction: column;
+            overflow-y: auto;
         }
         .logo {
             font-size: 24px;
@@ -31,53 +32,96 @@
             margin-bottom: 40px;
             text-align: center;
         }
-        .participants {
-            margin-bottom: 40px;
+        
+        .section {
+            margin-bottom: 35px;
         }
-        .participants h4 {
-            font-size: 14px;
-            opacity: 0.8;
+        .section-title {
+            font-size: 13px;
+            opacity: 0.7;
             margin-bottom: 15px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .participants ul {
-            list-style: none;
-        }
-        .participants li {
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.1);
-            transition: all 0.3s;
-        }
-        .participants li.active {
-            background: rgba(255,255,255,0.25);
+            letter-spacing: 1.2px;
             font-weight: 600;
         }
-        .participants li.facilitator {
-            border-left: 4px solid #fbbf24;
+        
+        .participant-card {
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            transition: all 0.3s;
+            border: 2px solid transparent;
         }
-        .nav {
+        .participant-card:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        .participant-card.speaking {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+        .participant-header {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .participant-icon {
+            font-size: 24px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .participant-info {
+            flex: 1;
+        }
+        .participant-name {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+        .participant-role {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .participant-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        .participant-status.inactive {
+            background: #6b7280;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
-        .nav a {
-            padding: 12px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
+        .stat-card {
             background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
         }
-        .nav a:hover {
-            background: rgba(255,255,255,0.2);
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
         }
-        .nav a.active {
-            background: white;
-            color: #667eea;
-            font-weight: 600;
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
         }
         
         main {
@@ -142,19 +186,6 @@
         .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
-        }
-        .recording-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background: #ef4444;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
         }
         
         .content {
@@ -269,6 +300,103 @@
             height: 100%;
         }
         
+        .input-container {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .manual-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        .manual-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .btn.send {
+            background: #667eea;
+            color: white;
+            padding: 12px 20px;
+        }
+        .btn.send:hover {
+            background: #5568d3;
+        }
+        .btn.send:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .bubble-actions {
+            display: none;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .bubble:hover .bubble-actions {
+            display: flex;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-edit {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-edit:hover {
+            background: #2563eb;
+        }
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+        .btn-save {
+            background: #10b981;
+            color: white;
+        }
+        .btn-save:hover {
+            background: #059669;
+        }
+        .btn-cancel {
+            background: #6b7280;
+            color: white;
+        }
+        .btn-cancel:hover {
+            background: #4b5563;
+        }
+        
+        .edit-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+        }
+        .edit-textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
         .empty-state {
             text-align: center;
             color: #9ca3af;
@@ -325,29 +453,79 @@
     <div class="app">
         <aside>
             <div class="logo">🤖 AI議事録</div>
-            <div class="participants">
-                <h4>参加者</h4>
-                <ul id="participantsList">
-                    <li class="facilitator active">🧭 AIファシリテーター</li>
-                </ul>
+            
+            <!-- 参加者セクション -->
+            <div class="section">
+                <div class="section-title">👥 参加者</div>
+                
+                <!-- AIファシリテーター -->
+                <div class="participant-card" id="facilitatorCard">
+                    <div class="participant-header">
+                        <div class="participant-icon">🧭</div>
+                        <div class="participant-info">
+                            <div class="participant-name">AIファシリテーター</div>
+                            <div class="participant-role">会議進行・議事録作成</div>
+                        </div>
+                        <span class="participant-status"></span>
+                    </div>
+                </div>
+                
+                <!-- AI書記 -->
+                <div class="participant-card">
+                    <div class="participant-header">
+                        <div class="participant-icon">📝</div>
+                        <div class="participant-info">
+                            <div class="participant-name">AI書記</div>
+                            <div class="participant-role">リアルタイム文字起こし</div>
+                        </div>
+                        <span class="participant-status"></span>
+                    </div>
+                </div>
+                
+                <!-- AIアナリスト -->
+                <div class="participant-card">
+                    <div class="participant-header">
+                        <div class="participant-icon">📊</div>
+                        <div class="participant-info">
+                            <div class="participant-name">AIアナリスト</div>
+                            <div class="participant-role">要約・分析</div>
+                        </div>
+                        <span class="participant-status"></span>
+                    </div>
+                </div>
+                
+                <!-- 人間の参加者 -->
+                <div id="humanParticipants">
+                    <!-- 動的に追加 -->
+                </div>
             </div>
-            <nav class="nav">
-                <a class="active">議事録</a>
-                <a>要約</a>
-                <a>タイムキーパー</a>
-            </nav>
+            
+            <!-- 統計情報 -->
+            <div class="section">
+                <div class="section-title">📈 統計</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statDuration">00:00</div>
+                        <div class="stat-label">経過時間</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTranscripts">0</div>
+                        <div class="stat-label">発言数</div>
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <main>
             <header>
-                    <div>
-                        <strong id="meetingTitle">定例ミーティング</strong><br />
-                        <small id="statusText">準備完了</small>
-                    </div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <a href="{% url 'index' %}" class="btn back" id="backBtn">戻る</a>
-                        <button class="btn primary" id="startBtn">録音開始</button>
-                    </div>
+                <div>
+                    <strong id="meetingTitle">定例ミーティング</strong><br />
+                    <small id="statusText">準備完了</small>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <a href="{% url 'index' %}" class="btn back" id="backBtn">戻る</a>
+                    <button class="btn primary" id="startBtn">録音開始</button>
+                </div>
             </header>
 
             <div class="content">
@@ -358,6 +536,17 @@
                     </div>
                     <div class="visualizer-container">
                         <canvas id="visualizer"></canvas>
+                    </div>
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <input 
+                                type="text" 
+                                class="manual-input" 
+                                id="manualInput" 
+                                placeholder="テキストを入力..."
+                            />
+                            <button class="btn send" id="sendBtn">送信</button>
+                        </div>
                     </div>
                 </section>
 
@@ -406,6 +595,7 @@
         let isRecording = false;
         let timerInterval = null;
         let timerSeconds = 0;
+        let transcriptCount = 0;
 
         const startBtn = document.getElementById('startBtn');
         const transcriptArea = document.getElementById('transcriptArea');
@@ -413,6 +603,12 @@
         const summarySection = document.getElementById('summarySection');
         const startTimerBtn = document.getElementById('startTimerBtn');
         const stopTimerBtn = document.getElementById('stopTimerBtn');
+        const statDuration = document.getElementById('statDuration');
+        const statTranscripts = document.getElementById('statTranscripts');
+        const manualInput = document.getElementById('manualInput');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        let transcriptItems = [];
 
         function connectWebSocket() {
             socket = new WebSocket(wsUrl);
@@ -427,6 +623,8 @@
                 
                 if (data.type === 'transcript') {
                     addTranscript(data.text);
+                    transcriptCount++;
+                    statTranscripts.textContent = transcriptCount;
                 } else if (data.type === 'summary_complete') {
                     displaySummary(data.summary);
                 } else if (data.type === 'error') {
@@ -513,26 +711,146 @@
         }
 
         function addTranscript(text) {
+            const id = Date.now();
             const item = document.createElement('div');
             item.className = 'bubble human';
+            item.dataset.id = id;
             
             const speaker = document.createElement('div');
             speaker.className = 'speaker';
             speaker.textContent = '👤 参加者';
             
             const content = document.createElement('div');
+            content.className = 'transcript-content';
             content.textContent = text;
             
             const timestamp = document.createElement('div');
             timestamp.className = 'timestamp';
             timestamp.textContent = new Date().toLocaleTimeString('ja-JP');
             
+            const actions = document.createElement('div');
+            actions.className = 'bubble-actions';
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn-small btn-edit';
+            editBtn.textContent = '編集';
+            editBtn.onclick = () => editTranscript(id);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn-small btn-delete';
+            deleteBtn.textContent = '削除';
+            deleteBtn.onclick = () => deleteTranscript(id);
+            
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+            
             item.appendChild(speaker);
             item.appendChild(content);
             item.appendChild(timestamp);
+            item.appendChild(actions);
             
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            
+            transcriptItems.push({ id, text, timestamp: new Date() });
+            
+            // ファシリテーターカードをアクティブに
+            const facilitatorCard = document.getElementById('facilitatorCard');
+            facilitatorCard.classList.add('speaking');
+            setTimeout(() => {
+                facilitatorCard.classList.remove('speaking');
+            }, 2000);
+        }
+        
+        function addManualTranscript() {
+            const text = manualInput.value.trim();
+            if (!text) return;
+            
+            addTranscript(text);
+            manualInput.value = '';
+            transcriptCount++;
+            statTranscripts.textContent = transcriptCount;
+        }
+        
+        function editTranscript(id) {
+            const bubble = document.querySelector(`[data-id="${id}"]`);
+            if (!bubble) return;
+            
+            const content = bubble.querySelector('.transcript-content');
+            const actions = bubble.querySelector('.bubble-actions');
+            const originalText = content.textContent;
+            
+            const textarea = document.createElement('textarea');
+            textarea.className = 'edit-textarea';
+            textarea.value = originalText;
+            
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'btn-small btn-save';
+            saveBtn.textContent = '保存';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn-small btn-cancel';
+            cancelBtn.textContent = 'キャンセル';
+            
+            saveBtn.onclick = () => {
+                const newText = textarea.value.trim();
+                if (newText) {
+                    content.textContent = newText;
+                    const item = transcriptItems.find(t => t.id === id);
+                    if (item) item.text = newText;
+                }
+                content.style.display = 'block';
+                textarea.remove();
+                actions.innerHTML = '';
+                actions.appendChild(createEditButton(id));
+                actions.appendChild(createDeleteButton(id));
+            };
+            
+            cancelBtn.onclick = () => {
+                content.style.display = 'block';
+                textarea.remove();
+                actions.innerHTML = '';
+                actions.appendChild(createEditButton(id));
+                actions.appendChild(createDeleteButton(id));
+            };
+            
+            content.style.display = 'none';
+            bubble.insertBefore(textarea, actions);
+            
+            actions.innerHTML = '';
+            actions.style.display = 'flex';
+            actions.appendChild(saveBtn);
+            actions.appendChild(cancelBtn);
+            
+            textarea.focus();
+        }
+        
+        function deleteTranscript(id) {
+            if (!confirm('この発言を削除しますか?')) return;
+            
+            const bubble = document.querySelector(`[data-id="${id}"]`);
+            if (bubble) {
+                bubble.remove();
+                transcriptItems = transcriptItems.filter(t => t.id !== id);
+                transcriptCount = Math.max(0, transcriptCount - 1);
+                statTranscripts.textContent = transcriptCount;
+            }
+        }
+        
+        function createEditButton(id) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-small btn-edit';
+            btn.textContent = '編集';
+            btn.onclick = () => editTranscript(id);
+            return btn;
+        }
+        
+        function createDeleteButton(id) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-small btn-delete';
+            btn.textContent = '削除';
+            btn.onclick = () => deleteTranscript(id);
+            return btn;
         }
 
         function displaySummary(summary) {
@@ -623,8 +941,11 @@
             if (timerInterval) return;
             timerInterval = setInterval(() => {
                 timerSeconds++;
-                document.getElementById('timerDisplay').textContent = 
-                    `${String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:${String(timerSeconds % 60).padStart(2, '0')}`;
+                const minutes = Math.floor(timerSeconds / 60);
+                const seconds = timerSeconds % 60;
+                const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                document.getElementById('timerDisplay').textContent = timeStr;
+                statDuration.textContent = timeStr;
             }, 1000);
         }
 
@@ -638,6 +959,14 @@
         startBtn.addEventListener('click', startRecording);
         startTimerBtn.addEventListener('click', startTimer);
         stopTimerBtn.addEventListener('click', stopTimer);
+        sendBtn.addEventListener('click', addManualTranscript);
+        
+        manualInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addManualTranscript();
+            }
+        });
 
         connectWebSocket();
 
