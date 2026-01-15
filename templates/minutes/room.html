@@ -210,6 +210,12 @@
             border-bottom: 1px solid #e5e7eb;
             font-weight: 600;
             color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-title {
+            flex: 1;
         }
         .panel-body {
             padding: 20px;
@@ -255,6 +261,7 @@
             flex-direction: column;
             gap: 15px;
             overflow-y: auto;
+            padding-bottom: 10px;
         }
         .right .panel {
             flex-shrink: 0;
@@ -271,6 +278,237 @@
         }
         .right .panel-body p {
             margin-bottom: 10px;
+        }
+        
+        .add-panel-btn {
+            background: white;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+        .add-panel-btn:hover {
+            border-color: #667eea;
+            background: #f9fafb;
+            color: #667eea;
+        }
+        .add-panel-btn.expanded {
+            display: none;
+        }
+        .plus-icon {
+            font-size: 24px;
+        }
+        
+        .feature-selector {
+            display: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 3px solid #667eea;
+        }
+        .feature-selector.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .feature-selector-header {
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            font-weight: 600;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+        }
+        .feature-selector-body {
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+        }
+        .feature-grid {
+            display: grid;
+            gap: 10px;
+        }
+        .feature-card {
+            padding: 15px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.95);
+        }
+        .feature-card:hover {
+            border-color: white;
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .feature-icon {
+            font-size: 28px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .feature-info {
+            flex: 1;
+        }
+        .feature-name {
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #1f2937;
+            font-size: 15px;
+        }
+        .feature-desc {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .close-selector-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            cursor: pointer;
+            color: white;
+            font-size: 20px;
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        .close-selector-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .panel-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 18px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .panel-close:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+        
+        .timer-settings {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .timer-settings.collapsed {
+            display: none;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .input-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+        }
+        .input-group input {
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .toggle-settings-btn {
+            background: #f3f4f6;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .toggle-settings-btn:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .toggle-settings-btn .arrow {
+            transition: transform 0.3s;
+        }
+        .toggle-settings-btn.collapsed .arrow {
+            transform: rotate(180deg);
+        }
+        .timer-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .timer-display.compact {
+            margin: 10px 0;
+        }
+        .timer-time {
+            font-size: 48px;
+            font-weight: 700;
+            color: #667eea;
+            font-variant-numeric: tabular-nums;
+        }
+        .timer-time.warning {
+            color: #f59e0b;
+        }
+        .timer-time.danger {
+            color: #ef4444;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .timer-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .timer-controls .btn {
+            flex: 1;
+            min-width: 80px;
         }
         
         .timer {
@@ -454,11 +692,9 @@
         <aside>
             <div class="logo">🤖 AI議事録</div>
             
-            <!-- 参加者セクション -->
             <div class="section">
                 <div class="section-title">👥 参加者</div>
                 
-                <!-- AIファシリテーター -->
                 <div class="participant-card" id="facilitatorCard">
                     <div class="participant-header">
                         <div class="participant-icon">🧭</div>
@@ -470,7 +706,6 @@
                     </div>
                 </div>
                 
-                <!-- AI書記 -->
                 <div class="participant-card">
                     <div class="participant-header">
                         <div class="participant-icon">📝</div>
@@ -482,7 +717,6 @@
                     </div>
                 </div>
                 
-                <!-- AIアナリスト -->
                 <div class="participant-card">
                     <div class="participant-header">
                         <div class="participant-icon">📊</div>
@@ -494,13 +728,9 @@
                     </div>
                 </div>
                 
-                <!-- 人間の参加者 -->
-                <div id="humanParticipants">
-                    <!-- 動的に追加 -->
-                </div>
+                <div id="humanParticipants"></div>
             </div>
             
-            <!-- 統計情報 -->
             <div class="section">
                 <div class="section-title">📈 統計</div>
                 <div class="stats-grid">
@@ -523,14 +753,14 @@
                     <small id="statusText">準備完了</small>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <a href="{% url 'index' %}" class="btn back" id="backBtn">戻る</a>
+                    <a href="#" class="btn back" id="backBtn">戻る</a>
                     <button class="btn primary" id="startBtn">録音開始</button>
                 </div>
             </header>
 
             <div class="content">
                 <section class="panel">
-                    <div class="panel-header">📝 文字起こし（リアルタイム）</div>
+                    <div class="panel-header">📝 文字起こし(リアルタイム)</div>
                     <div class="panel-body talk" id="transcriptArea">
                         <div class="empty-state">録音を開始すると、ここに文字起こしが表示されます</div>
                     </div>
@@ -550,16 +780,16 @@
                     </div>
                 </section>
 
-                <div class="right">
+                <div class="right" id="rightPanels">
                     <section class="panel">
                         <div class="panel-header">🧭 AIファシリテーション</div>
                         <div class="panel-body" id="facilitationContent">
-                            <p><strong>状態：</strong>待機中</p>
+                            <p><strong>状態:</strong>待機中</p>
                         </div>
                     </section>
 
                     <section class="panel">
-                        <div class="panel-header">📋 要約（リアルタイム）</div>
+                        <div class="panel-header">📋 要約(リアルタイム)</div>
                         <div class="panel-body" id="summaryContent">
                             <ul id="summaryList">
                                 <li style="color: #9ca3af;">会議開始後、要約を生成します</li>
@@ -567,26 +797,28 @@
                             <div class="summary-detail" id="summarySection"></div>
                         </div>
                     </section>
-
-                    <section class="panel">
-                        <div class="panel-header">⏱️ タイムキーパー</div>
-                        <div class="panel-body timer">
-                            <div class="time" id="timerDisplay">00:00</div>
-                            <div class="controls">
-                                <button class="btn" id="startTimerBtn">開始</button>
-                                <button class="btn danger" id="stopTimerBtn">停止</button>
-                            </div>
+                    
+                    <div class="feature-selector" id="featureSelector">
+                        <div class="feature-selector-header">
+                            <span>機能を追加</span>
+                            <button class="close-selector-btn" id="closeSelectorBtn">×</button>
                         </div>
-                    </section>
+                        <div class="feature-selector-body">
+                            <div class="feature-grid" id="featureList"></div>
+                        </div>
+                    </div>
+                    
+                    <button class="add-panel-btn" id="addPanelBtn">
+                        <span class="plus-icon">⊕</span>
+                        <span>機能を追加</span>
+                    </button>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
-        const meetingId = Number("{{ meeting.id }}");
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/meeting/${meetingId}/`;
+        const meetingId = 1;
         
         let socket = null;
         let mediaRecorder = null;
@@ -601,45 +833,379 @@
         const transcriptArea = document.getElementById('transcriptArea');
         const statusText = document.getElementById('statusText');
         const summarySection = document.getElementById('summarySection');
-        const startTimerBtn = document.getElementById('startTimerBtn');
-        const stopTimerBtn = document.getElementById('stopTimerBtn');
         const statDuration = document.getElementById('statDuration');
         const statTranscripts = document.getElementById('statTranscripts');
         const manualInput = document.getElementById('manualInput');
         const sendBtn = document.getElementById('sendBtn');
+        const addPanelBtn = document.getElementById('addPanelBtn');
+        const featureSelector = document.getElementById('featureSelector');
+        const closeSelectorBtn = document.getElementById('closeSelectorBtn');
+        const rightPanels = document.getElementById('rightPanels');
         
         let transcriptItems = [];
+        let panelIdCounter = 0;
+        let activePanels = {};
+        let globalTimerInterval = null;
+        let globalTimerSeconds = 0;
 
-        function connectWebSocket() {
-            socket = new WebSocket(wsUrl);
+        const availableFeatures = [
+            {
+                id: 'timekeeper',
+                name: 'タイムキーパー',
+                icon: '⏱️',
+                description: '会議の経過時間を計測',
+                create: createTimekeeperPanel
+            },
+            {
+                id: 'timer',
+                name: 'カスタムタイマー',
+                icon: '⏰',
+                description: '時間設定可能なタイマー',
+                create: createTimerPanel
+            }
+        ];
 
-            socket.onopen = () => {
-                console.log('WebSocket接続成功');
-                statusText.textContent = '接続完了 - 録音準備完了';
-            };
+        function showAddFeatureModal() {
+            const featureList = document.getElementById('featureList');
+            featureList.innerHTML = '';
+            
+            availableFeatures.forEach(feature => {
+                const card = document.createElement('div');
+                card.className = 'feature-card';
+                card.innerHTML = `
+                    <div class="feature-icon">${feature.icon}</div>
+                    <div class="feature-info">
+                        <div class="feature-name">${feature.name}</div>
+                        <div class="feature-desc">${feature.description}</div>
+                    </div>
+                `;
+                card.onclick = () => {
+                    addFeature(feature);
+                    hideAddFeatureModal();
+                };
+                featureList.appendChild(card);
+            });
+            
+            featureSelector.classList.add('active');
+            addPanelBtn.classList.add('expanded');
+        }
 
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
+        function hideAddFeatureModal() {
+            featureSelector.classList.remove('active');
+            addPanelBtn.classList.remove('expanded');
+        }
+
+        function addFeature(feature) {
+            const panelId = `panel-${feature.id}-${panelIdCounter++}`;
+            const panel = feature.create(panelId);
+            
+            rightPanels.insertBefore(panel, featureSelector);
+        }
+
+        function removePanel(panelId) {
+            if (activePanels[panelId]) {
+                if (activePanels[panelId].cleanup) {
+                    activePanels[panelId].cleanup();
+                }
                 
-                if (data.type === 'transcript') {
-                    addTranscript(data.text);
-                    transcriptCount++;
-                    statTranscripts.textContent = transcriptCount;
-                } else if (data.type === 'summary_complete') {
-                    displaySummary(data.summary);
-                } else if (data.type === 'error') {
-                    alert('エラー: ' + data.message);
+                activePanels[panelId].element.remove();
+                delete activePanels[panelId];
+            }
+        }
+
+        function createTimekeeperPanel(panelId) {
+            const panel = document.createElement('section');
+            panel.className = 'panel';
+            panel.id = panelId;
+            
+            const header = document.createElement('div');
+            header.className = 'panel-header';
+            header.innerHTML = `
+                <span class="panel-title">⏱️ タイムキーパー</span>
+            `;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'panel-close';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => removePanel(panelId);
+            header.appendChild(closeBtn);
+            
+            const body = document.createElement('div');
+            body.className = 'panel-body timer';
+            
+            const timekeeperData = {
+                interval: null,
+                seconds: 0,
+                isRunning: false
+            };
+            
+            body.innerHTML = `
+                <div class="time" id="timekeeper-display-${panelId}">00:00</div>
+                <div class="controls">
+                    <button class="btn primary timekeeper-start">開始</button>
+                    <button class="btn danger timekeeper-stop">停止</button>
+                </div>
+            `;
+            
+            panel.appendChild(header);
+            panel.appendChild(body);
+            
+            const timeDisplay = body.querySelector(`#timekeeper-display-${panelId}`);
+            const startBtn = body.querySelector('.timekeeper-start');
+            const stopBtn = body.querySelector('.timekeeper-stop');
+            
+            function updateDisplay() {
+                const minutes = Math.floor(timekeeperData.seconds / 60);
+                const seconds = timekeeperData.seconds % 60;
+                timeDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                statDuration.textContent = timeDisplay.textContent;
+            }
+            
+            function startTimekeeper() {
+                if (timekeeperData.isRunning) return;
+                
+                timekeeperData.isRunning = true;
+                timekeeperData.interval = setInterval(() => {
+                    timekeeperData.seconds++;
+                    updateDisplay();
+                }, 1000);
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            }
+            
+            function stopTimekeeper() {
+                if (!timekeeperData.isRunning) return;
+                
+                clearInterval(timekeeperData.interval);
+                timekeeperData.isRunning = false;
+                
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+            
+            startBtn.addEventListener('click', startTimekeeper);
+            stopBtn.addEventListener('click', stopTimekeeper);
+            
+            stopBtn.disabled = true;
+            
+            activePanels[panelId] = {
+                element: panel,
+                cleanup: () => {
+                    if (timekeeperData.interval) {
+                        clearInterval(timekeeperData.interval);
+                    }
                 }
             };
+            
+            return panel;
+        }
 
-            socket.onerror = (error) => {
-                console.error('WebSocketエラー:', error);
-                statusText.textContent = 'エラー: 接続に失敗しました';
+        function createTimerPanel(panelId) {
+            const panel = document.createElement('section');
+            panel.className = 'panel';
+            panel.id = panelId;
+            
+            const header = document.createElement('div');
+            header.className = 'panel-header';
+            header.innerHTML = `
+                <span class="panel-title">⏱️ カスタムタイマー</span>
+            `;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'panel-close';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => removePanel(panelId);
+            header.appendChild(closeBtn);
+            
+            const body = document.createElement('div');
+            body.className = 'panel-body';
+            
+            const timerData = {
+                targetMinutes: 25,
+                targetSeconds: 0,
+                currentSeconds: 0,
+                interval: null,
+                isRunning: false,
+                isPaused: false
             };
+            
+            body.innerHTML = `
+                <button class="toggle-settings-btn" id="toggle-${panelId}">
+                    <span class="arrow">▼</span>
+                    <span class="toggle-text">時間設定を隠す</span>
+                </button>
+                <div class="timer-settings" id="settings-${panelId}">
+                    <div class="input-group">
+                        <label>目標時間 (分)</label>
+                        <input type="number" class="timer-minutes" value="25" min="0" max="999">
+                    </div>
+                    <div class="input-group">
+                        <label>目標時間 (秒)</label>
+                        <input type="number" class="timer-seconds" value="0" min="0" max="59">
+                    </div>
+                </div>
+                <div class="timer-display" id="display-${panelId}">
+                    <div class="timer-time">25:00</div>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn primary timer-start">開始</button>
+                    <button class="btn timer-pause" style="display:none;">一時停止</button>
+                    <button class="btn danger timer-reset">リセット</button>
+                </div>
+            `;
+            
+            panel.appendChild(header);
+            panel.appendChild(body);
+            
+            const toggleBtn = body.querySelector(`#toggle-${panelId}`);
+            const toggleText = toggleBtn.querySelector('.toggle-text');
+            const settingsDiv = body.querySelector(`#settings-${panelId}`);
+            const displayDiv = body.querySelector(`#display-${panelId}`);
+            const minutesInput = body.querySelector('.timer-minutes');
+            const secondsInput = body.querySelector('.timer-seconds');
+            const timeDisplay = body.querySelector('.timer-time');
+            const startBtn = body.querySelector('.timer-start');
+            const pauseBtn = body.querySelector('.timer-pause');
+            const resetBtn = body.querySelector('.timer-reset');
+            
+            let settingsCollapsed = false;
+            
+            toggleBtn.addEventListener('click', () => {
+                settingsCollapsed = !settingsCollapsed;
+                if (settingsCollapsed) {
+                    settingsDiv.classList.add('collapsed');
+                    toggleBtn.classList.add('collapsed');
+                    toggleText.textContent = '時間設定を表示';
+                } else {
+                    settingsDiv.classList.remove('collapsed');
+                    toggleBtn.classList.remove('collapsed');
+                    toggleText.textContent = '時間設定を隠す';
+                }
+            });
+            
+            function updateDisplay() {
+                const totalSeconds = timerData.targetMinutes * 60 + timerData.targetSeconds - timerData.currentSeconds;
+                const mins = Math.floor(Math.abs(totalSeconds) / 60);
+                const secs = Math.abs(totalSeconds) % 60;
+                const sign = totalSeconds < 0 ? '-' : '';
+                
+                timeDisplay.textContent = `${sign}${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                
+                timeDisplay.className = 'timer-time';
+                const remaining = totalSeconds;
+                if (remaining < 0) {
+                    timeDisplay.classList.add('danger');
+                } else if (remaining < 60) {
+                    timeDisplay.classList.add('warning');
+                }
+            }
+            
+            function startTimer() {
+                if (timerData.isRunning) return;
+                
+                if (!timerData.isPaused) {
+                    timerData.targetMinutes = parseInt(minutesInput.value) || 0;
+                    timerData.targetSeconds = parseInt(secondsInput.value) || 0;
+                    timerData.currentSeconds = 0;
+                }
+                
+                timerData.isRunning = true;
+                timerData.isPaused = false;
+                
+                timerData.interval = setInterval(() => {
+                    timerData.currentSeconds++;
+                    updateDisplay();
+                    
+                    const totalSeconds = timerData.targetMinutes * 60 + timerData.targetSeconds;
+                    if (timerData.currentSeconds === totalSeconds) {
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            new Notification('タイマー終了', {
+                                body: 'カスタムタイマーが終了しました'
+                            });
+                        }
+                    }
+                }, 1000);
+                
+                // 動作開始時は設定を自動的に折りたたむ
+                if (!settingsCollapsed) {
+                    settingsDiv.classList.add('collapsed');
+                    toggleBtn.classList.add('collapsed');
+                    toggleText.textContent = '時間設定を表示';
+                    settingsCollapsed = true;
+                }
+                
+                displayDiv.classList.add('compact');
+                startBtn.style.display = 'none';
+                pauseBtn.style.display = 'block';
+                pauseBtn.textContent = '一時停止';
+            }
+            
+            function pauseTimer() {
+                if (!timerData.isRunning) return;
+                
+                clearInterval(timerData.interval);
+                timerData.isRunning = false;
+                timerData.isPaused = true;
+                
+                pauseBtn.textContent = '再開';
+                pauseBtn.onclick = startTimer;
+            }
+            
+            function resetTimer() {
+                clearInterval(timerData.interval);
+                timerData.isRunning = false;
+                timerData.isPaused = false;
+                timerData.currentSeconds = 0;
+                
+                updateDisplay();
+                
+                // リセット時は設定を展開
+                settingsDiv.classList.remove('collapsed');
+                toggleBtn.classList.remove('collapsed');
+                toggleText.textContent = '時間設定を隠す';
+                settingsCollapsed = false;
+                
+                displayDiv.classList.remove('compact');
+                startBtn.style.display = 'block';
+                pauseBtn.style.display = 'none';
+                pauseBtn.textContent = '一時停止';
+                pauseBtn.onclick = pauseTimer;
+            }
+            
+            minutesInput.addEventListener('input', () => {
+                if (!timerData.isRunning && !timerData.isPaused) {
+                    timerData.targetMinutes = parseInt(minutesInput.value) || 0;
+                    updateDisplay();
+                }
+            });
+            
+            secondsInput.addEventListener('input', () => {
+                if (!timerData.isRunning && !timerData.isPaused) {
+                    timerData.targetSeconds = parseInt(secondsInput.value) || 0;
+                    updateDisplay();
+                }
+            });
+            
+            startBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            resetBtn.addEventListener('click', resetTimer);
+            
+            activePanels[panelId] = {
+                element: panel,
+                cleanup: () => {
+                    if (timerData.interval) {
+                        clearInterval(timerData.interval);
+                    }
+                }
+            };
+            
+            return panel;
+        }
 
-            socket.onclose = () => {
-                console.log('WebSocket接続終了');
-            };
+        function connectWebSocket() {
+            console.log('WebSocket接続をシミュレート');
+            statusText.textContent = '接続完了 - 録音準備完了';
         }
 
         async function startRecording() {
@@ -660,17 +1226,7 @@
                 });
 
                 mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const base64Audio = reader.result.split(',')[1];
-                            socket.send(JSON.stringify({
-                                type: 'audio_chunk',
-                                audio: base64Audio
-                            }));
-                        };
-                        reader.readAsDataURL(event.data);
-                    }
+                    console.log('Audio data available:', event.data.size);
                 };
 
                 mediaRecorder.start(500);
@@ -681,8 +1237,6 @@
                 startBtn.onclick = stopRecording;
                 statusText.textContent = '録音中...';
                 transcriptArea.innerHTML = '';
-                
-                startTimer();
 
             } catch (error) {
                 console.error('マイクアクセスエラー:', error);
@@ -701,10 +1255,6 @@
                 startBtn.className = 'btn primary';
                 startBtn.onclick = startRecording;
                 statusText.textContent = '録音停止 - 議事録を生成中...';
-
-                socket.send(JSON.stringify({
-                    type: 'stop_recording'
-                }));
 
                 summarySection.classList.add('active');
             }
@@ -754,7 +1304,6 @@
             
             transcriptItems.push({ id, text, timestamp: new Date() });
             
-            // ファシリテーターカードをアクティブに
             const facilitatorCard = document.getElementById('facilitatorCard');
             facilitatorCard.classList.add('speaking');
             setTimeout(() => {
@@ -884,9 +1433,6 @@
             }
             
             html += '</div>';
-            html += '<div style="margin-top: 20px; text-align: center;">';
-            html += `<a href="/meeting/${meetingId}/detail/" style="padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; display: inline-block;">詳細ページを見る</a>`;
-            html += '</div>';
             
             summarySection.innerHTML = html;
             statusText.textContent = '議事録生成完了！';
@@ -937,29 +1483,10 @@
             draw();
         }
 
-        function startTimer() {
-            if (timerInterval) return;
-            timerInterval = setInterval(() => {
-                timerSeconds++;
-                const minutes = Math.floor(timerSeconds / 60);
-                const seconds = timerSeconds % 60;
-                const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-                document.getElementById('timerDisplay').textContent = timeStr;
-                statDuration.textContent = timeStr;
-            }, 1000);
-        }
-
-        function stopTimer() {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
-        }
-
         startBtn.addEventListener('click', startRecording);
-        startTimerBtn.addEventListener('click', startTimer);
-        stopTimerBtn.addEventListener('click', stopTimer);
         sendBtn.addEventListener('click', addManualTranscript);
+        addPanelBtn.addEventListener('click', showAddFeatureModal);
+        closeSelectorBtn.addEventListener('click', hideAddFeatureModal);
         
         manualInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -968,16 +1495,23 @@
             }
         });
 
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
         connectWebSocket();
 
         window.addEventListener('beforeunload', () => {
             if (isRecording) {
                 stopRecording();
             }
-            if (socket) {
-                socket.close();
-            }
-            stopTimer();
+            stopGlobalTimer();
+            
+            Object.keys(activePanels).forEach(panelId => {
+                if (activePanels[panelId].cleanup) {
+                    activePanels[panelId].cleanup();
+                }
+            });
         });
     </script>
 </body>
