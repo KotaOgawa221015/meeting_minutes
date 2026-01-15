@@ -300,6 +300,65 @@
             height: 100%;
         }
         
+        /* Transcript styles */
+        .transcript-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .transcript-item.facilitator-message {
+            background: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+        .transcript-content {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .transcript-content.facilitator-content {
+            font-weight: 600;
+            color: #92400e;
+        }
+        .transcript-timestamp {
+            font-size: 12px;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+        .facilitator-phase {
+            font-size: 12px;
+            color: #f59e0b;
+            font-weight: 500;
+        }
+        .transcript-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .transcript-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        .transcript-actions button:hover {
+            background: #e5e7eb;
+        }
+        
+        .speaking {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
         .input-container {
             padding: 15px 20px;
             background: white;
@@ -625,6 +684,8 @@
                     addTranscript(data.text);
                     transcriptCount++;
                     statTranscripts.textContent = transcriptCount;
+                } else if (data.type === 'facilitator_message') {
+                    addFacilitatorMessage(data.message, data.phase, data.progress);
                 } else if (data.type === 'summary_complete') {
                     displaySummary(data.summary);
                 } else if (data.type === 'error') {
@@ -760,6 +821,33 @@
             setTimeout(() => {
                 facilitatorCard.classList.remove('speaking');
             }, 2000);
+        }
+        
+        function addFacilitatorMessage(message, phase, progress) {
+            const id = Date.now();
+            
+            const item = document.createElement('div');
+            item.className = 'transcript-item facilitator-message';
+            item.setAttribute('data-id', id);
+            
+            const content = document.createElement('div');
+            content.className = 'transcript-content facilitator-content';
+            content.textContent = `🤖 ${message}`;
+            
+            const timestamp = document.createElement('div');
+            timestamp.className = 'transcript-timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString();
+            
+            const phaseInfo = document.createElement('div');
+            phaseInfo.className = 'facilitator-phase';
+            phaseInfo.textContent = `${phase} (${progress.toFixed(1)}%)`;
+            
+            item.appendChild(content);
+            item.appendChild(timestamp);
+            item.appendChild(phaseInfo);
+            
+            transcriptArea.appendChild(item);
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
         }
         
         function addManualTranscript() {
