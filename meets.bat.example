@@ -1,0 +1,11 @@
+REM 環境変数へパスを指定することで動作可能
+REM このフォルダをコピーして、.exampleを消してください
+
+REM meeting_minutesまでの絶対パス
+set cdir=\meeting_minutes
+
+call %cdir%\venv\Scripts\activate
+
+cd %cdir%
+
+daphne -b 127.0.0.1 -p 8080 meeting_minutes.asgi:application
