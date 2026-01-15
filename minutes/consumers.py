@@ -163,7 +163,23 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     language="ja",
                     response_format="text"
                 )
-            
+
+            text = transcript.strip()
+            forbidden_words = [
+                "ご視聴ありがとうございました",
+                "次回予告",
+                "字幕",
+                "チャンネル登録",
+                "ブーブー",
+                "はじめしゃちょーエンディング"
+                "【】"
+            ] # 排除したいワードのリスト
+
+            # 禁止文字が含まれているかチェック
+            if any(word in text for word in forbidden_words):
+                print(f"[Meeting {self.meeting_id}] 禁止文字を検知したため、この発言を破棄します")
+                return None # Noneを返却することで、保存・送信プロセスを中断させる
+                
             print(f"[Meeting {self.meeting_id}] Whisper API成功")
             return transcript.strip() if transcript else None
             
