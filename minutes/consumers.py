@@ -5,6 +5,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from openai import OpenAI
 from django.conf import settings
+from django.utils import timezone
+from datetime import datetime
 from .models import Meeting, Transcript
 import tempfile
 import os
@@ -35,19 +37,22 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         self.is_first_process = True
         # ------------------------------------
         
-        # ファシリテーター機能
+        # ファシリテーター機能（オプショナル）
         self.facilitator_task = None
-        self.last_phase = 'introduction'
+        self.last_phase = None  # 初期状態はNoneに設定
         
         # 会議開始時間をDBに保存
         await self.set_meeting_start_time()
         
-        # ファシリテータースケジュールを開始（会議時間が設定されている場合）
+        # ファシリテータースケジュールを開始（有効化されている場合）
         meeting = await self.get_meeting()
-        if meeting.duration_seconds > 0:
+        if meeting.use_facilitator and meeting.duration_seconds > 0:
             self.facilitator_task = asyncio.create_task(self.facilitator_loop())
+            # 初期フェーズを即座にチェック
+            await self.check_progress_and_facilitate()
+            print(f"[Meeting {self.meeting_id}] AIファシリテーター機能: 有効")
         else:
-            print(f"[Meeting {self.meeting_id}] 警告: 会議時間が設定されていません")
+            print(f"[Meeting {self.meeting_id}] AIファシリテーター機能: 無効")
         
         print(f"[Meeting {self.meeting_id}] WebSocket接続成功")
 
@@ -259,8 +264,13 @@ class MeetingConsumer(AsyncWebsocketConsumer):
     async def facilitator_loop(self):
         """ファシリテーターのメインループ"""
         try:
+            # 会議時間に応じてチェック間隔を調整
+            meeting = await self.get_meeting()
+            check_interval = max(5, min(30, meeting.duration_seconds // 20))  # 5～30秒
+            print(f"[Meeting {self.meeting_id}] ファシリテーター: チェック間隔 {check_interval}秒")
+            
             while True:
-                await asyncio.sleep(30)  # 30秒ごとにチェック
+                await asyncio.sleep(check_interval)
                 await self.check_progress_and_facilitate()
         except asyncio.CancelledError:
             print(f"[Meeting {self.meeting_id}] ファシリテーターループ終了")
@@ -273,7 +283,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             if not meeting.start_time or meeting.duration_seconds <= 0:
                 return
             
-            elapsed = (datetime.now() - meeting.start_time).total_seconds()
+            elapsed = (timezone.now() - meeting.start_time).total_seconds()
             progress = (elapsed / meeting.duration_seconds) * 100
             
             # 100%を超えた場合はcap
@@ -282,6 +292,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             # 現在のフェーズを決定
             current_phase = self.get_phase_from_progress(progress)
             
+            # 初回チェックまたはフェーズが変更された場合
             if current_phase != self.last_phase:
                 phase_names = {
                     'introduction': '導入',
@@ -289,7 +300,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     'discussion': '議論',
                     'summary': 'まとめ'
                 }
-                print(f"[Meeting {self.meeting_id}] フェーズ変更: {phase_names.get(self.last_phase)} -> {phase_names.get(current_phase)} (進行状況: {progress:.1f}%)")
+                prev_phase = phase_names.get(self.last_phase, 'なし')
+                print(f"[Meeting {self.meeting_id}] フェーズ変更: {prev_phase} -> {phase_names.get(current_phase)} (進行状況: {progress:.1f}%)")
                 self.last_phase = current_phase
                 await self.update_meeting_phase(current_phase)
                 await self.facilitate(current_phase, progress)
@@ -533,7 +545,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
     def set_meeting_start_time(self):
         meeting = Meeting.objects.get(id=self.meeting_id)
         if not meeting.start_time:
-            meeting.start_time = datetime.now()
+            meeting.start_time = timezone.now()
             meeting.save()
         print(f"[Meeting {self.meeting_id}] 会議開始時間設定: {meeting.start_time}")
 
