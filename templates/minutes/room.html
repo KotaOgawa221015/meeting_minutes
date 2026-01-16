@@ -849,15 +849,13 @@
         let transcriptItems = [];
         let panelIdCounter = 0;
         let activePanels = {};
+        
+        // 統計用の時間計測
+        let durationSeconds = 0;
+        let durationInterval = null;
+        let hasStartedRecording = false;
 
         const availableFeatures = [
-            {
-                id: 'timekeeper',
-                name: 'タイムキーパー',
-                icon: '⏱️',
-                description: '会議の経過時間を計測',
-                create: createTimekeeperPanel
-            },
             {
                 id: 'timer',
                 name: 'カスタムタイマー',
@@ -915,96 +913,7 @@
             }
         }
 
-        function createTimekeeperPanel(panelId) {
-            const panel = document.createElement('section');
-            panel.className = 'panel';
-            panel.id = panelId;
-            
-            const header = document.createElement('div');
-            header.className = 'panel-header';
-            header.innerHTML = `<span class="panel-title">⏱️ タイムキーパー</span>`;
-            
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'panel-close';
-            closeBtn.textContent = '×';
-            closeBtn.onclick = () => removePanel(panelId);
-            header.appendChild(closeBtn);
-            
-            const body = document.createElement('div');
-            body.className = 'panel-body timer';
-            
-            const timekeeperData = {
-                interval: null,
-                seconds: 0,
-                isRunning: false
-            };
-            
-            body.innerHTML = `<function_calls>
-                                <invoke name="artifacts">
-                                <parameter name="command">update</parameter>
-                                <parameter name="id">artifact_1</parameter>
-                                <parameter name="old_str">            
-                                body.innerHTML = </parameter> <parameter name="new_str">
-                                body.innerHTML = 
-                                <div class="time" id="timekeeper-display-${panelId}">00:00</div>
-                                <div class="controls">
-                                <button class="btn primary timekeeper-start">開始</button>
-                                <button class="btn danger timekeeper-stop">停止</button>
-                                </div>
-                                `;
-                                panel.appendChild(header);
-        panel.appendChild(body);
-        
-        const timeDisplay = body.querySelector(`#timekeeper-display-${panelId}`);
-        const startTimerBtn = body.querySelector('.timekeeper-start');
-        const stopTimerBtn = body.querySelector('.timekeeper-stop');
-        
-        function updateDisplay() {
-            const minutes = Math.floor(timekeeperData.seconds / 60);
-            const seconds = timekeeperData.seconds % 60;
-            timeDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            statDuration.textContent = timeDisplay.textContent;
-        }
-        
-        function startTimekeeper() {
-            if (timekeeperData.isRunning) return;
-            
-            timekeeperData.isRunning = true;
-            timekeeperData.interval = setInterval(() => {
-                timekeeperData.seconds++;
-                updateDisplay();
-            }, 1000);
-            
-            startTimerBtn.disabled = true;
-            stopTimerBtn.disabled = false;
-        }
-        
-        function stopTimekeeper() {
-            if (!timekeeperData.isRunning) return;
-            
-            clearInterval(timekeeperData.interval);
-            timekeeperData.isRunning = false;
-            
-            startTimerBtn.disabled = false;
-            stopTimerBtn.disabled = true;
-        }
-        
-        startTimerBtn.addEventListener('click', startTimekeeper);
-        stopTimerBtn.addEventListener('click', stopTimekeeper);
-        
-        stopTimerBtn.disabled = true;
-        
-        activePanels[panelId] = {
-            element: panel,
-            cleanup: () => {
-                if (timekeeperData.interval) {
-                    clearInterval(timekeeperData.interval);
-                }
-            }
-        };
-        
-        return panel;
-    }
+
 
     function createTimerPanel(panelId) {
         const panel = document.createElement('section');
@@ -1275,6 +1184,19 @@
             startBtn.className = 'btn danger';
             statusText.textContent = '録音中...';
             transcriptArea.innerHTML = '';
+            
+            // 時間計測開始（初回のみリセット）
+            if (!hasStartedRecording) {
+                durationSeconds = 0;
+                hasStartedRecording = true;
+            }
+            if (durationInterval) clearInterval(durationInterval);
+            durationInterval = setInterval(() => {
+                durationSeconds++;
+                const minutes = Math.floor(durationSeconds / 60);
+                const seconds = durationSeconds % 60;
+                statDuration.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
 
         } catch (error) {
             console.error('マイクアクセスエラー:', error);
@@ -1292,6 +1214,12 @@
             startBtn.textContent = '録音開始';
             startBtn.className = 'btn primary';
             statusText.textContent = '録音停止 - 議事録を生成中...';
+            
+            // 時間計測停止（リセットはしない、流し続ける）
+            if (durationInterval) {
+                clearInterval(durationInterval);
+                durationInterval = null;
+            }
 
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
