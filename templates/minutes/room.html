@@ -753,7 +753,7 @@
                     <small id="statusText">準備完了</small>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <a href="#" class="btn back" id="backBtn">戻る</a>
+                    <a href="/" class="btn back" id="backBtn">戻る</a>
                     <button class="btn primary" id="startBtn">録音開始</button>
                 </div>
             </header>
@@ -1215,11 +1215,11 @@
             startBtn.className = 'btn primary';
             statusText.textContent = '録音停止 - 議事録を生成中...';
             
-            // 時間計測停止（リセットはしない、流し続ける）
-            if (durationInterval) {
-                clearInterval(durationInterval);
-                durationInterval = null;
-            }
+            // 経過時間計測は継続する（clearIntervalを削除）
+            // if (durationInterval) {
+            //     clearInterval(durationInterval);
+            //     durationInterval = null;
+            // }
 
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
@@ -1228,8 +1228,8 @@
             }
 
             summarySection.classList.add('active');
-        }
     }
+}
 
     function addTranscript(text) {
         const id = Date.now();
