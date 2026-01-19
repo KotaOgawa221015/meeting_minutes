@@ -747,6 +747,7 @@
     </style>
 </head>
 <body>
+    {% csrf_token %}
     <div class="app">
         <aside>
             <div class="logo">🤖 AI議事録</div>
@@ -916,6 +917,30 @@
         let durationSeconds = 0;
         let durationInterval = null;
         let hasStartedRecording = false;
+
+        // 会議終了状態を取得して初期化
+        async function initializeMeetingStatus() {
+            try {
+                const response = await fetch(`/meeting/${meetingId}/status/`);
+                const data = await response.json();
+                if (data.is_ended) {
+                    isMeetingEnded = true;
+                    disableRecordingButtons();
+                    statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+                }
+            } catch (error) {
+                console.error('Failed to fetch meeting status:', error);
+            }
+        }
+
+        function disableRecordingButtons() {
+            startBtn.disabled = true;
+            startBtn.textContent = '録音不可';
+            startBtn.className = 'btn';
+            endMeetingBtn.disabled = true;
+            manualInput.disabled = true;
+            sendBtn.disabled = true;
+        }
 
         const availableFeatures = [
             {
@@ -1803,21 +1828,34 @@
     
     endMeetingBtn.addEventListener('click', () => {
         if (confirm('会議を終了しますか？この操作は元に戻せません。')) {
-            isMeetingEnded = true;
-
-            // 録音停止
-            if (isRecording) {
-                stopRecording();
-            }
-
-            // ボタンの無効化
-            startBtn.disabled = true;
-            startBtn.textContent = '録音不可';
-            startBtn.className = 'btn';
-            endMeetingBtn.disabled = true;
-
-            // 状態更新
-            statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+            fetch(`/meeting/${meetingId}/end/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    isMeetingEnded = true;
+                    
+                    // 録音停止
+                    if (isRecording) {
+                        stopRecording();
+                    }
+                    
+                    // ボタン等の無効化
+                    disableRecordingButtons();
+                    
+                    // 状態更新
+                    statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+                }
+            })
+            .catch(error => {
+                console.error('Error ending meeting:', error);
+                alert('会議の終了処理に失敗しました。');
+            });
         }
     });
 
@@ -1836,6 +1874,9 @@
         Notification.requestPermission();
     }
 
+    // ページロード時に会議終了状態を確認
+    initializeMeetingStatus();
+    
     connectWebSocket();
 
     window.addEventListener('beforeunload', () => {

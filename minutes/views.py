@@ -54,6 +54,26 @@ def delete_meeting(request, meeting_id):
     return JsonResponse({'status': 'error'}, status=405)
 
 
+def end_meeting(request, meeting_id):
+    """会議終了"""
+    if request.method == 'POST':
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        meeting.is_ended = True
+        meeting.save()
+        return JsonResponse({'status': 'success', 'is_ended': meeting.is_ended})
+    return JsonResponse({'status': 'error'}, status=405)
+
+
+def get_meeting_status(request, meeting_id):
+    """会議のステータスを取得"""
+    meeting = get_object_or_404(Meeting, id=meeting_id)
+    return JsonResponse({
+        'is_ended': meeting.is_ended,
+        'status': meeting.status,
+        'duration_seconds': meeting.duration_seconds
+    })
+
+
 def readme(request):
     """READMEページ"""
     return render(request, 'minutes/readme.html')

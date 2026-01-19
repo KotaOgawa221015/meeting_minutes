@@ -28,6 +28,7 @@ class Meeting(models.Model):
     start_time = models.DateTimeField(null=True, blank=True)
     use_facilitator = models.BooleanField(default=False, help_text='AIファシリテーター機能を有効にする')
     use_timekeeper = models.BooleanField(default=True, help_text='タイムキーパー機能を有効にする')
+    is_ended = models.BooleanField(default=False, help_text='会議が終了したかどうか')
 
     class Meta:
         ordering = ['-created_at']

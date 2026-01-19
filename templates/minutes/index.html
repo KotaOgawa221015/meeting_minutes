@@ -130,6 +130,10 @@
             background: #d1fae5;
             color: #065f46;
         }
+        .status-ended {
+            background: #fed7aa;
+            color: #92400e;
+        }
         .meeting-actions {
             display: flex;
             gap: 5px;
@@ -192,14 +196,16 @@
             
             {% if meetings %}
                 {% for meeting in meetings %}
-                <div class="meeting-card">
+                <div class="meeting-card {% if meeting.is_ended %}ended-meeting{% endif %}">
                     <div class="meeting-title">{{ meeting.title }}</div>
                     <div class="meeting-meta">
                         <span>
                             {{ meeting.created_at|date:"Y年m月d日 H:i" }}
                         </span>
                         <span>
-                            {% if meeting.status == 'recording' %}
+                            {% if meeting.is_ended %}
+                                <span class="status-badge status-ended">🏁 終了</span>
+                            {% elif meeting.status == 'recording' %}
                                 <span class="status-badge status-recording">🔴 録音中</span>
                             {% elif meeting.status == 'processing' %}
                                 <span class="status-badge status-processing">⚙️ 処理中</span>
@@ -209,7 +215,9 @@
                         </span>
                     </div>
                     <div class="meeting-actions">
-                        {% if meeting.status == 'recording' %}
+                        {% if meeting.is_ended %}
+                            <a href="/meeting/{{ meeting.id }}/detail/" class="btn btn-secondary btn-small">履歴を表示</a>
+                        {% elif meeting.status == 'recording' %}
                             <a href="/meeting/{{ meeting.id }}/" class="btn btn-primary btn-small">録音を再開</a>
                         {% else %}
                             <a href="/meeting/{{ meeting.id }}/detail/" class="btn btn-primary btn-small">議事録を見る</a>
