@@ -1203,7 +1203,10 @@
         const facilitatorData = {
             durationMinutes: 60,
             durationSeconds: 0,
-            isActive: false
+            isActive: false,
+            startTime: null,
+            totalSeconds: 0,
+            interval: null
         };
         
         body.innerHTML = `
@@ -1223,6 +1226,13 @@
             </div>
             <div class="timer-display" id="display-${panelId}">
                 <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">✓ 設定時間: <span id="display-time-${panelId}">60:00</span></div>
+                <div style="display:none;" id="countdown-${panelId}">
+                    <div style="font-size: 36px; font-weight: 700; color: #667eea; text-align: center; margin: 15px 0;" id="countdown-time-${panelId}">60:00</div>
+                    <div style="background: #e5e7eb; border-radius: 8px; height: 8px; margin: 15px 0; overflow: hidden;">
+                        <div id="progress-bar-${panelId}" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="font-size: 12px; color: #6b7280; text-align: center;" id="progress-text-${panelId}">0%</div>
+                </div>
             </div>
             <div class="timer-controls">
                 <button class="btn primary facilitator-start">スタート</button>
@@ -1242,6 +1252,10 @@
         const displayTimeSpan = body.querySelector(`#display-time-${panelId}`);
         const startBtn = body.querySelector('.facilitator-start');
         const stopBtn = body.querySelector('.facilitator-stop');
+        const countdownDiv = body.querySelector(`#countdown-${panelId}`);
+        const countdownTimeDisplay = body.querySelector(`#countdown-time-${panelId}`);
+        const progressBar = body.querySelector(`#progress-bar-${panelId}`);
+        const progressText = body.querySelector(`#progress-text-${panelId}`);
         
         let settingsCollapsed = false;
         
@@ -1252,6 +1266,34 @@
             const mins = String(facilitatorData.durationMinutes).padStart(2, '0');
             const secs = String(facilitatorData.durationSeconds).padStart(2, '0');
             displayTimeSpan.textContent = `${mins}:${secs}`;
+        }
+        
+        function updateCountdown() {
+            const elapsedSeconds = Math.floor((Date.now() - facilitatorData.startTime) / 1000);
+            const remainingSeconds = facilitatorData.totalSeconds - elapsedSeconds;
+            
+            if (remainingSeconds <= 0) {
+                // カウントダウン完了
+                clearInterval(facilitatorData.interval);
+                countdownTimeDisplay.textContent = '00:00';
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('ファシリテーター機能', {
+                        body: '設定時間が終了しました'
+                    });
+                }
+                return;
+            }
+            
+            const mins = Math.floor(remainingSeconds / 60);
+            const secs = remainingSeconds % 60;
+            countdownTimeDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            
+            const progress = ((elapsedSeconds / facilitatorData.totalSeconds) * 100);
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${Math.round(progress)}%`;
         }
         
         toggleBtn.addEventListener('click', () => {
@@ -1285,14 +1327,29 @@
             facilitatorData.isActive = true;
             facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
             facilitatorData.durationSeconds = parseInt(secondsInput.value) || 0;
+            facilitatorData.totalSeconds = facilitatorData.durationMinutes * 60 + facilitatorData.durationSeconds;
+            facilitatorData.startTime = Date.now();
+            
+            // カウントダウン表示を開始
+            countdownDiv.style.display = 'block';
+            countdownTimeDisplay.textContent = `${String(facilitatorData.durationMinutes).padStart(2, '0')}:${String(facilitatorData.durationSeconds).padStart(2, '0')}`;
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+            
+            // 毎秒更新
+            if (facilitatorData.interval) {
+                clearInterval(facilitatorData.interval);
+            }
+            facilitatorData.interval = setInterval(updateCountdown, 1000);
+            updateCountdown();  // 即座に最初の更新
             
             // サーバーに facilitator 機能の有効化を送信
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     type: 'enable_facilitator',
-                    duration_seconds: facilitatorData.durationMinutes * 60 + facilitatorData.durationSeconds
+                    duration_seconds: facilitatorData.totalSeconds
                 }));
-                console.log('Facilitator enabled with duration:', facilitatorData.durationMinutes * 60 + facilitatorData.durationSeconds);
+                console.log('Facilitator enabled with duration:', facilitatorData.totalSeconds);
             }
             
             // UI を更新
@@ -1311,6 +1368,13 @@
             if (!facilitatorData.isActive) return;
             
             facilitatorData.isActive = false;
+            
+            // カウントダウンを停止
+            if (facilitatorData.interval) {
+                clearInterval(facilitatorData.interval);
+                facilitatorData.interval = null;
+            }
+            countdownDiv.style.display = 'none';
             
             // サーバーに facilitator 機能の無効化を送信
             if (socket && socket.readyState === WebSocket.OPEN) {
@@ -1335,6 +1399,9 @@
         activePanels[panelId] = {
             element: panel,
             cleanup: () => {
+                if (facilitatorData.interval) {
+                    clearInterval(facilitatorData.interval);
+                }
                 if (facilitatorData.isActive) {
                     stopBtn.click();
                 }
