@@ -921,6 +921,13 @@
                 icon: '⏰',
                 description: '時間設定可能なタイマー',
                 create: createTimerPanel
+            },
+            {
+                id: 'facilitator',
+                name: 'AIファシリテーター',
+                icon: '🤖',
+                description: '会議の進行をAIが支援',
+                create: createFacilitatorPanel
             }
         ];
 
@@ -1172,6 +1179,168 @@
         return panel;
     }
 
+    function createFacilitatorPanel(panelId) {
+        const panel = document.createElement('section');
+        panel.className = 'panel';
+        panel.id = panelId;
+        
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.innerHTML = `<span class="panel-title">🤖 AIファシリテーター</span>`;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'panel-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = () => removePanel(panelId);
+        header.appendChild(closeBtn);
+        
+        const body = document.createElement('div');
+        body.className = 'panel-body';
+        
+        const facilitatorData = {
+            durationMinutes: 60,
+            durationSeconds: 0,
+            isActive: false
+        };
+        
+        body.innerHTML = `
+            <button class="toggle-settings-btn" id="toggle-${panelId}">
+                <span class="arrow">▼</span>
+                <span class="toggle-text">時間設定を隠す</span>
+            </button>
+            <div class="timer-settings" id="settings-${panelId}">
+                <div class="input-group">
+                    <label>会議予定時間（分）</label>
+                    <input type="number" class="facilitator-minutes" value="60" min="1" max="999">
+                </div>
+                <div class="input-group">
+                    <label>会議予定時間（秒）</label>
+                    <input type="number" class="facilitator-seconds" value="0" min="0" max="59">
+                </div>
+            </div>
+            <div class="timer-display" id="display-${panelId}">
+                <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">✓ 設定時間: <span id="display-time-${panelId}">60:00</span></div>
+            </div>
+            <div class="timer-controls">
+                <button class="btn primary facilitator-start">スタート</button>
+                <button class="btn danger facilitator-stop" style="display:none;">停止</button>
+            </div>
+        `;
+        
+        panel.appendChild(header);
+        panel.appendChild(body);
+        
+        const toggleBtn = body.querySelector(`#toggle-${panelId}`);
+        const toggleText = toggleBtn.querySelector('.toggle-text');
+        const settingsDiv = body.querySelector(`#settings-${panelId}`);
+        const displayDiv = body.querySelector(`#display-${panelId}`);
+        const minutesInput = body.querySelector('.facilitator-minutes');
+        const secondsInput = body.querySelector('.facilitator-seconds');
+        const displayTimeSpan = body.querySelector(`#display-time-${panelId}`);
+        const startBtn = body.querySelector('.facilitator-start');
+        const stopBtn = body.querySelector('.facilitator-stop');
+        
+        let settingsCollapsed = false;
+        
+        function updateDisplayTime() {
+            facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
+            facilitatorData.durationSeconds = parseInt(secondsInput.value) || 0;
+            
+            const mins = String(facilitatorData.durationMinutes).padStart(2, '0');
+            const secs = String(facilitatorData.durationSeconds).padStart(2, '0');
+            displayTimeSpan.textContent = `${mins}:${secs}`;
+        }
+        
+        toggleBtn.addEventListener('click', () => {
+            settingsCollapsed = !settingsCollapsed;
+            if (settingsCollapsed) {
+                settingsDiv.classList.add('collapsed');
+                toggleBtn.classList.add('collapsed');
+                toggleText.textContent = '時間設定を表示';
+            } else {
+                settingsDiv.classList.remove('collapsed');
+                toggleBtn.classList.remove('collapsed');
+                toggleText.textContent = '時間設定を隠す';
+            }
+        });
+        
+        minutesInput.addEventListener('input', () => {
+            if (!facilitatorData.isActive) {
+                updateDisplayTime();
+            }
+        });
+        
+        secondsInput.addEventListener('input', () => {
+            if (!facilitatorData.isActive) {
+                updateDisplayTime();
+            }
+        });
+        
+        startBtn.addEventListener('click', () => {
+            if (facilitatorData.isActive) return;
+            
+            facilitatorData.isActive = true;
+            facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
+            facilitatorData.durationSeconds = parseInt(secondsInput.value) || 0;
+            
+            // サーバーに facilitator 機能の有効化を送信
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'enable_facilitator',
+                    duration_seconds: facilitatorData.durationMinutes * 60 + facilitatorData.durationSeconds
+                }));
+                console.log('Facilitator enabled with duration:', facilitatorData.durationMinutes * 60 + facilitatorData.durationSeconds);
+            }
+            
+            // UI を更新
+            if (!settingsCollapsed) {
+                settingsDiv.classList.add('collapsed');
+                toggleBtn.classList.add('collapsed');
+                toggleText.textContent = '時間設定を表示';
+                settingsCollapsed = true;
+            }
+            
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            if (!facilitatorData.isActive) return;
+            
+            facilitatorData.isActive = false;
+            
+            // サーバーに facilitator 機能の無効化を送信
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'disable_facilitator'
+                }));
+                console.log('Facilitator disabled');
+            }
+            
+            settingsDiv.classList.remove('collapsed');
+            toggleBtn.classList.remove('collapsed');
+            toggleText.textContent = '時間設定を隠す';
+            settingsCollapsed = false;
+            
+            startBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+        });
+        
+        // 初期表示時に時間を更新
+        updateDisplayTime();
+        
+        activePanels[panelId] = {
+            element: panel,
+            cleanup: () => {
+                if (facilitatorData.isActive) {
+                    stopBtn.click();
+                }
+            }
+        };
+        
+        return panel;
+    }
+
     function connectWebSocket() {
         socket = new WebSocket(wsUrl);
 
@@ -1190,6 +1359,10 @@
                     statTranscripts.textContent = transcriptCount;
                 } else if (data.type === 'facilitator_message') {
                     addFacilitatorMessage(data.message, data.phase, data.progress);
+                } else if (data.type === 'facilitator_enabled') {
+                    console.log('Facilitator enabled with duration:', data.duration_seconds);
+                } else if (data.type === 'facilitator_disabled') {
+                    console.log('Facilitator disabled');
                 } else if (data.type === 'summary_complete') {
                     displaySummary(data.summary);
                 } else if (data.type === 'error') {

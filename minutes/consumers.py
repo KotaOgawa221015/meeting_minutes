@@ -75,6 +75,13 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         
         elif message_type == 'stop_recording':
             await self.finalize_transcription()
+        
+        elif message_type == 'enable_facilitator':
+            duration_seconds = data.get('duration_seconds', 3600)  # デフォルト1時間
+            await self.enable_facilitator(duration_seconds)
+        
+        elif message_type == 'disable_facilitator':
+            await self.disable_facilitator()
 
     async def process_audio_chunk(self, audio_base64):
         """音声チャンクを処理してWhisper APIに送信"""
@@ -380,6 +387,60 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] ファシリテートエラー: {e}")
+    
+    async def enable_facilitator(self, duration_seconds):
+        """ファシリテーター機能を有効化"""
+        try:
+            meeting = await self.get_meeting()
+            
+            # DBを更新
+            meeting = await self.update_meeting_facilitator(True, duration_seconds)
+            
+            # 既存のタスクをキャンセル
+            if self.facilitator_task:
+                self.facilitator_task.cancel()
+            
+            # 新しいタスクを開始
+            self.facilitator_task = asyncio.create_task(self.facilitator_loop())
+            self.last_phase = None  # フェーズをリセット
+            
+            print(f"[Meeting {self.meeting_id}] ファシリテーター機能: 有効化（期間: {duration_seconds}秒）")
+            
+            # クライアントに確認メッセージを送信
+            await self.send(text_data=json.dumps({
+                'type': 'facilitator_enabled',
+                'duration_seconds': duration_seconds
+            }))
+        
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] ファシリテーター有効化エラー: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    async def disable_facilitator(self):
+        """ファシリテーター機能を無効化"""
+        try:
+            meeting = await self.get_meeting()
+            
+            # DBを更新
+            await self.update_meeting_facilitator(False, 0)
+            
+            # タスクをキャンセル
+            if self.facilitator_task:
+                self.facilitator_task.cancel()
+                self.facilitator_task = None
+            
+            print(f"[Meeting {self.meeting_id}] ファシリテーター機能: 無効化")
+            
+            # クライアントに確認メッセージを送信
+            await self.send(text_data=json.dumps({
+                'type': 'facilitator_disabled'
+            }))
+        
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] ファシリテーター無効化エラー: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def finalize_transcription(self):
         """録音終了時の最終処理"""
@@ -563,6 +624,15 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         meeting = Meeting.objects.get(id=self.meeting_id)
         meeting.current_phase = phase
         meeting.save()
+    
+    @database_sync_to_async
+    def update_meeting_facilitator(self, use_facilitator, duration_seconds):
+        """ファシリテーター設定を更新"""
+        meeting = Meeting.objects.get(id=self.meeting_id)
+        meeting.use_facilitator = use_facilitator
+        meeting.duration_seconds = duration_seconds
+        meeting.save()
+        return meeting
 
     @database_sync_to_async
     def save_summary(self, full_text, summary_data):
