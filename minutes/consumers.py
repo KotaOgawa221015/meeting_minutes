@@ -167,6 +167,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             text = transcript.strip()
             forbidden_words = [
                 "ご視聴ありがとうございました",
+                "最後までご視聴頂き有難うございました。",
+                "最後までご視聴いただきありがとうございます。",
                 "次回予告",
                 "字幕",
                 "チャンネル登録",
