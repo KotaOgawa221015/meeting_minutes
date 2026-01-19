@@ -814,6 +814,7 @@
                 <div style="display:flex; gap:10px; align-items:center;">
                     <a href="/" class="btn back" id="backBtn">戻る</a>
                     <button class="btn primary" id="startBtn">録音開始</button>
+                    <button class="btn danger" id="endMeetingBtn">会議終了</button>
                 </div>
             </header>
 
@@ -904,10 +905,12 @@
         const featureSelector = document.getElementById('featureSelector');
         const closeSelectorBtn = document.getElementById('closeSelectorBtn');
         const rightPanels = document.getElementById('rightPanels');
+        const endMeetingBtn = document.getElementById('endMeetingBtn');
         
         let transcriptItems = [];
         let panelIdCounter = 0;
         let activePanels = {};
+        let isMeetingEnded = false;
         
         // 統計用の時間計測
         let durationSeconds = 0;
@@ -1720,6 +1723,10 @@
     }
 
     startBtn.addEventListener('click', () => {
+        if (isMeetingEnded) {
+            alert('会議は終了しています。録音はできません。');
+            return;
+        }
         if (isRecording) {
             stopRecording();
         } else {
@@ -1727,6 +1734,26 @@
         }
     });
     
+    endMeetingBtn.addEventListener('click', () => {
+        if (confirm('会議を終了しますか？この操作は元に戻せません。')) {
+            isMeetingEnded = true;
+
+            // 録音停止
+            if (isRecording) {
+                stopRecording();
+            }
+
+            // ボタンの無効化
+            startBtn.disabled = true;
+            startBtn.textContent = '録音不可';
+            startBtn.className = 'btn';
+            endMeetingBtn.disabled = true;
+
+            // 状態更新
+            statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+        }
+    });
+
     sendBtn.addEventListener('click', addManualTranscript);
     addPanelBtn.addEventListener('click', showAddFeatureModal);
     closeSelectorBtn.addEventListener('click', hideAddFeatureModal);
@@ -1759,3 +1786,5 @@
         });
     });
 </script>
+</body>
+</html>
