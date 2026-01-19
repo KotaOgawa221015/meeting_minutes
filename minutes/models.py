@@ -15,6 +15,19 @@ class Meeting(models.Model):
         ],
         default='recording'
     )
+    current_phase = models.CharField(
+        max_length=20,
+        choices=[
+            ('introduction', '導入'),
+            ('sharing', '共有'),
+            ('discussion', '議論'),
+            ('summary', 'まとめ'),
+        ],
+        default='introduction'
+    )
+    start_time = models.DateTimeField(null=True, blank=True)
+    use_facilitator = models.BooleanField(default=False, help_text='AIファシリテーター機能を有効にする')
+    use_timekeeper = models.BooleanField(default=True, help_text='タイムキーパー機能を有効にする')
 
     class Meta:
         ordering = ['-created_at']

@@ -12,10 +12,21 @@ def create_meeting(request):
     """新しい会議を作成"""
     if request.method == 'POST':
         title = request.POST.get('title', '無題の会議')
+        duration_minutes = request.POST.get('duration_minutes', 60)
+        use_facilitator = request.POST.get('use_facilitator') == 'on'
+        
+        # 分を秒に変換
+        try:
+            duration_seconds = int(duration_minutes) * 60
+        except (ValueError, TypeError):
+            duration_seconds = 60 * 60  # デフォルト60分
+        
         meeting = Meeting.objects.create(
             title=title,
             created_by=request.user if request.user.is_authenticated else None,
-            status='recording'
+            status='recording',
+            duration_seconds=duration_seconds,
+            use_facilitator=use_facilitator
         )
         return redirect('meeting_room', meeting_id=meeting.id)
     return render(request, 'minutes/create.html')

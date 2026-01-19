@@ -5,11 +5,14 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from openai import OpenAI
 from django.conf import settings
+from django.utils import timezone
+from datetime import datetime
 from .models import Meeting, Transcript
 import tempfile
 import os
 import time
 import subprocess
+from datetime import datetime
 
 
 class MeetingConsumer(AsyncWebsocketConsumer):
@@ -34,9 +37,28 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         self.is_first_process = True
         # ------------------------------------
         
+        # ファシリテーター機能（オプショナル）
+        self.facilitator_task = None
+        self.last_phase = None  # 初期状態はNoneに設定
+        
+        # 会議開始時間をDBに保存
+        await self.set_meeting_start_time()
+        
+        # ファシリテータースケジュールを開始（有効化されている場合）
+        meeting = await self.get_meeting()
+        if meeting.use_facilitator and meeting.duration_seconds > 0:
+            self.facilitator_task = asyncio.create_task(self.facilitator_loop())
+            # 初期フェーズを即座にチェック
+            await self.check_progress_and_facilitate()
+            print(f"[Meeting {self.meeting_id}] AIファシリテーター機能: 有効")
+        else:
+            print(f"[Meeting {self.meeting_id}] AIファシリテーター機能: 無効")
+        
         print(f"[Meeting {self.meeting_id}] WebSocket接続成功")
 
     async def disconnect(self, close_code):
+        if self.facilitator_task:
+            self.facilitator_task.cancel()
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
@@ -175,7 +197,7 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 "字幕",
                 "チャンネル登録",
                 "ブーブー",
-                "はじめしゃちょーエンディング"
+                "はじめしゃちょーエンディング",
                 "【】"
             ] # 排除したいワードのリスト
 
@@ -243,17 +265,121 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             import traceback
             traceback.print_exc()
             return False
+    
+    async def facilitator_loop(self):
+        """ファシリテーターのメインループ"""
+        try:
+            # 会議時間に応じてチェック間隔を調整
+            meeting = await self.get_meeting()
+            check_interval = max(5, min(30, meeting.duration_seconds // 20))  # 5～30秒
+            print(f"[Meeting {self.meeting_id}] ファシリテーター: チェック間隔 {check_interval}秒")
+            
+            while True:
+                await asyncio.sleep(check_interval)
+                await self.check_progress_and_facilitate()
+        except asyncio.CancelledError:
+            print(f"[Meeting {self.meeting_id}] ファシリテーターループ終了")
+            raise
+    
+    async def check_progress_and_facilitate(self):
+        """進行状況をチェックしてファシリテート"""
+        try:
+            meeting = await self.get_meeting()
+            if not meeting.start_time or meeting.duration_seconds <= 0:
+                return
+            
+            elapsed = (timezone.now() - meeting.start_time).total_seconds()
+            progress = (elapsed / meeting.duration_seconds) * 100
+            
+            # 100%を超えた場合はcap
+            progress = min(progress, 100.0)
+            
+            # 現在のフェーズを決定
+            current_phase = self.get_phase_from_progress(progress)
+            
+            # 初回チェックまたはフェーズが変更された場合
+            if current_phase != self.last_phase:
+                phase_names = {
+                    'introduction': '導入',
+                    'sharing': '共有',
+                    'discussion': '議論',
+                    'summary': 'まとめ'
+                }
+                prev_phase = phase_names.get(self.last_phase, 'なし')
+                print(f"[Meeting {self.meeting_id}] フェーズ変更: {prev_phase} -> {phase_names.get(current_phase)} (進行状況: {progress:.1f}%)")
+                self.last_phase = current_phase
+                await self.update_meeting_phase(current_phase)
+                await self.facilitate(current_phase, progress)
+                
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] ファシリテートチェックエラー: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def get_phase_from_progress(self, progress):
+        """進行状況からフェーズを決定"""
+        if progress < 10:
+            return 'introduction'
+        elif progress < 25:
+            return 'sharing'
+        elif progress < 85:
+            return 'discussion'
+        else:
+            return 'summary'
         
-    @database_sync_to_async
-    def save_transcript(self, text, timestamp):
-        """文字起こしをデータベースに保存"""
-        meeting = Meeting.objects.get(id=self.meeting_id)
-        Transcript.objects.create(
-            meeting=meeting,
-            text=text,
-            timestamp=timestamp
-        )
-        print(f"[Meeting {self.meeting_id}] DB保存完了: timestamp={timestamp:.1f}秒")
+    async def facilitate(self, phase, progress):
+        """フェーズに基づいてファシリテート"""
+        try:
+            transcripts = await self.get_all_transcripts()
+            if not transcripts:
+                return
+            
+            # 最新のログを取得（直近5分以内）
+            recent_transcripts = [t for t in transcripts if t.timestamp > (time.time() - self.start_time - 300)]
+            full_text = "\n".join([f"[{t.timestamp:.0f}秒] {t.text}" for t in recent_transcripts])
+            
+            phase_descriptions = {
+                'introduction': '導入 (10%): 目的の再確認、ゴールの共有、アイスブレイク',
+                'sharing': '共有(15%): 議論に必要な前提知識やデータのクイックな共有',
+                'discussion': '議論(60%): メインパート。アイデア出し、課題解決、意思決定',
+                'summary': 'まとめ(15%): 決定事項の確認、Next Action（誰が・いつまでに）の特定'
+            }
+            
+            prompt = f"""
+あなたは会議のファシリテーターです。現在のフェーズ: {phase_descriptions[phase]}
+進行状況: {progress:.1f}%
+
+これまでの会話ログ:
+{full_text}
+
+このフェーズの目的に基づいて、会議を効果的に進めるための短い介入メッセージを作成してください。
+メッセージは簡潔に、建設的で、参加者を励ますものにしてください。
+JSON形式で返してください: {{"message": "介入メッセージ"}}
+"""
+            
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            response = await asyncio.to_thread(
+                client.chat.completions.create,
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            message = result.get('message', '')
+            
+            if message:
+                await self.send(text_data=json.dumps({
+                    'type': 'facilitator_message',
+                    'message': message,
+                    'phase': phase,
+                    'progress': progress
+                }))
+                print(f"[Meeting {self.meeting_id}] ファシリテーターメッセージ: {message}")
+                
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] ファシリテートエラー: {e}")
 
     async def finalize_transcription(self):
         """録音終了時の最終処理"""
@@ -408,6 +534,35 @@ class MeetingConsumer(AsyncWebsocketConsumer):
     def get_all_transcripts(self):
         meeting = Meeting.objects.get(id=self.meeting_id)
         return list(meeting.transcripts.all())
+
+    @database_sync_to_async
+    def save_transcript(self, text, timestamp):
+        """文字起こしをデータベースに保存"""
+        meeting = Meeting.objects.get(id=self.meeting_id)
+        Transcript.objects.create(
+            meeting=meeting,
+            text=text,
+            timestamp=timestamp
+        )
+        print(f"[Meeting {self.meeting_id}] DB保存完了: timestamp={timestamp:.1f}秒")
+
+    @database_sync_to_async
+    def set_meeting_start_time(self):
+        meeting = Meeting.objects.get(id=self.meeting_id)
+        if not meeting.start_time:
+            meeting.start_time = timezone.now()
+            meeting.save()
+        print(f"[Meeting {self.meeting_id}] 会議開始時間設定: {meeting.start_time}")
+
+    @database_sync_to_async
+    def get_meeting(self):
+        return Meeting.objects.get(id=self.meeting_id)
+    
+    @database_sync_to_async
+    def update_meeting_phase(self, phase):
+        meeting = Meeting.objects.get(id=self.meeting_id)
+        meeting.current_phase = phase
+        meeting.save()
 
     @database_sync_to_async
     def save_summary(self, full_text, summary_data):
