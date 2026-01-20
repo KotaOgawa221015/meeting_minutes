@@ -823,7 +823,6 @@
                 <section class="panel">
                     <div class="panel-header">📝 文字起こし(リアルタイム)</div>
                     <div class="panel-body talk" id="transcriptArea">
-                        <div class="empty-state">録音を開始すると、ここに文字起こしが表示されます</div>
                     </div>
                     <div class="visualizer-container">
                         <canvas id="visualizer"></canvas>
@@ -843,18 +842,8 @@
 
                 <div class="right" id="rightPanels">
                     <section class="panel">
-                        <div class="panel-header">🧭 AIファシリテーション</div>
-                        <div class="panel-body" id="facilitationContent">
-                            <p><strong>状態:</strong>待機中</p>
-                        </div>
-                    </section>
-
-                    <section class="panel">
                         <div class="panel-header">📋 要約(リアルタイム)</div>
                         <div class="panel-body" id="summaryContent">
-                            <ul id="summaryList">
-                                <li style="color: #9ca3af;">会議開始後、要約を生成します</li>
-                            </ul>
                             <div class="summary-detail" id="summarySection"></div>
                         </div>
                     </section>
@@ -897,6 +886,7 @@
         const startBtn = document.getElementById('startBtn');
         const transcriptArea = document.getElementById('transcriptArea');
         const statusText = document.getElementById('statusText');
+        const summaryContent = document.getElementById('summaryContent');
         const summarySection = document.getElementById('summarySection');
         const statDuration = document.getElementById('statDuration');
         const statTranscripts = document.getElementById('statTranscripts');
@@ -911,9 +901,22 @@
         console.log('DOM elements initialized:');
         console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
         console.log('- transcriptArea:', transcriptArea ? 'found' : 'NOT FOUND');
+        console.log('- summaryContent:', summaryContent ? 'found' : 'NOT FOUND');
         console.log('- summarySection:', summarySection ? 'found' : 'NOT FOUND');
         console.log('- summarySection innerHTML:', summarySection ? summarySection.innerHTML.substring(0, 100) : 'N/A');
         console.log('- statusText:', statusText ? 'found' : 'NOT FOUND');
+        
+        // 初期段階で要約セクションの表示を確認・強制
+        if (summaryContent) {
+            summaryContent.style.display = 'block';
+            summaryContent.style.visibility = 'visible';
+            console.log('summaryContent initialized - display set to block');
+        }
+        if (summarySection) {
+            summarySection.style.display = 'block';
+            summarySection.style.visibility = 'visible';
+            console.log('summarySection initialized - display set to block');
+        }
         
         let transcriptItems = [];
         let panelIdCounter = 0;
@@ -1535,6 +1538,9 @@
                     console.log('Facilitator enabled with duration:', data.duration_seconds);
                 } else if (data.type === 'facilitator_disabled') {
                     console.log('Facilitator disabled');
+                } else if (data.type === 'partial_summary') {
+                    console.log('📊 Received partial_summary:', data);
+                    displayPartialSummary(data.summary, data.segment_count, data.timestamp);
                 } else if (data.type === 'summary_complete') {
                     displaySummary(data.summary);
                 } else if (data.type === 'error') {
@@ -1806,6 +1812,109 @@
             btn.onclick = () => deleteTranscript(id);
             return btn;
         }
+
+    function displayPartialSummary(summary, segmentCount, timestamp) {
+        /**
+         * 文字起こし中の定期要約を表示
+         * final summaryと区別するため、partial_summaryコンテナに表示
+         */
+        console.log('displayPartialSummary called:', { summary, segmentCount, timestamp });
+        console.log('summarySection element:', summarySection);
+        
+        if (!summary) {
+            console.warn('Partial summary data is null or undefined');
+            return;
+        }
+        
+        if (!summarySection) {
+            console.error('❌ summarySection NOT FOUND - cannot display partial summary');
+            return;
+        }
+        
+        // summaryContent（親要素）を確実に表示
+        if (summaryContent) {
+            summaryContent.style.display = 'block !important';
+            summaryContent.style.visibility = 'visible !important';
+        }
+        
+        console.log('summarySection visibility - display:', window.getComputedStyle(summarySection).display, 'visibility:', window.getComputedStyle(summarySection).visibility);
+        
+        // 親要素の可視性も確認
+        let parent = summarySection.parentElement;
+        let parentInfo = [];
+        while (parent) {
+            const style = window.getComputedStyle(parent);
+            parentInfo.push(`${parent.className || parent.id || parent.tagName}: display=${style.display}, visibility=${style.visibility}`);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                console.warn('⚠️ Parent element is hidden:', parent.className, parent.id);
+                // 非表示の親を表示
+                parent.style.display = 'block';
+                parent.style.visibility = 'visible';
+            }
+            parent = parent.parentElement;
+        }
+        console.log('Parent chain:', parentInfo.join(' → '));
+        
+        // summarySection自体も明示的に表示
+        summarySection.style.display = 'block !important';
+        summarySection.style.visibility = 'visible !important';
+        
+        // 既存のpartial_summary要素を探す、なければ作成
+        let partialSummaryContainer = document.getElementById('partialSummaryContainer');
+        if (!partialSummaryContainer) {
+            console.log('Creating new partialSummaryContainer');
+            partialSummaryContainer = document.createElement('div');
+            partialSummaryContainer.id = 'partialSummaryContainer';
+            partialSummaryContainer.style.cssText = `
+                display: block !important;
+                background: #f0f4ff;
+                border-left: 4px solid #667eea;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #666;
+            `;
+            // summarySection内の最初に挿入
+            if (summarySection) {
+                console.log('Inserting partialSummaryContainer into summarySection');
+                summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
+                console.log('After insert - summarySection innerHTML preview:', summarySection.innerHTML.substring(0, 150));
+            }
+        }
+        
+        // 定期要約コンテンツを生成
+        let html = `<div style="margin-bottom: 10px; font-weight: 600; color: #667eea;">
+            ⏱️ リアルタイム要約（${Math.floor(timestamp)}秒時点、${segmentCount}セグメント）
+        </div>`;
+        
+        html += `<p style="margin: 8px 0;">${summary.summary || 'データ処理中...'}</p>`;
+        
+        if (summary.key_points && summary.key_points.length > 0) {
+            html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">🔑 重要ポイント:</div>';
+            html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+            summary.key_points.slice(0, 3).forEach(point => {
+                html += `<li style="font-size: 12px;">${point}</li>`;
+            });
+            html += '</ul>';
+        }
+        
+        if (summary.action_items && summary.action_items.length > 0) {
+            const tasks = summary.action_items.filter(item => item.task);
+            if (tasks.length > 0) {
+                html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">✅ アクション:</div>';
+                html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+                tasks.slice(0, 2).forEach(item => {
+                    html += `<li style="font-size: 12px;">${item.task}</li>`;
+                });
+                html += '</ul>';
+            }
+        }
+        
+        console.log('Setting partialSummaryContainer innerHTML, existing container:', !!partialSummaryContainer);
+        partialSummaryContainer.innerHTML = html;
+        console.log('✅ Partial summary updated:', html.substring(0, 100));
+    }
 
     function displaySummary(summary, isLoadMode = false) {
         console.log('displaySummary called with:', { summary, isLoadMode });

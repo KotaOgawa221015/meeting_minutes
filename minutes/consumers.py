@@ -41,6 +41,11 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         self.facilitator_task = None
         self.last_phase = None  # 初期状態はNoneに設定
         
+        # 定期要約機能
+        self.periodic_summary_task = None
+        self.last_summary_time = time.time()  # 最後に要約を生成した時刻
+        self.summary_interval = 30  # 30秒ごとに要約を生成
+        
         # 会議開始時間をDBに保存
         await self.set_meeting_start_time()
         
@@ -54,11 +59,17 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         else:
             print(f"[Meeting {self.meeting_id}] AIファシリテーター機能: 無効")
         
+        # 定期要約タスクを開始
+        self.periodic_summary_task = asyncio.create_task(self.periodic_summary_loop())
+        print(f"[Meeting {self.meeting_id}] 定期要約機能: 開始")
+        
         print(f"[Meeting {self.meeting_id}] WebSocket接続成功")
 
     async def disconnect(self, close_code):
         if self.facilitator_task:
             self.facilitator_task.cancel()
+        if self.periodic_summary_task:
+            self.periodic_summary_task.cancel()
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
@@ -590,6 +601,103 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 'type': 'error',
                 'message': f'要約生成エラー: {str(e)}'
             }))
+
+    async def periodic_summary_loop(self):
+        """定期的に要約を生成するループ"""
+        try:
+            print(f"[Meeting {self.meeting_id}] 定期要約ループ: 開始（間隔: {self.summary_interval}秒）")
+            
+            while True:
+                await asyncio.sleep(self.summary_interval)
+                await self.generate_partial_summary()
+        except asyncio.CancelledError:
+            print(f"[Meeting {self.meeting_id}] 定期要約ループ: 終了")
+            raise
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] 定期要約ループ エラー: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def generate_partial_summary(self):
+        """現在の文字起こしデータから要約を生成（定期実行用）"""
+        try:
+            transcripts = await self.get_all_transcripts()
+            
+            # 文字起こしが少なすぎる場合はスキップ
+            if not transcripts or len(transcripts) < 2:
+                print(f"[Meeting {self.meeting_id}] 定期要約: 文字起こし件数が不足 ({len(transcripts) if transcripts else 0}件)")
+                return
+            
+            # タイムスタンプ順に並べて全文を結合
+            sorted_transcripts = sorted(transcripts, key=lambda t: t.timestamp)
+            full_text = "\n".join([f"[{t.timestamp:.0f}秒] {t.text}" for t in sorted_transcripts])
+            
+            print(f"[Meeting {self.meeting_id}] 定期要約生成中: {len(sorted_transcripts)}セグメント, {len(full_text)}文字")
+            
+            try:
+                client = OpenAI(api_key=settings.OPENAI_API_KEY)
+                
+                response = await asyncio.to_thread(
+                    client.chat.completions.create,
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": """あなたは議事録作成の専門家です。
+進行中の会議の文字起こしから、現在までの内容を以下の形式のJSON形式で要約してください。
+必ずJSON形式のみを返し、他の説明文や説明は一切含めないでください。
+
+{
+  "summary": "ここまでの会議の要約（2-3文で具体的に）",
+  "key_points": ["重要ポイント1", "重要ポイント2", "重要ポイント3"],
+  "action_items": [
+    {"task": "具体的なタスク内容", "assignee": "担当者名（不明な場合は空文字）"}
+  ],
+  "decisions": ["決定事項1", "決定事項2"]
+}
+
+文字起こしは時系列順に並んでいます。[X秒]の形式でタイムスタンプが付いています。
+会話の流れを理解して、現在までの重要な内容を抽出してください。"""
+                        },
+                        {
+                            "role": "user",
+                            "content": f"以下の会議内容をここまでの要約として作成してください：\n\n{full_text}"
+                        }
+                    ],
+                    temperature=0.3,
+                    response_format={ "type": "json_object" }
+                )
+                
+                # レスポンスからJSONを取得
+                response_text = response.choices[0].message.content.strip()
+                
+                # JSONパース
+                summary_json = json.loads(response_text)
+                
+                print(f"[Meeting {self.meeting_id}] 定期要約生成完了: {summary_json.get('summary', '')[:50]}")
+                
+                # クライアントに定期要約を送信
+                send_data = {
+                    'type': 'partial_summary',
+                    'summary': summary_json,
+                    'segment_count': len(sorted_transcripts),
+                    'timestamp': time.time() - self.start_time
+                }
+                print(f"[Meeting {self.meeting_id}] 定期要約送信: {send_data}")
+                await self.send(text_data=json.dumps(send_data))
+                print(f"[Meeting {self.meeting_id}] ✅ 定期要約送信完了")
+                
+            except json.JSONDecodeError as e:
+                print(f"[Meeting {self.meeting_id}] 定期要約: JSON parse error: {e}")
+                print(f"[Meeting {self.meeting_id}] Response text: {response_text}")
+            
+            except Exception as e:
+                print(f"[Meeting {self.meeting_id}] 定期要約生成エラー: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] 定期要約 外部エラー: {e}")
 
     @database_sync_to_async
     def get_all_transcripts(self):
