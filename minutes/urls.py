@@ -29,4 +29,9 @@ urlpatterns = [
     path('mark/<int:mark_id>/remove/', views.remove_mark, name='remove_mark'),
     path('mark/<int:mark_id>/edit/', views.edit_mark, name='edit_mark'),
     path('transcript/<int:transcript_id>/marks/', views.get_transcript_marks, name='get_transcript_marks'),
+    
+    # AI Member API
+    path('meeting/<int:meeting_id>/add-ai-member/', views.add_ai_member, name='add_ai_member'),
+    path('meeting/<int:meeting_id>/ai-members/', views.get_ai_members, name='get_ai_members'),
+    path('ai-member/<int:ai_member_id>/delete/', views.delete_ai_member, name='delete_ai_member'),
 ]

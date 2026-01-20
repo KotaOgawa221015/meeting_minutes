@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
-from .models import Meeting, MinuteSummary, Transcript, TranscriptStamp, TranscriptComment, TranscriptMark
+from .models import Meeting, MinuteSummary, Transcript, TranscriptStamp, TranscriptComment, TranscriptMark, AIMember, AIMemberResponse
 
 def index(request):
     """会議一覧"""
@@ -431,5 +431,91 @@ def get_transcript_marks(request, transcript_id):
         ]
         
         return JsonResponse({'status': 'success', 'marks': marks_data})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def add_ai_member(request, meeting_id):
+    """AIメンバーを追加"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        data = json.loads(request.body)
+        personality = data.get('personality', 'facilitator')
+        count = data.get('count', 1)
+        
+        # personality のバリデーション
+        valid_personalities = [choice[0] for choice in AIMember.PERSONALITY_CHOICES]
+        if personality not in valid_personalities:
+            return JsonResponse({'status': 'error', 'message': 'Invalid personality'}, status=400)
+        
+        ai_members = []
+        for i in range(count):
+            ai_member = AIMember.objects.create(
+                meeting=meeting,
+                name=f'AI-{personality}',
+                personality=personality,
+                is_active=True
+            )
+            ai_members.append({
+                'id': ai_member.id,
+                'name': ai_member.name,
+                'personality': ai_member.personality,
+                'personality_display': ai_member.get_personality_display(),
+                'is_active': ai_member.is_active,
+                'created_at': ai_member.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'ai_members': ai_members,
+            'total_count': len(ai_members)
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_ai_members(request, meeting_id):
+    """会議のAIメンバー一覧を取得"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        ai_members = meeting.ai_members.all()
+        
+        ai_members_data = [
+            {
+                'id': ai_member.id,
+                'name': ai_member.name,
+                'personality': ai_member.personality,
+                'personality_display': ai_member.get_personality_display(),
+                'is_active': ai_member.is_active,
+                'response_count': ai_member.responses.count(),
+                'created_at': ai_member.created_at.isoformat()
+            }
+            for ai_member in ai_members
+        ]
+        
+        return JsonResponse({
+            'status': 'success',
+            'ai_members': ai_members_data,
+            'total_count': len(ai_members_data)
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["DELETE"])
+def delete_ai_member(request, ai_member_id):
+    """AIメンバーを削除"""
+    try:
+        ai_member = get_object_or_404(AIMember, id=ai_member_id)
+        meeting_id = ai_member.meeting.id
+        ai_member.delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'AI member deleted',
+            'meeting_id': meeting_id
+        })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

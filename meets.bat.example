@@ -8,6 +8,8 @@ call %cdir%\venv\Scripts\activate
 
 cd %cdir%
 
+start http://127.0.0.1:8080/
+
 daphne -b 127.0.0.1 -p 8080 meeting_minutes.asgi:application
 
 cd %cdir%

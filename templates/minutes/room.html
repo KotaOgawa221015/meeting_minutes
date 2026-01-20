@@ -1178,6 +1178,22 @@
         console.log('Meeting ID:', meetingId);
         console.log('WebSocket URL:', wsUrl);
         
+        // Cookie から CSRF Token を取得する関数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
         let socket = null;
         let mediaRecorder = null;
         let audioContext = null;
@@ -1436,6 +1452,13 @@
                 icon: '🤖',
                 description: '会議の進行をAIが支援',
                 create: createFacilitatorPanel
+            },
+            {
+                id: 'ai_members',
+                name: 'AIメンバー',
+                icon: '👥',
+                description: '複数の性格を持つAIが議論に参加',
+                create: createAIMembersPanel
             }
         ];
 
@@ -1916,6 +1939,166 @@
         return panel;
     }
 
+    function createAIMembersPanel(panelId) {
+        const panel = document.createElement('section');
+        panel.className = 'panel';
+        panel.id = panelId;
+        
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.innerHTML = `<span class="panel-title">🤖 AIメンバー</span>`;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'panel-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = () => removePanel(panelId);
+        header.appendChild(closeBtn);
+        
+        const body = document.createElement('div');
+        body.className = 'panel-body';
+        
+        body.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">AIメンバーの性格</label>
+                    <select class="ai-personality" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <option value="idea">💡 新たなアイディアを提案</option>
+                        <option value="facilitator">🎯 議論を促進</option>
+                        <option value="cheerful">😊 明るい</option>
+                        <option value="negative">😟 ネガティブ</option>
+                        <option value="angry">😠 怒りっぽい</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">追加する数</label>
+                    <input type="number" class="ai-count" value="1" min="1" max="10" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                </div>
+                <button class="btn primary" style="width: 100%; margin-top: 10px;" id="add-ai-btn-${panelId}">AIメンバーを追加</button>
+            </div>
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 15px;">
+                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px;">参加中のAIメンバー</h4>
+                <div id="ai-members-list-${panelId}" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- AIメンバーリストがここに挿入される -->
+                </div>
+            </div>
+        `;
+        
+        panel.appendChild(header);
+        panel.appendChild(body);
+        
+        const personalitySelect = body.querySelector('.ai-personality');
+        const countInput = body.querySelector('.ai-count');
+        const addAIBtn = body.querySelector(`#add-ai-btn-${panelId}`);
+        const aiMembersList = body.querySelector(`#ai-members-list-${panelId}`);
+        
+        let aiMembers = [];
+        
+        function loadAIMembers() {
+            fetch(`/meeting/${meetingId}/ai-members/`)
+                .then(response => response.json())
+                .then(data => {
+                    aiMembers = data.ai_members;
+                    renderAIMembers();
+                })
+                .catch(error => {
+                    console.error('Failed to load AI members:', error);
+                });
+        }
+        
+        function renderAIMembers() {
+            aiMembersList.innerHTML = '';
+            
+            if (aiMembers.length === 0) {
+                aiMembersList.innerHTML = '<p style="color: #9ca3af; font-size: 13px; text-align: center;">まだAIメンバーはいません</p>';
+                return;
+            }
+            
+            aiMembers.forEach(member => {
+                const memberDiv = document.createElement('div');
+                memberDiv.style.cssText = 'padding: 10px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: center;';
+                memberDiv.innerHTML = `
+                    <div>
+                        <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${member.name}</div>
+                        <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
+                        <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
+                    </div>
+                    <button data-member-id="${member.id}" class="delete-ai-btn" style="background: #fee2e2; border: none; color: #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">削除</button>
+                `;
+                aiMembersList.appendChild(memberDiv);
+            });
+            
+            // 削除ボタンのイベントリスナーを追加
+            aiMembersList.querySelectorAll('.delete-ai-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const memberId = btn.getAttribute('data-member-id');
+                    deleteAIMember(memberId);
+                });
+            });
+        }
+        
+        function deleteAIMember(memberId) {
+            if (!confirm('このAIメンバーを削除しますか？')) {
+                return;
+            }
+            
+            fetch(`/ai-member/${memberId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAIMembers();
+                }
+            })
+            .catch(error => {
+                console.error('Failed to delete AI member:', error);
+            });
+        }
+        
+        addAIBtn.addEventListener('click', () => {
+            const personality = personalitySelect.value;
+            const count = parseInt(countInput.value) || 1;
+            
+            fetch(`/meeting/${meetingId}/add-ai-member/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    personality: personality,
+                    count: count
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAIMembers();
+                    countInput.value = 1;
+                    alert(`${count}個のAIメンバーを追加しました`);
+                }
+            })
+            .catch(error => {
+                console.error('Failed to add AI member:', error);
+                alert('AIメンバーの追加に失敗しました');
+            });
+        });
+        
+        // 初期ロード
+        loadAIMembers();
+        
+        activePanels[panelId] = {
+            element: panel,
+            cleanup: () => {}
+        };
+        
+        return panel;
+    }
+
     function connectWebSocket() {
         socket = new WebSocket(wsUrl);
 
@@ -1935,6 +2118,8 @@
                     statTranscripts.textContent = transcriptCount;
                 } else if (data.type === 'facilitator_message') {
                     addFacilitatorMessage(data.message, data.phase, data.progress);
+                } else if (data.type === 'ai_response') {
+                    addAIResponse(data.ai_member_name, data.ai_member_personality, data.response, data.timestamp);
                 } else if (data.type === 'facilitator_enabled') {
                     console.log('Facilitator enabled with duration:', data.duration_seconds);
                 } else if (data.type === 'facilitator_disabled') {
@@ -2562,6 +2747,31 @@
             item.appendChild(content);
             item.appendChild(timestamp);
             item.appendChild(phaseInfo);
+            
+            transcriptArea.appendChild(item);
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+        }
+
+        function addAIResponse(aiName, aiPersonality, responseText, timestamp) {
+            const item = document.createElement('div');
+            item.className = 'bubble ai';
+            item.setAttribute('data-id', `ai-response-${Date.now()}`);
+            
+            const speaker = document.createElement('div');
+            speaker.className = 'speaker';
+            speaker.innerHTML = `👤 ${aiName} <span style="font-size: 12px; color: #666; margin-left: 5px;">(${aiPersonality})</span>`;
+            
+            const content = document.createElement('div');
+            content.className = 'transcript-content';
+            content.textContent = responseText;
+            
+            const timeDisplay = document.createElement('div');
+            timeDisplay.className = 'timestamp';
+            timeDisplay.textContent = `${Math.floor(timestamp / 60)}:${String(Math.floor(timestamp % 60)).padStart(2, '0')}`;
+            
+            item.appendChild(speaker);
+            item.appendChild(content);
+            item.appendChild(timeDisplay);
             
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;

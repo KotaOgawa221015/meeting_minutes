@@ -127,3 +127,45 @@ class TranscriptMark(models.Model):
 
     def __str__(self):
         return f"{self.get_color_display()} Mark on {self.transcript.text[:30]}"
+
+
+class AIMember(models.Model):
+    """AI参加者モデル"""
+    PERSONALITY_CHOICES = [
+        ('idea', '💡 新たなアイディアを提案'),
+        ('facilitator', '🎯 議論を促進'),
+        ('cheerful', '😊 明るい'),
+        ('negative', '😟 ネガティブ'),
+        ('angry', '😠 怒りっぽい'),
+    ]
+    
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='ai_members')
+    name = models.CharField(max_length=100, default='AI')
+    personality = models.CharField(
+        max_length=20,
+        choices=PERSONALITY_CHOICES,
+        default='facilitator'
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_personality_display()}) - {self.meeting.title}"
+
+
+class AIMemberResponse(models.Model):
+    """AIメンバーの返答記録"""
+    ai_member = models.ForeignKey(AIMember, on_delete=models.CASCADE, related_name='responses')
+    triggered_by = models.ForeignKey(Transcript, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_ai_responses')
+    response_text = models.TextField()
+    timestamp = models.FloatField()  # 会議開始からの秒数
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['timestamp']
+    
+    def __str__(self):
+        return f"{self.ai_member.name}: {self.response_text[:50]}..."

@@ -7,7 +7,7 @@ from openai import OpenAI
 from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
-from .models import Meeting, Transcript
+from .models import Meeting, Transcript, AIMember, AIMemberResponse
 import tempfile
 import os
 import time
@@ -40,6 +40,11 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         # ファシリテーター機能（オプショナル）
         self.facilitator_task = None
         self.last_phase = None  # 初期状態はNoneに設定
+        
+        # AIメンバー機能
+        self.last_transcript_timestamp = 0.0
+        self.min_interval_for_ai_response = 15  # AIは15秒以上間隔があるときに返答を検討
+
         
         # 定期要約機能
         self.periodic_summary_task = None
@@ -167,6 +172,10 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                         elapsed_time = time.time() - self.start_time
                         print(f"[Meeting {self.meeting_id}] 文字起こし成功: {transcript_text[:50]}...")
                         transcript_id = await self.save_transcript(transcript_text, elapsed_time)
+                        
+                        # AIメンバー返答処理をトリガー
+                        await self.trigger_ai_member_response(transcript_id, elapsed_time)
+                        
                         await self.send(text_data=json.dumps({
                             'type': 'transcript',
                             'transcript_id': transcript_id,
@@ -766,3 +775,116 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         # meeting.save()
         
         print(f"[Meeting {self.meeting_id}] 議事録DB保存完了")
+
+    async def trigger_ai_member_response(self, transcript_id, elapsed_time):
+        """トランスクリプトに基づいてAIメンバーの返答をトリガー"""
+        try:
+            ai_members = await self.get_ai_members()
+            
+            if not ai_members or len(ai_members) == 0:
+                return
+            
+            # 時間間隔をチェック（最小15秒）
+            time_diff = elapsed_time - self.last_transcript_timestamp
+            if time_diff < self.min_interval_for_ai_response:
+                print(f"[Meeting {self.meeting_id}] AI返答: 時間間隔が短いためスキップ ({time_diff:.1f}秒 < {self.min_interval_for_ai_response}秒)")
+                return
+            
+            self.last_transcript_timestamp = elapsed_time
+            
+            # 最新のトランスクリプトを取得
+            transcripts = await self.get_all_transcripts()
+            if not transcripts:
+                return
+            
+            # ランダムにAIメンバーを選択して返答を生成
+            import random
+            selected_ai = random.choice(ai_members)
+            
+            # 直近の会話ログを取得
+            recent_transcripts = [t for t in transcripts if t.timestamp > (elapsed_time - 120)]  # 直近2分
+            recent_text = "\n".join([f"[{t.timestamp:.0f}秒] {t.text}" for t in recent_transcripts])
+            
+            await self.generate_ai_response(selected_ai, recent_text, elapsed_time)
+            
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] AI返答トリガーエラー: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def generate_ai_response(self, ai_member, conversation_context, elapsed_time):
+        """AIメンバーが返答を生成"""
+        try:
+            personality_descriptions = {
+                'idea': '新たなアイディアや視点を提案するタイプ。議論に新しい可能性をもたらす。',
+                'facilitator': '議論の流れを促進し、誰もが参加しやすい雰囲気を作るタイプ。進行をスムーズにする。',
+                'cheerful': '明るく前向きな雰囲気を作るタイプ。チームのモチベーションを高める。',
+                'negative': 'リスクや課題を指摘して慎重に検討するタイプ。落とし穴を見つけるのが得意。',
+                'angry': '鋭い指摘や厳しい意見を言うタイプ。甘い考えにメスを入れる。',
+            }
+            
+            personality_desc = personality_descriptions.get(ai_member.personality, '')
+            
+            prompt = f"""あなたはこの会議のAIメンバーです。
+あなたの性格タイプ: {ai_member.get_personality_display()}
+性格説明: {personality_desc}
+
+これまでの会話:
+{conversation_context}
+
+あなたの性格を表現しながら、この話題について短い発言（1-2文）をしてください。
+会議に価値を加える建設的なコメントをしてください。
+JSON形式で返してください: {{"response": "あなたの発言内容"}}
+"""
+            
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            response = await asyncio.to_thread(
+                client.chat.completions.create,
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.8,
+                response_format={"type": "json_object"}
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            response_text = result.get('response', '')
+            
+            if response_text:
+                # DBに保存
+                ai_response_id = await self.save_ai_response(ai_member.id, response_text, elapsed_time)
+                
+                # クライアントに送信
+                await self.send(text_data=json.dumps({
+                    'type': 'ai_response',
+                    'ai_member_id': ai_member.id,
+                    'ai_member_name': ai_member.name,
+                    'ai_member_personality': ai_member.personality,
+                    'response': response_text,
+                    'timestamp': elapsed_time,
+                    'response_id': ai_response_id
+                }))
+                
+                print(f"[Meeting {self.meeting_id}] AI返答: {ai_member.name} ({ai_member.get_personality_display()}): {response_text}")
+        
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] AI返答生成エラー: {e}")
+            import traceback
+            traceback.print_exc()
+
+    @database_sync_to_async
+    def get_ai_members(self):
+        """会議のアクティブなAIメンバーを取得"""
+        meeting = Meeting.objects.get(id=self.meeting_id)
+        return list(meeting.ai_members.filter(is_active=True))
+
+    @database_sync_to_async
+    def save_ai_response(self, ai_member_id, response_text, elapsed_time):
+        """AIメンバーの返答をDBに保存"""
+        ai_member = AIMember.objects.get(id=ai_member_id)
+        ai_response = AIMemberResponse.objects.create(
+            ai_member=ai_member,
+            response_text=response_text,
+            timestamp=elapsed_time
+        )
+        print(f"[Meeting {self.meeting_id}] AI返答DB保存: {ai_response.id}")
+        return ai_response.id
