@@ -1057,37 +1057,12 @@
             <div class="section">
                 <div class="section-title">👥 参加者</div>
                 
-                <div class="participant-card" id="facilitatorCard">
-                    <div class="participant-header">
-                        <div class="participant-icon">🧭</div>
-                        <div class="participant-info">
-                            <div class="participant-name">AIファシリテーター</div>
-                            <div class="participant-role">会議進行・議事録作成</div>
-                        </div>
-                        <span class="participant-status"></span>
-                    </div>
+                <div id="participantsList" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- 参加者がここに動的に追加されます -->
                 </div>
                 
-                <div class="participant-card">
-                    <div class="participant-header">
-                        <div class="participant-icon">📝</div>
-                        <div class="participant-info">
-                            <div class="participant-name">AI書記</div>
-                            <div class="participant-role">リアルタイム文字起こし</div>
-                        </div>
-                        <span class="participant-status"></span>
-                    </div>
-                </div>
-                
-                <div class="participant-card">
-                    <div class="participant-header">
-                        <div class="participant-icon">📊</div>
-                        <div class="participant-info">
-                            <div class="participant-name">AIアナリスト</div>
-                            <div class="participant-role">要約・分析</div>
-                        </div>
-                        <span class="participant-status"></span>
-                    </div>
+                <div id="aiMembersContainer" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                    <!-- AIファシリテーター / AIメンバーがここに動的に追加されます -->
                 </div>
                 
                 <div id="humanParticipants"></div>
@@ -1240,6 +1215,12 @@
         let panelIdCounter = 0;
         let activePanels = {};
         let isMeetingEnded = false;
+        
+        // 参加者管理
+        let participants = {
+            facilitator: null,  // AIファシリテーター
+            aiMembers: {}        // AIメンバー: { id: {name, personality} }
+        };
         
         // 統計用の時間計測
         let durationSeconds = 0;
@@ -1436,6 +1417,110 @@
             endMeetingBtn.disabled = true;
             manualInput.disabled = true;
             sendBtn.disabled = true;
+        }
+
+        // 参加者一覧を描画する関数
+        function renderParticipants() {
+            const participantsList = document.getElementById('participantsList');
+            const aiMembersContainer = document.getElementById('aiMembersContainer');
+            
+            participantsList.innerHTML = '';
+            aiMembersContainer.innerHTML = '';
+            
+            // AIファシリテーターを表示
+            if (participants.facilitator) {
+                const facilitatorCard = document.createElement('div');
+                facilitatorCard.className = 'participant-card';
+                facilitatorCard.id = 'facilitator-participant';
+                facilitatorCard.innerHTML = `
+                    <div class="participant-header">
+                        <div class="participant-icon">🧭</div>
+                        <div class="participant-info">
+                            <div class="participant-name">AIファシリテーター</div>
+                            <div class="participant-role">会議進行</div>
+                        </div>
+                        <button class="participant-remove-btn" data-type="facilitator" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                    </div>
+                `;
+                aiMembersContainer.appendChild(facilitatorCard);
+            }
+            
+            // AIメンバーを表示
+            Object.entries(participants.aiMembers).forEach(([id, member]) => {
+                const personalityIcons = {
+                    'idea': '💡',
+                    'facilitator': '🎯',
+                    'cheerful': '😊',
+                    'negative': '😟',
+                    'angry': '😠'
+                };
+                
+                const personalityLabels = {
+                    'idea': '新たなアイディア',
+                    'facilitator': '議論促進',
+                    'cheerful': '明るい',
+                    'negative': 'ネガティブ',
+                    'angry': '怒りっぽい'
+                };
+                
+                const memberCard = document.createElement('div');
+                memberCard.className = 'participant-card';
+                memberCard.id = `ai-member-${id}`;
+                memberCard.innerHTML = `
+                    <div class="participant-header">
+                        <div class="participant-icon">${personalityIcons[member.personality] || '🤖'}</div>
+                        <div class="participant-info">
+                            <div class="participant-name">${member.name}</div>
+                            <div class="participant-role">${personalityLabels[member.personality] || member.personality}</div>
+                        </div>
+                        <button class="participant-remove-btn" data-type="ai_member" data-id="${id}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                    </div>
+                `;
+                aiMembersContainer.appendChild(memberCard);
+            });
+            
+            // 削除ボタンのイベントリスナーを追加
+            document.querySelectorAll('.participant-remove-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const type = btn.getAttribute('data-type');
+                    const id = btn.getAttribute('data-id');
+                    
+                    if (type === 'facilitator') {
+                        if (confirm('AIファシリテーターを削除しますか？')) {
+                            removeFacilitatorFromUI();
+                        }
+                    } else if (type === 'ai_member') {
+                        if (confirm('このAIメンバーを削除しますか？')) {
+                            await deleteAIMember(id);
+                        }
+                    }
+                });
+            });
+        }
+        
+        // AIファシリテーターをUIに追加
+        function addFacilitatorToUI() {
+            participants.facilitator = true;
+            renderParticipants();
+        }
+        
+        // AIファシリテーターをUIから削除
+        function removeFacilitatorFromUI() {
+            participants.facilitator = null;
+            renderParticipants();
+        }
+        
+        // AIメンバーをUIに追加
+        function addAIMemberToUI(id, name, personality) {
+            participants.aiMembers[id] = { name, personality };
+            renderParticipants();
+        }
+        
+        // AIメンバーをUIから削除
+        function removeAIMemberFromUI(id) {
+            delete participants.aiMembers[id];
+            renderParticipants();
         }
 
         const availableFeatures = [
@@ -1904,6 +1989,9 @@
             }
             countdownDiv.style.display = 'none';
             
+            // UIから削除
+            removeFacilitatorFromUI();
+            
             // サーバーに facilitator 機能の無効化を送信
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
@@ -2051,6 +2139,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
+                    removeAIMemberFromUI(memberId);
                     loadAIMembers();
                 }
             })
@@ -2077,6 +2166,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
+                    // 各AIメンバーをUIに追加
+                    data.ai_members.forEach(member => {
+                        addAIMemberToUI(member.id, member.name, member.personality);
+                    });
                     loadAIMembers();
                     countInput.value = 1;
                     alert(`${count}個のAIメンバーを追加しました`);
@@ -2122,8 +2215,10 @@
                     addAIResponse(data.ai_member_name, data.ai_member_personality, data.response, data.timestamp);
                 } else if (data.type === 'facilitator_enabled') {
                     console.log('Facilitator enabled with duration:', data.duration_seconds);
+                    addFacilitatorToUI();
                 } else if (data.type === 'facilitator_disabled') {
                     console.log('Facilitator disabled');
+                    removeFacilitatorFromUI();
                 } else if (data.type === 'partial_summary') {
                     console.log('📊 Received partial_summary:', data);
                     displayPartialSummary(data.summary, data.segment_count, data.timestamp);
@@ -3240,6 +3335,9 @@
     (async () => {
         console.log('Page initialization started');
         console.log('meetingId:', meetingId);
+        
+        // 参加者一覧を初期化
+        renderParticipants();
         
         await initializeMeetingStatus();
         console.log('initializeMeetingStatus completed');
