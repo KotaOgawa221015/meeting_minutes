@@ -233,6 +233,8 @@
             border-radius: 12px;
             border-left: 4px solid #667eea;
             background: #f9fafb;
+            position: relative; /* 子要素の絶対位置の基準にする */
+            transition: all 0.2s ease;
         }
         .bubble.human {
             border-left-color: #3b82f6;
@@ -641,11 +643,23 @@
         .bubble-actions {
             display: none;
             gap: 8px;
-            margin-top: 10px;
+            position: absolute; /* 絶対位置指定 */
+            top: 10px;          /* 上からの位置 */
+            right: 10px;        /* 右からの位置 */
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9); /* 背景を少し白くして視認性を上げる */
+            padding: 4px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+
         .bubble:hover .bubble-actions {
             display: flex;
         }
+        .bubble .transcript-content {
+            padding-right: 80px; /* ボタンが表示されるスペースをあらかじめ確保 */
+        }
+        
         .btn-small {
             padding: 6px 12px;
             font-size: 12px;
