@@ -548,10 +548,14 @@
             background: #f8fafc;
             border-radius: 8px;
             border-left: 4px solid #667eea;
+            transition: background-color 0.3s ease;
         }
         .transcript-item.facilitator-message {
             background: #fef3c7;
             border-left-color: #f59e0b;
+        }
+        .transcript-item.has-mark {
+            background: var(--mark-color, #f8fafc) !important;
         }
         .transcript-content {
             flex: 1;
@@ -2343,29 +2347,29 @@
                         return;
                     }
                     
-                    // 既存のマークが同じ色の場合は削除
-                    const existingMark = item.querySelector(`[data-mark-color="${color}"]`);
-                    if (existingMark) {
-                        existingMark.remove();
-                    }
-                    
-                    // 新しいマークバッジを追加
-                    const badge = document.createElement('span');
-                    badge.className = `mark-badge ${color}`;
-                    badge.dataset.markColor = color;
-                    badge.dataset.markId = data.mark_id;
-                    badge.innerHTML = `
-                        ${data.color_display}
-                        <button style="background: none; border: none; cursor: pointer; padding: 0; margin-left: 4px;" onclick="removeMark(${data.mark_id}, ${transcriptId})">×</button>
-                    `;
-                    const stampsContainer = document.getElementById(`stamps-${transcriptId}`);
-                    if (stampsContainer) {
-                        stampsContainer.appendChild(badge);
-                    }
-                    
-                    // 背景色を変更
-                    item.style.setProperty('--mark-color', getMarkColorValue(color));
+                    // 背景色を直接設定
+                    const bgColor = getMarkColorValue(color);
+                    item.style.backgroundColor = bgColor;
                     item.classList.add('has-mark');
+                    // マークIDをデータ属性に保存（削除時に参照）
+                    item.dataset.markId = data.mark_id;
+                    item.dataset.markColor = color;
+                    
+                    // ×ボタンを追加
+                    let removeBtn = item.querySelector('.mark-remove-btn');
+                    if (!removeBtn) {
+                        removeBtn = document.createElement('button');
+                        removeBtn.className = 'mark-remove-btn';
+                        removeBtn.type = 'button';
+                        removeBtn.textContent = '×';
+                        removeBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 18px; color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s;';
+                        removeBtn.onmouseover = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.3)';
+                        removeBtn.onmouseout = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.2)';
+                        removeBtn.onclick = () => removeMark(data.mark_id, transcriptId);
+                        item.style.position = 'relative';
+                        item.appendChild(removeBtn);
+                    }
+                    
                     console.log('Mark added successfully');
                 } else {
                     console.error('API returned error:', data);
@@ -2403,18 +2407,16 @@
                 const data = await response.json();
                 
                 if (data.status === 'success') {
-                    const badge = document.querySelector(`[data-mark-id="${markId}"]`);
-                    if (badge) {
-                        badge.remove();
-                    }
-                    
-                    // マークが残っていなければ背景色をリセット
                     const item = document.querySelector(`[data-id="${transcriptId}"]`);
                     if (item) {
-                        const remainingMarks = document.querySelectorAll(`[data-id="${transcriptId}"] [data-mark-id]`);
-                        if (remainingMarks.length === 0) {
-                            item.style.removeProperty('--mark-color');
-                            item.classList.remove('has-mark');
+                        item.classList.remove('has-mark');
+                        item.style.backgroundColor = '#f8fafc';
+                        item.dataset.markId = '';
+                        item.dataset.markColor = '';
+                        // ×ボタンを削除
+                        const removeBtn = item.querySelector('.mark-remove-btn');
+                        if (removeBtn) {
+                            removeBtn.remove();
                         }
                     }
                 }
