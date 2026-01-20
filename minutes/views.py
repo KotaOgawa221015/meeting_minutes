@@ -117,17 +117,32 @@ def get_meeting_data(request, meeting_id):
     """会議のトランスクリプトと要約データを取得"""
     meeting = get_object_or_404(Meeting, id=meeting_id)
     
-    # トランスクリプトデータを取得
+    # トランスクリプトデータを取得（スタンプ、コメント、マーク含む）
     transcripts = meeting.transcripts.all().order_by('timestamp')
-    transcript_list = [
-        {
+    transcript_list = []
+    
+    for t in transcripts:
+        # スタンプを取得
+        stamps = TranscriptStamp.objects.filter(transcript=t).values_list('stamp_type', 'id')
+        stamps_list = [{'type': s[0], 'id': s[1]} for s in stamps]
+        
+        # コメントを取得
+        comments = TranscriptComment.objects.filter(transcript=t).values('id', 'comment_text', 'created_by__username', 'created_at', 'updated_at')
+        comments_list = list(comments)
+        
+        # マークを取得
+        marks = TranscriptMark.objects.filter(transcript=t).values('id', 'color', 'note', 'created_by__username', 'created_at')
+        marks_list = list(marks)
+        
+        transcript_list.append({
             'id': t.id,
             'timestamp': t.timestamp,
             'speaker': t.speaker,
-            'text': t.text
-        }
-        for t in transcripts
-    ]
+            'text': t.text,
+            'stamps': stamps_list,
+            'comments': comments_list,
+            'marks': marks_list
+        })
     
     # 要約データを取得
     summary_data = None
@@ -369,6 +384,9 @@ def remove_mark(request, mark_id):
         mark.delete()
         return JsonResponse({'status': 'success'})
     except Exception as e:
+        import traceback
+        print(f"[ERROR] Error removing mark {mark_id}: {str(e)}")
+        traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 

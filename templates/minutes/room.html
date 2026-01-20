@@ -1280,9 +1280,107 @@
                         timestamp.className = 'timestamp';
                         timestamp.textContent = new Date(transcript.timestamp * 1000).toLocaleTimeString('ja-JP');
                         
+                        const actions = document.createElement('div');
+                        actions.className = 'bubble-actions';
+                        
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'btn-small btn-edit';
+                        editBtn.textContent = '編集';
+                        editBtn.onclick = () => editTranscript(transcript.id);
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn-small btn-delete';
+                        deleteBtn.textContent = '削除';
+                        deleteBtn.onclick = () => deleteTranscript(transcript.id);
+                        
+                        actions.appendChild(editBtn);
+                        actions.appendChild(deleteBtn);
+                        
+                        // 機能パネル（スタンプ、コメント、マーク）を追加
+                        const featuresPanel = createTranscriptFeaturesPanel(transcript.id);
+                        
                         item.appendChild(speaker);
                         item.appendChild(content);
                         item.appendChild(timestamp);
+                        item.appendChild(actions);
+                        item.appendChild(featuresPanel);
+                        
+                        // スタンプを復元
+                        if (transcript.stamps && transcript.stamps.length > 0) {
+                            const stampsContainer = document.getElementById(`stamps-${transcript.id}`);
+                            if (stampsContainer) {
+                                transcript.stamps.forEach(stamp => {
+                                    const stampTypes = [
+                                        { value: 'important', label: '⭐ 重要', display: '⭐' },
+                                        { value: 'action', label: '✅ アクション', display: '✅' },
+                                        { value: 'decision', label: '🎯 決定', display: '🎯' },
+                                        { value: 'question', label: '❓ 質問', display: '❓' },
+                                        { value: 'good', label: '👍 良い点', display: '👍' },
+                                        { value: 'follow_up', label: '📝 フォローアップ', display: '📝' }
+                                    ];
+                                    const stampType = stampTypes.find(s => s.value === stamp.type);
+                                    if (stampType) {
+                                        const badge = document.createElement('span');
+                                        badge.className = 'stamp-badge';
+                                        badge.dataset.stampType = stamp.type;
+                                        badge.dataset.stampId = stamp.id;
+                                        badge.innerHTML = `
+                                            ${stampType.display}
+                                            <button class="stamp-remove" onclick="removeStamp(${stamp.id}, ${transcript.id})">×</button>
+                                        `;
+                                        stampsContainer.appendChild(badge);
+                                    }
+                                });
+                            }
+                        }
+                        
+                        // コメントを復元
+                        if (transcript.comments && transcript.comments.length > 0) {
+                            const commentsContainer = document.getElementById(`comments-${transcript.id}`);
+                            if (commentsContainer) {
+                                transcript.comments.forEach(comment => {
+                                    const commentEl = document.createElement('div');
+                                    commentEl.className = 'comment-item';
+                                    commentEl.dataset.commentId = comment.id;
+                                    const createdTime = new Date(comment.created_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                                    commentEl.innerHTML = `
+                                        <div class="comment-header">
+                                            <span class="comment-user">${comment.created_by__username || 'Unknown'}</span>
+                                            <span class="comment-time">${createdTime}</span>
+                                        </div>
+                                        <div class="comment-text">${comment.comment_text}</div>
+                                        <div class="comment-actions">
+                                            <button class="comment-edit-btn" onclick="editComment(${comment.id}, ${transcript.id})">編集</button>
+                                            <button class="comment-delete-btn" onclick="deleteComment(${comment.id}, ${transcript.id})">削除</button>
+                                        </div>
+                                    `;
+                                    commentsContainer.appendChild(commentEl);
+                                });
+                            }
+                        }
+                        
+                        // マークを復元
+                        if (transcript.marks && transcript.marks.length > 0) {
+                            const mark = transcript.marks[0]; // 最新のマークを取得
+                            if (mark) {
+                                item.style.backgroundColor = getMarkColorValue(mark.color);
+                                item.classList.add('has-mark');
+                                item.dataset.markId = mark.id;
+                                item.dataset.markColor = mark.color;
+                                
+                                // ×ボタンを追加
+                                const removeBtn = document.createElement('button');
+                                removeBtn.className = 'mark-remove-btn';
+                                removeBtn.type = 'button';
+                                removeBtn.textContent = '×';
+                                removeBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 18px; color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s;';
+                                removeBtn.onmouseover = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.3)';
+                                removeBtn.onmouseout = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.2)';
+                                removeBtn.onclick = () => removeMark(mark.id, transcript.id);
+                                item.style.position = 'relative';
+                                item.appendChild(removeBtn);
+                            }
+                        }
                         
                         transcriptArea.appendChild(item);
                         transcriptCount++;
@@ -2324,6 +2422,19 @@
         async function addMark(transcriptId, color) {
             console.log('addMark called:', { transcriptId, color });
             try {
+                const item = document.querySelector(`[data-id="${transcriptId}"]`);
+                if (!item) {
+                    console.error('Transcript item not found:', `[data-id="${transcriptId}"]`);
+                    return;
+                }
+                
+                // 既存のマークがある場合は先に削除
+                const existingMarkId = item.dataset.markId;
+                if (existingMarkId) {
+                    console.log('Removing existing mark:', existingMarkId);
+                    await removeMark(existingMarkId, transcriptId);
+                }
+                
                 const url = `/transcript/${transcriptId}/mark/add/`;
                 console.log('Fetching URL:', url);
                 
@@ -2341,12 +2452,6 @@
                 console.log('Response data:', data);
                 
                 if (data.status === 'success') {
-                    const item = document.querySelector(`[data-id="${transcriptId}"]`);
-                    if (!item) {
-                        console.error('Transcript item not found:', `[data-id="${transcriptId}"]`);
-                        return;
-                    }
-                    
                     // 背景色を直接設定
                     const bgColor = getMarkColorValue(color);
                     item.style.backgroundColor = bgColor;
@@ -2397,6 +2502,7 @@
         // マークを削除
         async function removeMark(markId, transcriptId) {
             try {
+                console.log('removeMark called:', { markId, transcriptId });
                 const response = await fetch(`/mark/${markId}/remove/`, {
                     method: 'DELETE',
                     headers: {
@@ -2404,7 +2510,9 @@
                     }
                 });
                 
+                console.log('Response status:', response.status);
                 const data = await response.json();
+                console.log('Response data:', data);
                 
                 if (data.status === 'success') {
                     const item = document.querySelector(`[data-id="${transcriptId}"]`);
@@ -2419,9 +2527,16 @@
                             removeBtn.remove();
                         }
                     }
+                    return true;
+                } else {
+                    console.error('API returned error:', data);
+                    alert('マーク削除に失敗しました: ' + (data.message || 'Unknown error'));
+                    return false;
                 }
             } catch (error) {
                 console.error('Error removing mark:', error);
+                alert('マーク削除中にエラーが発生しました: ' + error.message);
+                return false;
             }
         }
 
