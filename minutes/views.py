@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import Meeting, MinuteSummary
+from django.views.decorators.http import require_http_methods
+import json
+from .models import Meeting, MinuteSummary, Transcript, TranscriptStamp, TranscriptComment, TranscriptMark, AIMember, AIMemberResponse
 
 def index(request):
     """会議一覧"""
@@ -75,21 +77,72 @@ def get_meeting_status(request, meeting_id):
     })
 
 
+@require_http_methods(["POST"])
+def save_manual_transcript(request, meeting_id):
+    """手動入力されたトランスクリプトをサーバーに保存"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        data = json.loads(request.body)
+        text = data.get('text', '').strip()
+        
+        if not text:
+            return JsonResponse({'status': 'error', 'message': 'text is required'}, status=400)
+        
+        # タイムスタンプを計算（会議開始時からの秒数）
+        if meeting.start_time:
+            from django.utils import timezone
+            elapsed = (timezone.now() - meeting.start_time).total_seconds()
+        else:
+            elapsed = 0
+        
+        # トランスクリプトを作成
+        transcript = Transcript.objects.create(
+            meeting=meeting,
+            timestamp=elapsed,
+            speaker='手動入力',
+            text=text
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'transcript_id': transcript.id,
+            'text': transcript.text,
+            'timestamp': transcript.timestamp
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
 def get_meeting_data(request, meeting_id):
     """会議のトランスクリプトと要約データを取得"""
     meeting = get_object_or_404(Meeting, id=meeting_id)
     
-    # トランスクリプトデータを取得
+    # トランスクリプトデータを取得（スタンプ、コメント、マーク含む）
     transcripts = meeting.transcripts.all().order_by('timestamp')
-    transcript_list = [
-        {
+    transcript_list = []
+    
+    for t in transcripts:
+        # スタンプを取得
+        stamps = TranscriptStamp.objects.filter(transcript=t).values_list('stamp_type', 'id')
+        stamps_list = [{'type': s[0], 'id': s[1]} for s in stamps]
+        
+        # コメントを取得
+        comments = TranscriptComment.objects.filter(transcript=t).values('id', 'comment_text', 'created_by__username', 'created_at', 'updated_at')
+        comments_list = list(comments)
+        
+        # マークを取得
+        marks = TranscriptMark.objects.filter(transcript=t).values('id', 'color', 'note', 'created_by__username', 'created_at')
+        marks_list = list(marks)
+        
+        transcript_list.append({
             'id': t.id,
             'timestamp': t.timestamp,
             'speaker': t.speaker,
-            'text': t.text
-        }
-        for t in transcripts
-    ]
+            'text': t.text,
+            'stamps': stamps_list,
+            'comments': comments_list,
+            'marks': marks_list
+        })
     
     # 要約データを取得
     summary_data = None
@@ -125,3 +178,344 @@ def get_meeting_data(request, meeting_id):
 def readme(request):
     """READMEページ"""
     return render(request, 'minutes/readme.html')
+
+
+# ========================================
+# Transcript Stamp API (スタンプ機能)
+# ========================================
+
+@require_http_methods(["POST"])
+def add_stamp(request, transcript_id):
+    """文字起こしにスタンプを追加"""
+    try:
+        transcript = get_object_or_404(Transcript, id=transcript_id)
+        data = json.loads(request.body)
+        stamp_type = data.get('stamp_type')
+        
+        if not stamp_type:
+            return JsonResponse({'status': 'error', 'message': 'stamp_type is required'}, status=400)
+        
+        # 既存のスタンプがあれば削除
+        TranscriptStamp.objects.filter(transcript=transcript, stamp_type=stamp_type).delete()
+        
+        # 新しいスタンプを作成
+        stamp = TranscriptStamp.objects.create(
+            transcript=transcript,
+            stamp_type=stamp_type,
+            created_by=request.user if request.user.is_authenticated else None
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'stamp_id': stamp.id,
+            'stamp_type': stamp.stamp_type,
+            'stamp_display': stamp.get_stamp_type_display()
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["DELETE"])
+def remove_stamp(request, stamp_id):
+    """スタンプを削除"""
+    try:
+        stamp = get_object_or_404(TranscriptStamp, id=stamp_id)
+        stamp.delete()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_transcript_stamps(request, transcript_id):
+    """トランスクリプトのスタンプ一覧を取得"""
+    try:
+        transcript = get_object_or_404(Transcript, id=transcript_id)
+        stamps = TranscriptStamp.objects.filter(transcript=transcript)
+        
+        stamps_data = [
+            {
+                'id': stamp.id,
+                'stamp_type': stamp.stamp_type,
+                'stamp_display': stamp.get_stamp_type_display(),
+                'created_at': stamp.created_at.isoformat()
+            }
+            for stamp in stamps
+        ]
+        
+        return JsonResponse({'status': 'success', 'stamps': stamps_data})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ========================================
+# Transcript Comment API (コメント機能)
+# ========================================
+
+@require_http_methods(["POST"])
+def add_comment(request, transcript_id):
+    """文字起こしにコメントを追加"""
+    try:
+        transcript = get_object_or_404(Transcript, id=transcript_id)
+        data = json.loads(request.body)
+        comment_text = data.get('comment_text', '').strip()
+        
+        if not comment_text:
+            return JsonResponse({'status': 'error', 'message': 'comment_text is required'}, status=400)
+        
+        comment = TranscriptComment.objects.create(
+            transcript=transcript,
+            comment_text=comment_text,
+            created_by=request.user if request.user.is_authenticated else None
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'comment_id': comment.id,
+            'comment_text': comment.comment_text,
+            'created_at': comment.created_at.isoformat()
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def edit_comment(request, comment_id):
+    """コメントを編集"""
+    try:
+        comment = get_object_or_404(TranscriptComment, id=comment_id)
+        data = json.loads(request.body)
+        comment_text = data.get('comment_text', '').strip()
+        
+        if not comment_text:
+            return JsonResponse({'status': 'error', 'message': 'comment_text is required'}, status=400)
+        
+        comment.comment_text = comment_text
+        comment.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'comment_id': comment.id,
+            'comment_text': comment.comment_text,
+            'updated_at': comment.updated_at.isoformat()
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["DELETE"])
+def delete_comment(request, comment_id):
+    """コメントを削除"""
+    try:
+        comment = get_object_or_404(TranscriptComment, id=comment_id)
+        comment.delete()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_transcript_comments(request, transcript_id):
+    """トランスクリプトのコメント一覧を取得"""
+    try:
+        transcript = get_object_or_404(Transcript, id=transcript_id)
+        comments = TranscriptComment.objects.filter(transcript=transcript)
+        
+        comments_data = [
+            {
+                'id': comment.id,
+                'comment_text': comment.comment_text,
+                'created_by': comment.created_by.username if comment.created_by else 'Anonymous',
+                'created_at': comment.created_at.isoformat(),
+                'updated_at': comment.updated_at.isoformat()
+            }
+            for comment in comments
+        ]
+        
+        return JsonResponse({'status': 'success', 'comments': comments_data})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ========================================
+# Transcript Mark API (マーキング機能)
+# ========================================
+
+@require_http_methods(["POST"])
+def add_mark(request, transcript_id):
+    """文字起こしにマーク（ハイライト）を追加"""
+    try:
+        transcript = get_object_or_404(Transcript, id=transcript_id)
+        data = json.loads(request.body)
+        color = data.get('color')
+        note = data.get('note', '')
+        
+        if not color:
+            return JsonResponse({'status': 'error', 'message': 'color is required'}, status=400)
+        
+        # 既存のマークがあれば削除
+        TranscriptMark.objects.filter(transcript=transcript, color=color).delete()
+        
+        # 新しいマークを作成
+        mark = TranscriptMark.objects.create(
+            transcript=transcript,
+            color=color,
+            note=note,
+            created_by=request.user if request.user.is_authenticated else None
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'mark_id': mark.id,
+            'color': mark.color,
+            'color_display': mark.get_color_display(),
+            'note': mark.note,
+            'created_at': mark.created_at.isoformat()
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["DELETE"])
+def remove_mark(request, mark_id):
+    """マークを削除"""
+    try:
+        mark = get_object_or_404(TranscriptMark, id=mark_id)
+        mark.delete()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Error removing mark {mark_id}: {str(e)}")
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def edit_mark(request, mark_id):
+    """マークを編集（ノート更新）"""
+    try:
+        mark = get_object_or_404(TranscriptMark, id=mark_id)
+        data = json.loads(request.body)
+        note = data.get('note', '')
+        
+        mark.note = note
+        mark.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'mark_id': mark.id,
+            'note': mark.note,
+            'updated_at': mark.updated_at.isoformat()
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_transcript_marks(request, transcript_id):
+    """トランスクリプトのマーク一覧を取得"""
+    try:
+        transcript = get_object_or_404(Transcript, id=transcript_id)
+        marks = TranscriptMark.objects.filter(transcript=transcript)
+        
+        marks_data = [
+            {
+                'id': mark.id,
+                'color': mark.color,
+                'color_display': mark.get_color_display(),
+                'note': mark.note,
+                'created_at': mark.created_at.isoformat(),
+                'updated_at': mark.updated_at.isoformat()
+            }
+            for mark in marks
+        ]
+        
+        return JsonResponse({'status': 'success', 'marks': marks_data})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def add_ai_member(request, meeting_id):
+    """AIメンバーを追加"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        data = json.loads(request.body)
+        personality = data.get('personality', 'facilitator')
+        count = data.get('count', 1)
+        
+        # personality のバリデーション
+        valid_personalities = [choice[0] for choice in AIMember.PERSONALITY_CHOICES]
+        if personality not in valid_personalities:
+            return JsonResponse({'status': 'error', 'message': 'Invalid personality'}, status=400)
+        
+        ai_members = []
+        for i in range(count):
+            ai_member = AIMember.objects.create(
+                meeting=meeting,
+                name=f'AI-{personality}',
+                personality=personality,
+                is_active=True
+            )
+            ai_members.append({
+                'id': ai_member.id,
+                'name': ai_member.name,
+                'personality': ai_member.personality,
+                'personality_display': ai_member.get_personality_display(),
+                'is_active': ai_member.is_active,
+                'created_at': ai_member.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'ai_members': ai_members,
+            'total_count': len(ai_members)
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_ai_members(request, meeting_id):
+    """会議のAIメンバー一覧を取得"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        ai_members = meeting.ai_members.all()
+        
+        ai_members_data = [
+            {
+                'id': ai_member.id,
+                'name': ai_member.name,
+                'personality': ai_member.personality,
+                'personality_display': ai_member.get_personality_display(),
+                'is_active': ai_member.is_active,
+                'response_count': ai_member.responses.count(),
+                'created_at': ai_member.created_at.isoformat()
+            }
+            for ai_member in ai_members
+        ]
+        
+        return JsonResponse({
+            'status': 'success',
+            'ai_members': ai_members_data,
+            'total_count': len(ai_members_data)
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["DELETE"])
+def delete_ai_member(request, ai_member_id):
+    """AIメンバーを削除"""
+    try:
+        ai_member = get_object_or_404(AIMember, id=ai_member_id)
+        meeting_id = ai_member.meeting.id
+        ai_member.delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'AI member deleted',
+            'meeting_id': meeting_id
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

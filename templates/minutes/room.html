@@ -233,6 +233,8 @@
             border-radius: 12px;
             border-left: 4px solid #667eea;
             background: #f9fafb;
+            position: relative; /* 子要素の絶対位置の基準にする */
+            transition: all 0.2s ease;
         }
         .bubble.human {
             border-left-color: #3b82f6;
@@ -548,10 +550,14 @@
             background: #f8fafc;
             border-radius: 8px;
             border-left: 4px solid #667eea;
+            transition: background-color 0.3s ease;
         }
         .transcript-item.facilitator-message {
             background: #fef3c7;
             border-left-color: #f59e0b;
+        }
+        .transcript-item.has-mark {
+            background: var(--mark-color, #f8fafc) !important;
         }
         .transcript-content {
             flex: 1;
@@ -637,11 +643,23 @@
         .bubble-actions {
             display: none;
             gap: 8px;
-            margin-top: 10px;
+            position: absolute; /* 絶対位置指定 */
+            top: 10px;          /* 上からの位置 */
+            right: 10px;        /* 右からの位置 */
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9); /* 背景を少し白くして視認性を上げる */
+            padding: 4px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+
         .bubble:hover .bubble-actions {
             display: flex;
         }
+        .bubble .transcript-content {
+            padding-right: 80px; /* ボタンが表示されるスペースをあらかじめ確保 */
+        }
+        
         .btn-small {
             padding: 6px 12px;
             font-size: 12px;
@@ -729,6 +747,304 @@
             border-left: 4px solid #f59e0b;
         }
         
+        /* Transcript Features Styles (Stamp, Comment, Mark) */
+        .transcript-item {
+            position: relative;
+        }
+        
+        .transcript-item.has-stamp {
+            border-top: 3px solid #667eea;
+        }
+        
+        .transcript-item.has-mark {
+            background-color: var(--mark-color, transparent);
+        }
+        
+        .transcript-features {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .stamp-container {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .stamp-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 500;
+        }
+        
+        .stamp-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            color: #c7d2fe;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        
+        .stamp-remove:hover {
+            color: #667eea;
+        }
+        
+        .mark-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .mark-badge.yellow {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+        }
+        
+        .mark-badge.pink {
+            background: #fecdd3;
+            border: 1px solid #fb7185;
+            color: #831843;
+        }
+        
+        .mark-badge.blue {
+            background: #bfdbfe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+        
+        .mark-badge.green {
+            background: #dcfce7;
+            border: 1px solid #4ade80;
+            color: #166534;
+        }
+        
+        .mark-badge.purple {
+            background: #e9d5ff;
+            border: 1px solid #d8b4fe;
+            color: #6b21a8;
+        }
+        
+        .mark-badge.orange {
+            background: #fed7aa;
+            border: 1px solid #fb923c;
+            color: #9a3412;
+        }
+        
+        .comments-section {
+            margin-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 10px;
+        }
+        
+        .comment-item {
+            background: #f9fafb;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            border-left: 2px solid #3b82f6;
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .comment-author {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .comment-time {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+        
+        .comment-text {
+            color: #374151;
+            word-break: break-word;
+        }
+        
+        .comment-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        
+        .comment-edit, .comment-delete {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            color: #9ca3af;
+            padding: 0;
+            transition: color 0.2s;
+        }
+        
+        .comment-edit:hover {
+            color: #3b82f6;
+        }
+        
+        .comment-delete:hover {
+            color: #ef4444;
+        }
+        
+        .transcript-action-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+        
+        .action-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+        }
+        
+        .action-btn:hover {
+            background: #e5e7eb;
+            border-color: #d1d5db;
+        }
+        
+        .action-btn.stamp-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .action-btn.comment-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .action-btn.mark-btn:hover {
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+        
+        .stamp-menu, .mark-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 150px;
+        }
+        
+        .stamp-menu.active, .mark-menu.active {
+            display: block;
+        }
+        
+        .stamp-menu-item, .mark-menu-item {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            transition: background 0.2s;
+        }
+        
+        .stamp-menu-item:hover, .mark-menu-item:hover {
+            background: #f3f4f6;
+        }
+        
+        .comment-input-box {
+            display: none;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .comment-input-box.active {
+            display: block;
+        }
+        
+        .comment-input-box textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 40px;
+            margin-bottom: 6px;
+        }
+        
+        .comment-input-box textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .comment-input-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .comment-input-actions button {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .comment-submit {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .comment-submit:hover {
+            background: #2563eb;
+        }
+        
+        .comment-cancel {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .comment-cancel:hover {
+            background: #d1d5db;
+        }
+        
         @media (max-width: 1024px) {
             aside {
                 width: 200px;
@@ -755,37 +1071,12 @@
             <div class="section">
                 <div class="section-title">👥 参加者</div>
                 
-                <div class="participant-card" id="facilitatorCard">
-                    <div class="participant-header">
-                        <div class="participant-icon">🧭</div>
-                        <div class="participant-info">
-                            <div class="participant-name">AIファシリテーター</div>
-                            <div class="participant-role">会議進行・議事録作成</div>
-                        </div>
-                        <span class="participant-status"></span>
-                    </div>
+                <div id="participantsList" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- 参加者がここに動的に追加されます -->
                 </div>
                 
-                <div class="participant-card">
-                    <div class="participant-header">
-                        <div class="participant-icon">📝</div>
-                        <div class="participant-info">
-                            <div class="participant-name">AI書記</div>
-                            <div class="participant-role">リアルタイム文字起こし</div>
-                        </div>
-                        <span class="participant-status"></span>
-                    </div>
-                </div>
-                
-                <div class="participant-card">
-                    <div class="participant-header">
-                        <div class="participant-icon">📊</div>
-                        <div class="participant-info">
-                            <div class="participant-name">AIアナリスト</div>
-                            <div class="participant-role">要約・分析</div>
-                        </div>
-                        <span class="participant-status"></span>
-                    </div>
+                <div id="aiMembersContainer" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                    <!-- AIファシリテーター / AIメンバーがここに動的に追加されます -->
                 </div>
                 
                 <div id="humanParticipants"></div>
@@ -823,7 +1114,6 @@
                 <section class="panel">
                     <div class="panel-header">📝 文字起こし(リアルタイム)</div>
                     <div class="panel-body talk" id="transcriptArea">
-                        <div class="empty-state">録音を開始すると、ここに文字起こしが表示されます</div>
                     </div>
                     <div class="visualizer-container">
                         <canvas id="visualizer"></canvas>
@@ -843,18 +1133,8 @@
 
                 <div class="right" id="rightPanels">
                     <section class="panel">
-                        <div class="panel-header">🧭 AIファシリテーション</div>
-                        <div class="panel-body" id="facilitationContent">
-                            <p><strong>状態:</strong>待機中</p>
-                        </div>
-                    </section>
-
-                    <section class="panel">
                         <div class="panel-header">📋 要約(リアルタイム)</div>
                         <div class="panel-body" id="summaryContent">
-                            <ul id="summaryList">
-                                <li style="color: #9ca3af;">会議開始後、要約を生成します</li>
-                            </ul>
                             <div class="summary-detail" id="summarySection"></div>
                         </div>
                     </section>
@@ -887,6 +1167,22 @@
         console.log('Meeting ID:', meetingId);
         console.log('WebSocket URL:', wsUrl);
         
+        // Cookie から CSRF Token を取得する関数
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
         let socket = null;
         let mediaRecorder = null;
         let audioContext = null;
@@ -897,6 +1193,7 @@
         const startBtn = document.getElementById('startBtn');
         const transcriptArea = document.getElementById('transcriptArea');
         const statusText = document.getElementById('statusText');
+        const summaryContent = document.getElementById('summaryContent');
         const summarySection = document.getElementById('summarySection');
         const statDuration = document.getElementById('statDuration');
         const statTranscripts = document.getElementById('statTranscripts');
@@ -912,14 +1209,33 @@
         console.log('DOM elements initialized:');
         console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
         console.log('- transcriptArea:', transcriptArea ? 'found' : 'NOT FOUND');
+        console.log('- summaryContent:', summaryContent ? 'found' : 'NOT FOUND');
         console.log('- summarySection:', summarySection ? 'found' : 'NOT FOUND');
         console.log('- summarySection innerHTML:', summarySection ? summarySection.innerHTML.substring(0, 100) : 'N/A');
         console.log('- statusText:', statusText ? 'found' : 'NOT FOUND');
+        
+        // 初期段階で要約セクションの表示を確認・強制
+        if (summaryContent) {
+            summaryContent.style.display = 'block';
+            summaryContent.style.visibility = 'visible';
+            console.log('summaryContent initialized - display set to block');
+        }
+        if (summarySection) {
+            summarySection.style.display = 'block';
+            summarySection.style.visibility = 'visible';
+            console.log('summarySection initialized - display set to block');
+        }
         
         let transcriptItems = [];
         let panelIdCounter = 0;
         let activePanels = {};
         let isMeetingEnded = false;
+        
+        // 参加者管理
+        let participants = {
+            facilitator: null,  // AIファシリテーター
+            aiMembers: {}        // AIメンバー: { id: {name, personality} }
+        };
         
         // 統計用の時間計測
         let durationSeconds = 0;
@@ -995,9 +1311,107 @@
                         timestamp.className = 'timestamp';
                         timestamp.textContent = new Date(transcript.timestamp * 1000).toLocaleTimeString('ja-JP');
                         
+                        const actions = document.createElement('div');
+                        actions.className = 'bubble-actions';
+                        
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'btn-small btn-edit';
+                        editBtn.textContent = '編集';
+                        editBtn.onclick = () => editTranscript(transcript.id);
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn-small btn-delete';
+                        deleteBtn.textContent = '削除';
+                        deleteBtn.onclick = () => deleteTranscript(transcript.id);
+                        
+                        actions.appendChild(editBtn);
+                        actions.appendChild(deleteBtn);
+                        
+                        // 機能パネル（スタンプ、コメント、マーク）を追加
+                        const featuresPanel = createTranscriptFeaturesPanel(transcript.id);
+                        
                         item.appendChild(speaker);
                         item.appendChild(content);
                         item.appendChild(timestamp);
+                        item.appendChild(actions);
+                        item.appendChild(featuresPanel);
+                        
+                        // スタンプを復元
+                        if (transcript.stamps && transcript.stamps.length > 0) {
+                            const stampsContainer = document.getElementById(`stamps-${transcript.id}`);
+                            if (stampsContainer) {
+                                transcript.stamps.forEach(stamp => {
+                                    const stampTypes = [
+                                        { value: 'important', label: '⭐ 重要', display: '⭐' },
+                                        { value: 'action', label: '✅ アクション', display: '✅' },
+                                        { value: 'decision', label: '🎯 決定', display: '🎯' },
+                                        { value: 'question', label: '❓ 質問', display: '❓' },
+                                        { value: 'good', label: '👍 良い点', display: '👍' },
+                                        { value: 'follow_up', label: '📝 フォローアップ', display: '📝' }
+                                    ];
+                                    const stampType = stampTypes.find(s => s.value === stamp.type);
+                                    if (stampType) {
+                                        const badge = document.createElement('span');
+                                        badge.className = 'stamp-badge';
+                                        badge.dataset.stampType = stamp.type;
+                                        badge.dataset.stampId = stamp.id;
+                                        badge.innerHTML = `
+                                            ${stampType.display}
+                                            <button class="stamp-remove" onclick="removeStamp(${stamp.id}, ${transcript.id})">×</button>
+                                        `;
+                                        stampsContainer.appendChild(badge);
+                                    }
+                                });
+                            }
+                        }
+                        
+                        // コメントを復元
+                        if (transcript.comments && transcript.comments.length > 0) {
+                            const commentsContainer = document.getElementById(`comments-${transcript.id}`);
+                            if (commentsContainer) {
+                                transcript.comments.forEach(comment => {
+                                    const commentEl = document.createElement('div');
+                                    commentEl.className = 'comment-item';
+                                    commentEl.dataset.commentId = comment.id;
+                                    const createdTime = new Date(comment.created_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                                    commentEl.innerHTML = `
+                                        <div class="comment-header">
+                                            <span class="comment-user">${comment.created_by__username || 'Unknown'}</span>
+                                            <span class="comment-time">${createdTime}</span>
+                                        </div>
+                                        <div class="comment-text">${comment.comment_text}</div>
+                                        <div class="comment-actions">
+                                            <button class="comment-edit-btn" onclick="editComment(${comment.id}, ${transcript.id})">編集</button>
+                                            <button class="comment-delete-btn" onclick="deleteComment(${comment.id}, ${transcript.id})">削除</button>
+                                        </div>
+                                    `;
+                                    commentsContainer.appendChild(commentEl);
+                                });
+                            }
+                        }
+                        
+                        // マークを復元
+                        if (transcript.marks && transcript.marks.length > 0) {
+                            const mark = transcript.marks[0]; // 最新のマークを取得
+                            if (mark) {
+                                item.style.backgroundColor = getMarkColorValue(mark.color);
+                                item.classList.add('has-mark');
+                                item.dataset.markId = mark.id;
+                                item.dataset.markColor = mark.color;
+                                
+                                // ×ボタンを追加
+                                const removeBtn = document.createElement('button');
+                                removeBtn.className = 'mark-remove-btn';
+                                removeBtn.type = 'button';
+                                removeBtn.textContent = '×';
+                                removeBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 18px; color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s;';
+                                removeBtn.onmouseover = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.3)';
+                                removeBtn.onmouseout = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.2)';
+                                removeBtn.onclick = () => removeMark(mark.id, transcript.id);
+                                item.style.position = 'relative';
+                                item.appendChild(removeBtn);
+                            }
+                        }
                         
                         transcriptArea.appendChild(item);
                         transcriptCount++;
@@ -1039,6 +1453,110 @@
             sendBtn.disabled = true;
         }
 
+        // 参加者一覧を描画する関数
+        function renderParticipants() {
+            const participantsList = document.getElementById('participantsList');
+            const aiMembersContainer = document.getElementById('aiMembersContainer');
+            
+            participantsList.innerHTML = '';
+            aiMembersContainer.innerHTML = '';
+            
+            // AIファシリテーターを表示
+            if (participants.facilitator) {
+                const facilitatorCard = document.createElement('div');
+                facilitatorCard.className = 'participant-card';
+                facilitatorCard.id = 'facilitator-participant';
+                facilitatorCard.innerHTML = `
+                    <div class="participant-header">
+                        <div class="participant-icon">🧭</div>
+                        <div class="participant-info">
+                            <div class="participant-name">AIファシリテーター</div>
+                            <div class="participant-role">会議進行</div>
+                        </div>
+                        <button class="participant-remove-btn" data-type="facilitator" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                    </div>
+                `;
+                aiMembersContainer.appendChild(facilitatorCard);
+            }
+            
+            // AIメンバーを表示
+            Object.entries(participants.aiMembers).forEach(([id, member]) => {
+                const personalityIcons = {
+                    'idea': '💡',
+                    'facilitator': '🎯',
+                    'cheerful': '😊',
+                    'negative': '😟',
+                    'angry': '😠'
+                };
+                
+                const personalityLabels = {
+                    'idea': '新たなアイディア',
+                    'facilitator': '議論促進',
+                    'cheerful': '明るい',
+                    'negative': 'ネガティブ',
+                    'angry': '怒りっぽい'
+                };
+                
+                const memberCard = document.createElement('div');
+                memberCard.className = 'participant-card';
+                memberCard.id = `ai-member-${id}`;
+                memberCard.innerHTML = `
+                    <div class="participant-header">
+                        <div class="participant-icon">${personalityIcons[member.personality] || '🤖'}</div>
+                        <div class="participant-info">
+                            <div class="participant-name">${member.name}</div>
+                            <div class="participant-role">${personalityLabels[member.personality] || member.personality}</div>
+                        </div>
+                        <button class="participant-remove-btn" data-type="ai_member" data-id="${id}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                    </div>
+                `;
+                aiMembersContainer.appendChild(memberCard);
+            });
+            
+            // 削除ボタンのイベントリスナーを追加
+            document.querySelectorAll('.participant-remove-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const type = btn.getAttribute('data-type');
+                    const id = btn.getAttribute('data-id');
+                    
+                    if (type === 'facilitator') {
+                        if (confirm('AIファシリテーターを削除しますか？')) {
+                            removeFacilitatorFromUI();
+                        }
+                    } else if (type === 'ai_member') {
+                        if (confirm('このAIメンバーを削除しますか？')) {
+                            await deleteAIMember(id);
+                        }
+                    }
+                });
+            });
+        }
+        
+        // AIファシリテーターをUIに追加
+        function addFacilitatorToUI() {
+            participants.facilitator = true;
+            renderParticipants();
+        }
+        
+        // AIファシリテーターをUIから削除
+        function removeFacilitatorFromUI() {
+            participants.facilitator = null;
+            renderParticipants();
+        }
+        
+        // AIメンバーをUIに追加
+        function addAIMemberToUI(id, name, personality) {
+            participants.aiMembers[id] = { name, personality };
+            renderParticipants();
+        }
+        
+        // AIメンバーをUIから削除
+        function removeAIMemberFromUI(id) {
+            delete participants.aiMembers[id];
+            renderParticipants();
+        }
+
         const availableFeatures = [
             {
                 id: 'timer',
@@ -1056,10 +1574,17 @@
             },
             {
                 id: 'memo',
-                name: '個人用メモ',
-                icon: '📝',
-                description: '自由に書き込めるメモ帳',
+                name: 'メモパネル',
+                icon: '🗒️',
+                description: '自由にメモを取るためのパネル',
                 create: createMemoPanel
+            },
+            {
+                id: 'ai_member',
+                name: 'AIメンバー追加',
+                icon: '🧑‍💻',
+                description: '多様なAIメンバーを追加',
+                create: createAIMemberPanel
             }
         ];
 
@@ -1483,16 +2008,6 @@
                     }
                 }
             };
-
-            activePanels[panelId] = {
-                element: panel,
-                panelType: 'timer',
-                cleanup: () => {
-                    if (timerData.interval) {
-                        clearInterval(timerData.interval);
-                    }
-                }
-            };
             
             return panel;
         }
@@ -1629,111 +2144,399 @@
             return panel;
         }
 
-        function createFacilitatorPanel(panelId) {
-            const panel = document.createElement('section');
-            panel.className = 'panel';
-            panel.id = panelId;
-            
-            const header = document.createElement('div');
-            header.className = 'panel-header';
-            header.innerHTML = `<span class="panel-title">🤖 AIファシリテーター</span>`;
-            
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'panel-close';
-            closeBtn.textContent = '×';
-            closeBtn.onclick = () => removePanel(panelId);
-            header.appendChild(closeBtn);
-            
-            const body = document.createElement('div');
-            body.className = 'panel-body';
-            
-            const facilitatorData = {
-                durationMinutes: 60,
-                durationSeconds: 0,
-                isActive: false,
-                startTime: null,
-                totalSeconds: 0,
-                interval: null
-            };
-            
-            body.innerHTML = `
-                <button class="toggle-settings-btn" id="toggle-${panelId}">
-                    <span class="arrow">▼</span>
-                    <span class="toggle-text">時間設定を隠す</span>
-                </button>
-                <div class="timer-settings" id="settings-${panelId}">
-                    <div class="input-group">
-                        <label>会議予定時間（分）</label>
-                        <input type="number" class="facilitator-minutes" value="60" min="1" max="999">
-                    </div>
-                    <div class="input-group">
-                        <label>会議予定時間（秒）</label>
-                        <input type="number" class="facilitator-seconds" value="0" min="0" max="59">
-                    </div>
+    function createFacilitatorPanel(panelId) {
+        const panel = document.createElement('section');
+        panel.className = 'panel';
+        panel.id = panelId;
+        
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.innerHTML = `<span class="panel-title">🤖 AIファシリテーター</span>`;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'panel-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = () => removePanel(panelId);
+        header.appendChild(closeBtn);
+        
+        const body = document.createElement('div');
+        body.className = 'panel-body';
+        
+        const facilitatorData = {
+            durationMinutes: 60,
+            durationSeconds: 0,
+            isActive: false,
+            startTime: null,
+            totalSeconds: 0,
+            interval: null
+        };
+        
+        body.innerHTML = `
+            <button class="toggle-settings-btn" id="toggle-${panelId}">
+                <span class="arrow">▼</span>
+                <span class="toggle-text">時間設定を隠す</span>
+            </button>
+            <div class="timer-settings" id="settings-${panelId}">
+                <div class="input-group">
+                    <label>会議予定時間（分）</label>
+                    <input type="number" class="facilitator-minutes" value="60" min="1" max="999">
                 </div>
-                <div class="timer-display" id="display-${panelId}">
-                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">✓ 設定時間: <span id="display-time-${panelId}">60:00</span></div>
-                    <div style="display:none;" id="countdown-${panelId}">
-                        <div style="font-size: 36px; font-weight: 700; color: #667eea; text-align: center; margin: 15px 0;" id="countdown-time-${panelId}">60:00</div>
-                        <div style="background: #e5e7eb; border-radius: 8px; height: 8px; margin: 15px 0; overflow: hidden;">
-                            <div id="progress-bar-${panelId}" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
-                        </div>
-                        <div style="font-size: 12px; color: #6b7280; text-align: center;" id="progress-text-${panelId}">0%</div>
+                <div class="input-group">
+                    <label>会議予定時間（秒）</label>
+                    <input type="number" class="facilitator-seconds" value="0" min="0" max="59">
+                </div>
+            </div>
+            <div class="timer-display" id="display-${panelId}">
+                <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">✓ 設定時間: <span id="display-time-${panelId}">60:00</span></div>
+                <div style="display:none;" id="countdown-${panelId}">
+                    <div style="font-size: 36px; font-weight: 700; color: #667eea; text-align: center; margin: 15px 0;" id="countdown-time-${panelId}">60:00</div>
+                    <div style="background: #e5e7eb; border-radius: 8px; height: 8px; margin: 15px 0; overflow: hidden;">
+                        <div id="progress-bar-${panelId}" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
                     </div>
+                    <div style="font-size: 12px; color: #6b7280; text-align: center;" id="progress-text-${panelId}">0%</div>
                 </div>
-                <div class="timer-controls">
-                    <button class="btn primary facilitator-start">スタート</button>
-                    <button class="btn danger facilitator-stop" style="display:none;">停止</button>
-                </div>
-            `;
+            </div>
+            <div class="timer-controls">
+                <button class="btn primary facilitator-start">スタート</button>
+                <button class="btn danger facilitator-stop" style="display:none;">停止</button>
+            </div>
+        `;
+        
+        panel.appendChild(header);
+        panel.appendChild(body);
+        
+        const toggleBtn = body.querySelector(`#toggle-${panelId}`);
+        const toggleText = toggleBtn.querySelector('.toggle-text');
+        const settingsDiv = body.querySelector(`#settings-${panelId}`);
+        const displayDiv = body.querySelector(`#display-${panelId}`);
+        const minutesInput = body.querySelector('.facilitator-minutes');
+        const secondsInput = body.querySelector('.facilitator-seconds');
+        const displayTimeSpan = body.querySelector(`#display-time-${panelId}`);
+        const startBtn = body.querySelector('.facilitator-start');
+        const stopBtn = body.querySelector('.facilitator-stop');
+        const countdownDiv = body.querySelector(`#countdown-${panelId}`);
+        const countdownTimeDisplay = body.querySelector(`#countdown-time-${panelId}`);
+        const progressBar = body.querySelector(`#progress-bar-${panelId}`);
+        const progressText = body.querySelector(`#progress-text-${panelId}`);
+        
+        let settingsCollapsed = false;
+        
+        function updateDisplayTime() {
+            facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
+            facilitatorData.durationSeconds = parseInt(secondsInput.value) || 0;
             
-            panel.appendChild(header);
-            panel.appendChild(body);
-            
-            const minutesInput = body.querySelector('.facilitator-minutes');
-            const secondsInput = body.querySelector('.facilitator-seconds');
-            
-            // パネル状態を保存する関数
-            function savePanelState() {
-                PanelStateManager.savePanelState(meetingId, 'facilitator', panelId, {
-                    minutes: parseInt(minutesInput.value) || 60,
-                    seconds: parseInt(secondsInput.value) || 0
-                });
-            }
-            
-            minutesInput.addEventListener('input', savePanelState);
-            secondsInput.addEventListener('input', savePanelState);
-            
-            savePanelState();  // 初期状態を保存
-            console.log('Initial facilitator state saved:', {minutes: 60, seconds: 0});
-
-            activePanels[panelId] = {
-                element: panel,
-                panelType: 'facilitator',
-                cleanup: () => {
-                    // ...
-                }
-            };
-
-            activePanels[panelId] = {
-                element: panel,
-                panelType: 'facilitator',
-                cleanup: () => {
-                    if (facilitatorData.interval) {
-                        clearInterval(facilitatorData.interval);
-                    }
-                    if (facilitatorData.isActive) {
-                        // 停止ボタンをクリックして終了
-                        const stopBtn = body.querySelector('.facilitator-stop');
-                        if (stopBtn && stopBtn.style.display !== 'none') {
-                            stopBtn.click();
-                        }
-                    }
-                }
-            }
-
-            return panel;
+            const mins = String(facilitatorData.durationMinutes).padStart(2, '0');
+            const secs = String(facilitatorData.durationSeconds).padStart(2, '0');
+            displayTimeSpan.textContent = `${mins}:${secs}`;
         }
+        
+        function updateCountdown() {
+            const elapsedSeconds = Math.floor((Date.now() - facilitatorData.startTime) / 1000);
+            const remainingSeconds = facilitatorData.totalSeconds - elapsedSeconds;
+            
+            if (remainingSeconds <= 0) {
+                // カウントダウン完了
+                clearInterval(facilitatorData.interval);
+                countdownTimeDisplay.textContent = '00:00';
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('ファシリテーター機能', {
+                        body: '設定時間が終了しました'
+                    });
+                }
+                return;
+            }
+            
+            const mins = Math.floor(remainingSeconds / 60);
+            const secs = remainingSeconds % 60;
+            countdownTimeDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            
+            const progress = ((elapsedSeconds / facilitatorData.totalSeconds) * 100);
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${Math.round(progress)}%`;
+        }
+        
+        toggleBtn.addEventListener('click', () => {
+            settingsCollapsed = !settingsCollapsed;
+            if (settingsCollapsed) {
+                settingsDiv.classList.add('collapsed');
+                toggleBtn.classList.add('collapsed');
+                toggleText.textContent = '時間設定を表示';
+            } else {
+                settingsDiv.classList.remove('collapsed');
+                toggleBtn.classList.remove('collapsed');
+                toggleText.textContent = '時間設定を隠す';
+            }
+        });
+        
+        minutesInput.addEventListener('input', () => {
+            if (!facilitatorData.isActive) {
+                updateDisplayTime();
+            }
+        });
+        
+        secondsInput.addEventListener('input', () => {
+            if (!facilitatorData.isActive) {
+                updateDisplayTime();
+            }
+        });
+        
+        startBtn.addEventListener('click', () => {
+            if (facilitatorData.isActive) return;
+            
+            facilitatorData.isActive = true;
+            facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
+            facilitatorData.durationSeconds = parseInt(secondsInput.value) || 0;
+            facilitatorData.totalSeconds = facilitatorData.durationMinutes * 60 + facilitatorData.durationSeconds;
+            facilitatorData.startTime = Date.now();
+            
+            // カウントダウン表示を開始
+            countdownDiv.style.display = 'block';
+            countdownTimeDisplay.textContent = `${String(facilitatorData.durationMinutes).padStart(2, '0')}:${String(facilitatorData.durationSeconds).padStart(2, '0')}`;
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+            
+            // 毎秒更新
+            if (facilitatorData.interval) {
+                clearInterval(facilitatorData.interval);
+            }
+            facilitatorData.interval = setInterval(updateCountdown, 1000);
+            updateCountdown();  // 即座に最初の更新
+            
+            // サーバーに facilitator 機能の有効化を送信
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'enable_facilitator',
+                    duration_seconds: facilitatorData.totalSeconds
+                }));
+                console.log('Facilitator enabled with duration:', facilitatorData.totalSeconds);
+            }
+            
+            // UI を更新
+            if (!settingsCollapsed) {
+                settingsDiv.classList.add('collapsed');
+                toggleBtn.classList.add('collapsed');
+                toggleText.textContent = '時間設定を表示';
+                settingsCollapsed = true;
+            }
+            
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            if (!facilitatorData.isActive) return;
+            
+            facilitatorData.isActive = false;
+            
+            // カウントダウンを停止
+            if (facilitatorData.interval) {
+                clearInterval(facilitatorData.interval);
+                facilitatorData.interval = null;
+            }
+            countdownDiv.style.display = 'none';
+            
+            // サーバーに facilitator 機能の無効化を送信
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'disable_facilitator'
+                }));
+                console.log('Facilitator disabled');
+            }
+            
+            settingsDiv.classList.remove('collapsed');
+            toggleBtn.classList.remove('collapsed');
+            toggleText.textContent = '時間設定を隠す';
+            settingsCollapsed = false;
+            
+            startBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+        });
+        
+        // 初期表示時に時間を更新
+        updateDisplayTime();
+        
+        activePanels[panelId] = {
+            element: panel,
+            cleanup: () => {
+                if (facilitatorData.interval) {
+                    clearInterval(facilitatorData.interval);
+                }
+                if (facilitatorData.isActive) {
+                    stopBtn.click();
+                }
+            }
+        };
+        
+        return panel;
+    }
+
+    function createAIMembersPanel(panelId) {
+        const panel = document.createElement('section');
+        panel.className = 'panel';
+        panel.id = panelId;
+        
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+        header.innerHTML = `<span class="panel-title">🤖 AIメンバー</span>`;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'panel-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = () => removePanel(panelId);
+        header.appendChild(closeBtn);
+        
+        const body = document.createElement('div');
+        body.className = 'panel-body';
+        
+        body.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">AIメンバーの性格</label>
+                    <select class="ai-personality" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <option value="idea">💡 新たなアイディアを提案</option>
+                        <option value="facilitator">🎯 議論を促進</option>
+                        <option value="cheerful">😊 明るい</option>
+                        <option value="negative">😟 ネガティブ</option>
+                        <option value="angry">😠 怒りっぽい</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">追加する数</label>
+                    <input type="number" class="ai-count" value="1" min="1" max="10" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                </div>
+                <button class="btn primary" style="width: 100%; margin-top: 10px;" id="add-ai-btn-${panelId}">AIメンバーを追加</button>
+            </div>
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 15px;">
+                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px;">参加中のAIメンバー</h4>
+                <div id="ai-members-list-${panelId}" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- AIメンバーリストがここに挿入される -->
+                </div>
+            </div>
+        `;
+        
+        panel.appendChild(header);
+        panel.appendChild(body);
+        
+        const personalitySelect = body.querySelector('.ai-personality');
+        const countInput = body.querySelector('.ai-count');
+        const addAIBtn = body.querySelector(`#add-ai-btn-${panelId}`);
+        const aiMembersList = body.querySelector(`#ai-members-list-${panelId}`);
+        
+        let aiMembers = [];
+        
+        function loadAIMembers() {
+            fetch(`/meeting/${meetingId}/ai-members/`)
+                .then(response => response.json())
+                .then(data => {
+                    aiMembers = data.ai_members;
+                    renderAIMembers();
+                })
+                .catch(error => {
+                    console.error('Failed to load AI members:', error);
+                });
+        }
+        
+        function renderAIMembers() {
+            aiMembersList.innerHTML = '';
+            
+            if (aiMembers.length === 0) {
+                aiMembersList.innerHTML = '<p style="color: #9ca3af; font-size: 13px; text-align: center;">まだAIメンバーはいません</p>';
+                return;
+            }
+            
+            aiMembers.forEach(member => {
+                const memberDiv = document.createElement('div');
+                memberDiv.style.cssText = 'padding: 10px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: center;';
+                memberDiv.innerHTML = `
+                    <div>
+                        <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${member.name}</div>
+                        <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
+                        <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
+                    </div>
+                    <button data-member-id="${member.id}" class="delete-ai-btn" style="background: #fee2e2; border: none; color: #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">削除</button>
+                `;
+                aiMembersList.appendChild(memberDiv);
+            });
+            
+            // 削除ボタンのイベントリスナーを追加
+            aiMembersList.querySelectorAll('.delete-ai-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const memberId = btn.getAttribute('data-member-id');
+                    deleteAIMember(memberId);
+                });
+            });
+        }
+        
+        function deleteAIMember(memberId) {
+            if (!confirm('このAIメンバーを削除しますか？')) {
+                return;
+            }
+            
+            fetch(`/ai-member/${memberId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    removeAIMemberFromUI(memberId);
+                    loadAIMembers();
+                }
+            })
+            .catch(error => {
+                console.error('Failed to delete AI member:', error);
+            });
+        }
+        
+        addAIBtn.addEventListener('click', () => {
+            const personality = personalitySelect.value;
+            const count = parseInt(countInput.value) || 1;
+            
+            fetch(`/meeting/${meetingId}/add-ai-member/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    personality: personality,
+                    count: count
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 各AIメンバーをUIに追加
+                    data.ai_members.forEach(member => {
+                        addAIMemberToUI(member.id, member.name, member.personality);
+                    });
+                    loadAIMembers();
+                    countInput.value = 1;
+                    alert(`${count}個のAIメンバーを追加しました`);
+                }
+            })
+            .catch(error => {
+                console.error('Failed to add AI member:', error);
+                alert('AIメンバーの追加に失敗しました');
+            });
+        });
+        
+        // 初期ロード
+        loadAIMembers();
+        
+        activePanels[panelId] = {
+            element: panel,
+            cleanup: () => {}
+        };
+        
+        return panel;
+    }
 
         function connectWebSocket() {
             socket = new WebSocket(wsUrl);
@@ -1743,26 +2546,34 @@
                 statusText.textContent = '接続完了 - 録音準備完了';
             };
 
-                socket.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    console.log('WebSocket message:', data);
-                    
-                    if (data.type === 'transcript') {
-                        addTranscript(data.text);
-                        transcriptCount++;
-                        statTranscripts.textContent = transcriptCount;
-                    } else if (data.type === 'facilitator_message') {
-                        addFacilitatorMessage(data.message, data.phase, data.progress);
-                    } else if (data.type === 'facilitator_enabled') {
-                        console.log('Facilitator enabled with duration:', data.duration_seconds);
-                    } else if (data.type === 'facilitator_disabled') {
-                        console.log('Facilitator disabled');
-                    } else if (data.type === 'summary_complete') {
-                        displaySummary(data.summary);
-                    } else if (data.type === 'error') {
-                        alert('エラー: ' + data.message);
-                    }
-                };
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('WebSocket message:', data);
+                
+                if (data.type === 'transcript') {
+                    // WebSocket経由で受け取ったトランスクリプトを表示
+                    addTranscriptToUI(data.text, data.transcript_id);
+                    transcriptCount++;
+                    statTranscripts.textContent = transcriptCount;
+                } else if (data.type === 'facilitator_message') {
+                    addFacilitatorMessage(data.message, data.phase, data.progress);
+                } else if (data.type === 'ai_response') {
+                    addAIResponse(data.ai_member_name, data.ai_member_personality, data.response, data.timestamp);
+                } else if (data.type === 'facilitator_enabled') {
+                    console.log('Facilitator enabled with duration:', data.duration_seconds);
+                    addFacilitatorToUI();
+                } else if (data.type === 'facilitator_disabled') {
+                    console.log('Facilitator disabled');
+                    removeFacilitatorFromUI();
+                } else if (data.type === 'partial_summary') {
+                    console.log('📊 Received partial_summary:', data);
+                    displayPartialSummary(data.summary, data.segment_count, data.timestamp);
+                } else if (data.type === 'summary_complete') {
+                    displaySummary(data.summary);
+                } else if (data.type === 'error') {
+                    alert('エラー: ' + data.message);
+                }
+            };
 
             socket.onerror = (error) => {
                 console.error('WebSocketエラー:', error);
@@ -1859,56 +2670,500 @@
             }
         }
 
-        function addTranscript(text) {
-            const id = Date.now();
-            const item = document.createElement('div');
-            item.className = 'bubble human';
-            item.dataset.id = id;
+        // スタンプ・コメント・マーク機能用パネルの作成
+        function createTranscriptFeaturesPanel(transcriptId) {
+            const panel = document.createElement('div');
+            panel.className = 'transcript-features';
+            panel.id = `features-${transcriptId}`;
             
-            const speaker = document.createElement('div');
-            speaker.className = 'speaker';
-            speaker.textContent = '👤 参加者';
+            // スタンプコンテナ
+            const stampContainer = document.createElement('div');
+            stampContainer.className = 'stamp-container';
+            stampContainer.id = `stamps-${transcriptId}`;
             
-            const content = document.createElement('div');
-            content.className = 'transcript-content';
-            content.textContent = text;
+            // コメントコンテナ
+            const commentsContainer = document.createElement('div');
+            commentsContainer.className = 'comments-section';
+            commentsContainer.id = `comments-${transcriptId}`;
             
-            const timestamp = document.createElement('div');
-            timestamp.className = 'timestamp';
-            timestamp.textContent = new Date().toLocaleTimeString('ja-JP');
+            // アクションボタン
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'transcript-action-buttons';
             
-            const actions = document.createElement('div');
-            actions.className = 'bubble-actions';
+            // スタンプボタン
+            const stampBtn = document.createElement('button');
+            stampBtn.className = 'action-btn stamp-btn';
+            stampBtn.textContent = '📍 スタンプ';
+            stampBtn.id = `stamp-btn-${transcriptId}`;
             
-            const editBtn = document.createElement('button');
-            editBtn.className = 'btn-small btn-edit';
-            editBtn.textContent = '編集';
-            editBtn.onclick = () => editTranscript(id);
+            const stampMenu = document.createElement('div');
+            stampMenu.className = 'stamp-menu';
+            stampMenu.id = `stamp-menu-${transcriptId}`;
             
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'btn-small btn-delete';
-            deleteBtn.textContent = '削除';
-            deleteBtn.onclick = () => deleteTranscript(id);
+            const stampTypes = [
+                { value: 'important', label: '📍 重要' },
+                { value: 'action', label: '✅ アクション' },
+                { value: 'decision', label: '📋 決定' },
+                { value: 'question', label: '❓ 質問' },
+                { value: 'good', label: '👍 良い意見' },
+                { value: 'follow_up', label: '🔗 フォローアップ' }
+            ];
             
-            actions.appendChild(editBtn);
-            actions.appendChild(deleteBtn);
+            stampTypes.forEach(type => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'stamp-menu-item';
+                item.textContent = type.label;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Stamp menu item clicked:', type.value);
+                    addStamp(transcriptId, type.value);
+                    stampMenu.classList.remove('active');
+                };
+                stampMenu.appendChild(item);
+            });
             
-            item.appendChild(speaker);
-            item.appendChild(content);
-            item.appendChild(timestamp);
-            item.appendChild(actions);
+            stampBtn.addEventListener('click', (e) => {
+                console.log('Stamp button clicked');
+                e.stopPropagation();
+                // 他のメニューを閉じる
+                const otherMenus = document.querySelectorAll(`.mark-menu.active`);
+                otherMenus.forEach(menu => menu.classList.remove('active'));
+                // このメニューをトグル
+                stampMenu.classList.toggle('active');
+            });
             
-            transcriptArea.appendChild(item);
-            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            // コメントボタン
+            const commentBtn = document.createElement('button');
+            commentBtn.className = 'action-btn comment-btn';
+            commentBtn.textContent = '💬 コメント';
+            commentBtn.onclick = (e) => {
+                e.stopPropagation();
+                toggleCommentInput(transcriptId);
+            };
             
-            transcriptItems.push({ id, text, timestamp: new Date() });
+            // マークボタン
+            const markBtn = document.createElement('button');
+            markBtn.className = 'action-btn mark-btn';
+            markBtn.textContent = '🎨 マーク';
+            markBtn.id = `mark-btn-${transcriptId}`;
             
-            // ファシリテーターカードをアクティブに
-            const facilitatorCard = document.getElementById('facilitatorCard');
-            facilitatorCard.classList.add('speaking');
-            setTimeout(() => {
-                facilitatorCard.classList.remove('speaking');
-            }, 2000);
+            const markMenu = document.createElement('div');
+            markMenu.className = 'mark-menu';
+            markMenu.id = `mark-menu-${transcriptId}`;
+            
+            const markColors = [
+                { value: 'yellow', label: '🟨 黄' },
+                { value: 'pink', label: '🟥 ピンク' },
+                { value: 'blue', label: '🟦 青' },
+                { value: 'green', label: '🟩 緑' },
+                { value: 'purple', label: '🟪 紫' },
+                { value: 'orange', label: '🟧 オレンジ' }
+            ];
+            
+            markColors.forEach(color => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'mark-menu-item';
+                item.textContent = color.label;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Mark menu item clicked:', color.value);
+                    addMark(transcriptId, color.value);
+                    markMenu.classList.remove('active');
+                };
+                markMenu.appendChild(item);
+            });
+            
+            markBtn.addEventListener('click', (e) => {
+                console.log('Mark button clicked');
+                e.stopPropagation();
+                // 他のメニューを閉じる
+                const otherMenus = document.querySelectorAll(`.stamp-menu.active`);
+                otherMenus.forEach(menu => menu.classList.remove('active'));
+                // このメニューをトグル
+                markMenu.classList.toggle('active');
+            });
+            
+            // コメント入力ボックス
+            const commentInputBox = document.createElement('div');
+            commentInputBox.className = 'comment-input-box';
+            commentInputBox.id = `comment-input-${transcriptId}`;
+            
+            const textarea = document.createElement('textarea');
+            textarea.placeholder = 'コメントを入力...';
+            textarea.id = `comment-textarea-${transcriptId}`;
+            
+            const inputActions = document.createElement('div');
+            inputActions.className = 'comment-input-actions';
+            
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'comment-submit';
+            submitBtn.textContent = '送信';
+            submitBtn.onclick = () => submitComment(transcriptId);
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'comment-cancel';
+            cancelBtn.textContent = 'キャンセル';
+            cancelBtn.onclick = () => toggleCommentInput(transcriptId);
+            
+            inputActions.appendChild(submitBtn);
+            inputActions.appendChild(cancelBtn);
+            
+            commentInputBox.appendChild(textarea);
+            commentInputBox.appendChild(inputActions);
+            
+            actionButtons.appendChild(stampBtn);
+            actionButtons.appendChild(stampMenu);
+            actionButtons.appendChild(commentBtn);
+            actionButtons.appendChild(markBtn);
+            actionButtons.appendChild(markMenu);
+            
+            panel.appendChild(stampContainer);
+            panel.appendChild(commentsContainer);
+            panel.appendChild(actionButtons);
+            panel.appendChild(commentInputBox);
+            
+            // クリック時にメニューを閉じる（外側のクリックのみ）
+            document.addEventListener('click', (e) => {
+                // パネル内のクリックならメニューを開いたままにする
+                if (!panel.contains(e.target)) {
+                    stampMenu.classList.remove('active');
+                    markMenu.classList.remove('active');
+                }
+            });
+            
+            return panel;
+        }
+        
+        // スタンプを追加
+        async function addStamp(transcriptId, stampType) {
+            console.log('addStamp called:', { transcriptId, stampType });
+            try {
+                const url = `/transcript/${transcriptId}/stamp/add/`;
+                console.log('Fetching URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ stamp_type: stampType })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.status === 'success') {
+                    const stampsContainer = document.getElementById(`stamps-${transcriptId}`);
+                    if (!stampsContainer) {
+                        console.error('Stamps container not found:', `stamps-${transcriptId}`);
+                        return;
+                    }
+                    
+                    // 既存のスタンプが同じタイプの場合は削除
+                    const existingStamp = stampsContainer.querySelector(`[data-stamp-type="${stampType}"]`);
+                    if (existingStamp) {
+                        existingStamp.remove();
+                    }
+                    
+                    // 新しいスタンプバッジを追加
+                    const badge = document.createElement('span');
+                    badge.className = 'stamp-badge';
+                    badge.dataset.stampType = stampType;
+                    badge.dataset.stampId = data.stamp_id;
+                    badge.innerHTML = `
+                        ${data.stamp_display}
+                        <button class="stamp-remove" onclick="removeStamp(${data.stamp_id}, ${transcriptId})">×</button>
+                    `;
+                    stampsContainer.appendChild(badge);
+                    console.log('Stamp added successfully');
+                } else {
+                    console.error('API returned error:', data);
+                    alert('スタンプの追加に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding stamp:', error);
+                alert('スタンプの追加中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // スタンプを削除
+        async function removeStamp(stampId, transcriptId) {
+            try {
+                const response = await fetch(`/stamp/${stampId}/remove/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const badge = document.querySelector(`[data-stamp-id="${stampId}"]`);
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing stamp:', error);
+            }
+        }
+        
+        // コメント入力を表示/非表示
+        function toggleCommentInput(transcriptId) {
+            const input = document.getElementById(`comment-input-${transcriptId}`);
+            input.classList.toggle('active');
+            if (input.classList.contains('active')) {
+                document.getElementById(`comment-textarea-${transcriptId}`).focus();
+            }
+        }
+        
+        // コメントを送信
+        async function submitComment(transcriptId) {
+            console.log('submitComment called:', transcriptId);
+            const textarea = document.getElementById(`comment-textarea-${transcriptId}`);
+            const commentText = textarea.value.trim();
+            
+            if (!commentText) {
+                console.warn('Comment text is empty');
+                return;
+            }
+            
+            try {
+                const url = `/transcript/${transcriptId}/comment/add/`;
+                console.log('Fetching URL:', url);
+                console.log('Sending comment:', commentText);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comment_text: commentText })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.status === 'success') {
+                    const commentsContainer = document.getElementById(`comments-${transcriptId}`);
+                    if (!commentsContainer) {
+                        console.error('Comments container not found:', `comments-${transcriptId}`);
+                        return;
+                    }
+                    
+                    const commentItem = document.createElement('div');
+                    commentItem.className = 'comment-item';
+                    commentItem.dataset.commentId = data.comment_id;
+                    commentItem.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">コメント</span>
+                            <span class="comment-time">${new Date(data.created_at).toLocaleTimeString('ja-JP')}</span>
+                        </div>
+                        <div class="comment-text">${data.comment_text}</div>
+                        <div class="comment-actions">
+                            <button class="comment-edit" onclick="editComment(${data.comment_id}, ${transcriptId})">編集</button>
+                            <button class="comment-delete" onclick="deleteComment(${data.comment_id}, ${transcriptId})">削除</button>
+                        </div>
+                    `;
+                    commentsContainer.appendChild(commentItem);
+                    
+                    textarea.value = '';
+                    toggleCommentInput(transcriptId);
+                    console.log('Comment added successfully');
+                } else {
+                    console.error('API returned error:', data);
+                    alert('コメントの追加に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding comment:', error);
+                alert('コメント追加中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // コメントを編集
+        async function editComment(commentId, transcriptId) {
+            const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
+            if (!commentItem) return;
+            
+            const currentText = commentItem.querySelector('.comment-text').textContent;
+            const newText = prompt('コメントを編集:', currentText);
+            
+            if (newText === null || newText.trim() === '') return;
+            
+            try {
+                const response = await fetch(`/comment/${commentId}/edit/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comment_text: newText.trim() })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    commentItem.querySelector('.comment-text').textContent = data.comment_text;
+                }
+            } catch (error) {
+                console.error('Error editing comment:', error);
+            }
+        }
+        
+        // コメントを削除
+        async function deleteComment(commentId, transcriptId) {
+            if (!confirm('コメントを削除しますか？')) return;
+            
+            try {
+                const response = await fetch(`/comment/${commentId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
+                    if (commentItem) {
+                        commentItem.remove();
+                    }
+                }
+            } catch (error) {
+                console.error('Error deleting comment:', error);
+            }
+        }
+        
+        // マークを追加
+        async function addMark(transcriptId, color) {
+            console.log('addMark called:', { transcriptId, color });
+            try {
+                const item = document.querySelector(`[data-id="${transcriptId}"]`);
+                if (!item) {
+                    console.error('Transcript item not found:', `[data-id="${transcriptId}"]`);
+                    return;
+                }
+                
+                // 既存のマークがある場合は先に削除
+                const existingMarkId = item.dataset.markId;
+                if (existingMarkId) {
+                    console.log('Removing existing mark:', existingMarkId);
+                    await removeMark(existingMarkId, transcriptId);
+                }
+                
+                const url = `/transcript/${transcriptId}/mark/add/`;
+                console.log('Fetching URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ color: color, note: '' })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.status === 'success') {
+                    // 背景色を直接設定
+                    const bgColor = getMarkColorValue(color);
+                    item.style.backgroundColor = bgColor;
+                    item.classList.add('has-mark');
+                    // マークIDをデータ属性に保存（削除時に参照）
+                    item.dataset.markId = data.mark_id;
+                    item.dataset.markColor = color;
+                    
+                    // ×ボタンを追加
+                    let removeBtn = item.querySelector('.mark-remove-btn');
+                    if (!removeBtn) {
+                        removeBtn = document.createElement('button');
+                        removeBtn.className = 'mark-remove-btn';
+                        removeBtn.type = 'button';
+                        removeBtn.textContent = '×';
+                        removeBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 18px; color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s;';
+                        removeBtn.onmouseover = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.3)';
+                        removeBtn.onmouseout = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.2)';
+                        removeBtn.onclick = () => removeMark(data.mark_id, transcriptId);
+                        item.style.position = 'relative';
+                        item.appendChild(removeBtn);
+                    }
+                    
+                    console.log('Mark added successfully');
+                } else {
+                    console.error('API returned error:', data);
+                    alert('マークの追加に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding mark:', error);
+                alert('マーク追加中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // マークの色コード
+        function getMarkColorValue(color) {
+            const colors = {
+                'yellow': '#fef3c7',
+                'pink': '#fecdd3',
+                'blue': '#bfdbfe',
+                'green': '#dcfce7',
+                'purple': '#e9d5ff',
+                'orange': '#fed7aa'
+            };
+            return colors[color] || '#f9fafb';
+        }
+        
+        // マークを削除
+        async function removeMark(markId, transcriptId) {
+            try {
+                console.log('removeMark called:', { markId, transcriptId });
+                const response = await fetch(`/mark/${markId}/remove/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.status === 'success') {
+                    const item = document.querySelector(`[data-id="${transcriptId}"]`);
+                    if (item) {
+                        item.classList.remove('has-mark');
+                        item.style.backgroundColor = '#f8fafc';
+                        item.dataset.markId = '';
+                        item.dataset.markColor = '';
+                        // ×ボタンを削除
+                        const removeBtn = item.querySelector('.mark-remove-btn');
+                        if (removeBtn) {
+                            removeBtn.remove();
+                        }
+                    }
+                    return true;
+                } else {
+                    console.error('API returned error:', data);
+                    alert('マーク削除に失敗しました: ' + (data.message || 'Unknown error'));
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error removing mark:', error);
+                alert('マーク削除中にエラーが発生しました: ' + error.message);
+                return false;
+            }
         }
 
         function addFacilitatorMessage(message, phase, progress) {
@@ -1937,15 +3192,122 @@
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
         }
+
+        function addAIResponse(aiName, aiPersonality, responseText, timestamp) {
+            const item = document.createElement('div');
+            item.className = 'bubble ai';
+            item.setAttribute('data-id', `ai-response-${Date.now()}`);
+            
+            const speaker = document.createElement('div');
+            speaker.className = 'speaker';
+            speaker.innerHTML = `👤 ${aiName} <span style="font-size: 12px; color: #666; margin-left: 5px;">(${aiPersonality})</span>`;
+            
+            const content = document.createElement('div');
+            content.className = 'transcript-content';
+            content.textContent = responseText;
+            
+            const timeDisplay = document.createElement('div');
+            timeDisplay.className = 'timestamp';
+            timeDisplay.textContent = `${Math.floor(timestamp / 60)}:${String(Math.floor(timestamp % 60)).padStart(2, '0')}`;
+            
+            item.appendChild(speaker);
+            item.appendChild(content);
+            item.appendChild(timeDisplay);
+            
+            transcriptArea.appendChild(item);
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+        }
         
         function addManualTranscript() {
             const text = manualInput.value.trim();
             if (!text) return;
             
-            addTranscript(text);
+            // サーバーに保存
+            saveManualTranscript(text);
             manualInput.value = '';
-            transcriptCount++;
-            statTranscripts.textContent = transcriptCount;
+        }
+        
+        // 手動入力トランスクリプトをサーバーに保存
+        async function saveManualTranscript(text) {
+            try {
+                const url = `/meeting/${meetingId}/save-transcript/`;
+                console.log('Saving manual transcript:', { url, text });
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                console.log('Save transcript response:', data);
+                
+                if (data.status === 'success') {
+                    // サーバーから返されたIDでトランスクリプトを表示
+                    addTranscriptToUI(text, data.transcript_id);
+                    transcriptCount++;
+                    statTranscripts.textContent = transcriptCount;
+                } else {
+                    console.error('Failed to save transcript:', data);
+                    alert('トランスクリプトの保存に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving manual transcript:', error);
+                alert('トランスクリプト保存中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // トランスクリプトをUIに追加
+        function addTranscriptToUI(text, transcriptId) {
+            const item = document.createElement('div');
+            item.className = 'bubble human';
+            item.dataset.id = transcriptId;
+            item.dataset.transcriptId = transcriptId;
+            
+            const speaker = document.createElement('div');
+            speaker.className = 'speaker';
+            speaker.textContent = '👤 参加者';
+            
+            const content = document.createElement('div');
+            content.className = 'transcript-content';
+            content.textContent = text;
+            
+            const timestamp = document.createElement('div');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString('ja-JP');
+            
+            const actions = document.createElement('div');
+            actions.className = 'bubble-actions';
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn-small btn-edit';
+            editBtn.textContent = '編集';
+            editBtn.onclick = () => editTranscript(transcriptId);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn-small btn-delete';
+            deleteBtn.textContent = '削除';
+            deleteBtn.onclick = () => deleteTranscript(transcriptId);
+            
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+            
+            // 機能パネル（スタンプ、コメント、マーク）を追加
+            const featuresPanel = createTranscriptFeaturesPanel(transcriptId);
+            
+            item.appendChild(speaker);
+            item.appendChild(content);
+            item.appendChild(timestamp);
+            item.appendChild(actions);
+            item.appendChild(featuresPanel);
+            
+            transcriptArea.appendChild(item);
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            
+            transcriptItems.push({ id: transcriptId, text, timestamp: new Date() });
         }
         
         function editTranscript(id) {
@@ -2028,6 +3390,109 @@
             btn.onclick = () => deleteTranscript(id);
             return btn;
         }
+
+    function displayPartialSummary(summary, segmentCount, timestamp) {
+        /**
+         * 文字起こし中の定期要約を表示
+         * final summaryと区別するため、partial_summaryコンテナに表示
+         */
+        console.log('displayPartialSummary called:', { summary, segmentCount, timestamp });
+        console.log('summarySection element:', summarySection);
+        
+        if (!summary) {
+            console.warn('Partial summary data is null or undefined');
+            return;
+        }
+        
+        if (!summarySection) {
+            console.error('❌ summarySection NOT FOUND - cannot display partial summary');
+            return;
+        }
+        
+        // summaryContent（親要素）を確実に表示
+        if (summaryContent) {
+            summaryContent.style.display = 'block !important';
+            summaryContent.style.visibility = 'visible !important';
+        }
+        
+        console.log('summarySection visibility - display:', window.getComputedStyle(summarySection).display, 'visibility:', window.getComputedStyle(summarySection).visibility);
+        
+        // 親要素の可視性も確認
+        let parent = summarySection.parentElement;
+        let parentInfo = [];
+        while (parent) {
+            const style = window.getComputedStyle(parent);
+            parentInfo.push(`${parent.className || parent.id || parent.tagName}: display=${style.display}, visibility=${style.visibility}`);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                console.warn('⚠️ Parent element is hidden:', parent.className, parent.id);
+                // 非表示の親を表示
+                parent.style.display = 'block';
+                parent.style.visibility = 'visible';
+            }
+            parent = parent.parentElement;
+        }
+        console.log('Parent chain:', parentInfo.join(' → '));
+        
+        // summarySection自体も明示的に表示
+        summarySection.style.display = 'block !important';
+        summarySection.style.visibility = 'visible !important';
+        
+        // 既存のpartial_summary要素を探す、なければ作成
+        let partialSummaryContainer = document.getElementById('partialSummaryContainer');
+        if (!partialSummaryContainer) {
+            console.log('Creating new partialSummaryContainer');
+            partialSummaryContainer = document.createElement('div');
+            partialSummaryContainer.id = 'partialSummaryContainer';
+            partialSummaryContainer.style.cssText = `
+                display: block !important;
+                background: #f0f4ff;
+                border-left: 4px solid #667eea;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #666;
+            `;
+            // summarySection内の最初に挿入
+            if (summarySection) {
+                console.log('Inserting partialSummaryContainer into summarySection');
+                summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
+                console.log('After insert - summarySection innerHTML preview:', summarySection.innerHTML.substring(0, 150));
+            }
+        }
+        
+        // 定期要約コンテンツを生成
+        let html = `<div style="margin-bottom: 10px; font-weight: 600; color: #667eea;">
+            ⏱️ リアルタイム要約（${Math.floor(timestamp)}秒時点、${segmentCount}セグメント）
+        </div>`;
+        
+        html += `<p style="margin: 8px 0;">${summary.summary || 'データ処理中...'}</p>`;
+        
+        if (summary.key_points && summary.key_points.length > 0) {
+            html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">🔑 重要ポイント:</div>';
+            html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+            summary.key_points.slice(0, 3).forEach(point => {
+                html += `<li style="font-size: 12px;">${point}</li>`;
+            });
+            html += '</ul>';
+        }
+        
+        if (summary.action_items && summary.action_items.length > 0) {
+            const tasks = summary.action_items.filter(item => item.task);
+            if (tasks.length > 0) {
+                html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">✅ アクション:</div>';
+                html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+                tasks.slice(0, 2).forEach(item => {
+                    html += `<li style="font-size: 12px;">${item.task}</li>`;
+                });
+                html += '</ul>';
+            }
+        }
+        
+        console.log('Setting partialSummaryContainer innerHTML, existing container:', !!partialSummaryContainer);
+        partialSummaryContainer.innerHTML = html;
+        console.log('✅ Partial summary updated:', html.substring(0, 100));
+    }
 
         function displaySummary(summary, isLoadMode = false) {
             console.log('displaySummary called with:', { summary, isLoadMode });
@@ -2212,22 +3677,25 @@
             Notification.requestPermission();
         }
 
-        // ページロード時に会議終了状態を確認して既存データを復元
-        (async () => {
-            console.log('Page initialization started');
-            console.log('meetingId:', meetingId);
-            
-            await initializeMeetingStatus();
-            console.log('initializeMeetingStatus completed');
-            
-            console.log('About to call loadMeetingData');
-            await loadMeetingData();
-            console.log('loadMeetingData completed');
-            
-            console.log('About to connect WebSocket');
-            connectWebSocket();
-            console.log('connectWebSocket called');
-        })();
+    // ページロード時に会議終了状態を確認して既存データを復元
+    (async () => {
+        console.log('Page initialization started');
+        console.log('meetingId:', meetingId);
+        
+        // 参加者一覧を初期化
+        renderParticipants();
+        
+        await initializeMeetingStatus();
+        console.log('initializeMeetingStatus completed');
+        
+        console.log('About to call loadMeetingData');
+        await loadMeetingData();
+        console.log('loadMeetingData completed');
+        
+        console.log('About to connect WebSocket');
+        connectWebSocket();
+        console.log('connectWebSocket called');
+    })();
 
         window.addEventListener('beforeunload', () => {
             if (isRecording) {
