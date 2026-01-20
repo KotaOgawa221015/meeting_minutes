@@ -729,6 +729,304 @@
             border-left: 4px solid #f59e0b;
         }
         
+        /* Transcript Features Styles (Stamp, Comment, Mark) */
+        .transcript-item {
+            position: relative;
+        }
+        
+        .transcript-item.has-stamp {
+            border-top: 3px solid #667eea;
+        }
+        
+        .transcript-item.has-mark {
+            background-color: var(--mark-color, transparent);
+        }
+        
+        .transcript-features {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .stamp-container {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .stamp-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 500;
+        }
+        
+        .stamp-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            color: #c7d2fe;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        
+        .stamp-remove:hover {
+            color: #667eea;
+        }
+        
+        .mark-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .mark-badge.yellow {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+        }
+        
+        .mark-badge.pink {
+            background: #fecdd3;
+            border: 1px solid #fb7185;
+            color: #831843;
+        }
+        
+        .mark-badge.blue {
+            background: #bfdbfe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+        
+        .mark-badge.green {
+            background: #dcfce7;
+            border: 1px solid #4ade80;
+            color: #166534;
+        }
+        
+        .mark-badge.purple {
+            background: #e9d5ff;
+            border: 1px solid #d8b4fe;
+            color: #6b21a8;
+        }
+        
+        .mark-badge.orange {
+            background: #fed7aa;
+            border: 1px solid #fb923c;
+            color: #9a3412;
+        }
+        
+        .comments-section {
+            margin-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 10px;
+        }
+        
+        .comment-item {
+            background: #f9fafb;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            border-left: 2px solid #3b82f6;
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .comment-author {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .comment-time {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+        
+        .comment-text {
+            color: #374151;
+            word-break: break-word;
+        }
+        
+        .comment-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        
+        .comment-edit, .comment-delete {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            color: #9ca3af;
+            padding: 0;
+            transition: color 0.2s;
+        }
+        
+        .comment-edit:hover {
+            color: #3b82f6;
+        }
+        
+        .comment-delete:hover {
+            color: #ef4444;
+        }
+        
+        .transcript-action-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+        
+        .action-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+        }
+        
+        .action-btn:hover {
+            background: #e5e7eb;
+            border-color: #d1d5db;
+        }
+        
+        .action-btn.stamp-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .action-btn.comment-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .action-btn.mark-btn:hover {
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+        
+        .stamp-menu, .mark-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 150px;
+        }
+        
+        .stamp-menu.active, .mark-menu.active {
+            display: block;
+        }
+        
+        .stamp-menu-item, .mark-menu-item {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+            transition: background 0.2s;
+        }
+        
+        .stamp-menu-item:hover, .mark-menu-item:hover {
+            background: #f3f4f6;
+        }
+        
+        .comment-input-box {
+            display: none;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .comment-input-box.active {
+            display: block;
+        }
+        
+        .comment-input-box textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 40px;
+            margin-bottom: 6px;
+        }
+        
+        .comment-input-box textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .comment-input-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .comment-input-actions button {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .comment-submit {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .comment-submit:hover {
+            background: #2563eb;
+        }
+        
+        .comment-cancel {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .comment-cancel:hover {
+            background: #d1d5db;
+        }
+        
         @media (max-width: 1024px) {
             aside {
                 width: 200px;
@@ -1529,7 +1827,8 @@
                 console.log('WebSocket message:', data);
                 
                 if (data.type === 'transcript') {
-                    addTranscript(data.text);
+                    // WebSocket経由で受け取ったトランスクリプトを表示
+                    addTranscriptToUI(data.text, data.transcript_id);
                     transcriptCount++;
                     statTranscripts.textContent = transcriptCount;
                 } else if (data.type === 'facilitator_message') {
@@ -1643,56 +1942,485 @@
         }
     }
 
-        function addTranscript(text) {
-            const id = Date.now();
-            const item = document.createElement('div');
-            item.className = 'bubble human';
-            item.dataset.id = id;
+        // スタンプ・コメント・マーク機能用パネルの作成
+        function createTranscriptFeaturesPanel(transcriptId) {
+            const panel = document.createElement('div');
+            panel.className = 'transcript-features';
+            panel.id = `features-${transcriptId}`;
             
-            const speaker = document.createElement('div');
-            speaker.className = 'speaker';
-            speaker.textContent = '👤 参加者';
+            // スタンプコンテナ
+            const stampContainer = document.createElement('div');
+            stampContainer.className = 'stamp-container';
+            stampContainer.id = `stamps-${transcriptId}`;
             
-            const content = document.createElement('div');
-            content.className = 'transcript-content';
-            content.textContent = text;
+            // コメントコンテナ
+            const commentsContainer = document.createElement('div');
+            commentsContainer.className = 'comments-section';
+            commentsContainer.id = `comments-${transcriptId}`;
             
-            const timestamp = document.createElement('div');
-            timestamp.className = 'timestamp';
-            timestamp.textContent = new Date().toLocaleTimeString('ja-JP');
+            // アクションボタン
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'transcript-action-buttons';
             
-            const actions = document.createElement('div');
-            actions.className = 'bubble-actions';
+            // スタンプボタン
+            const stampBtn = document.createElement('button');
+            stampBtn.className = 'action-btn stamp-btn';
+            stampBtn.textContent = '📍 スタンプ';
+            stampBtn.id = `stamp-btn-${transcriptId}`;
             
-            const editBtn = document.createElement('button');
-            editBtn.className = 'btn-small btn-edit';
-            editBtn.textContent = '編集';
-            editBtn.onclick = () => editTranscript(id);
+            const stampMenu = document.createElement('div');
+            stampMenu.className = 'stamp-menu';
+            stampMenu.id = `stamp-menu-${transcriptId}`;
             
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'btn-small btn-delete';
-            deleteBtn.textContent = '削除';
-            deleteBtn.onclick = () => deleteTranscript(id);
+            const stampTypes = [
+                { value: 'important', label: '📍 重要' },
+                { value: 'action', label: '✅ アクション' },
+                { value: 'decision', label: '📋 決定' },
+                { value: 'question', label: '❓ 質問' },
+                { value: 'good', label: '👍 良い意見' },
+                { value: 'follow_up', label: '🔗 フォローアップ' }
+            ];
             
-            actions.appendChild(editBtn);
-            actions.appendChild(deleteBtn);
+            stampTypes.forEach(type => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'stamp-menu-item';
+                item.textContent = type.label;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Stamp menu item clicked:', type.value);
+                    addStamp(transcriptId, type.value);
+                    stampMenu.classList.remove('active');
+                };
+                stampMenu.appendChild(item);
+            });
             
-            item.appendChild(speaker);
-            item.appendChild(content);
-            item.appendChild(timestamp);
-            item.appendChild(actions);
+            stampBtn.addEventListener('click', (e) => {
+                console.log('Stamp button clicked');
+                e.stopPropagation();
+                // 他のメニューを閉じる
+                const otherMenus = document.querySelectorAll(`.mark-menu.active`);
+                otherMenus.forEach(menu => menu.classList.remove('active'));
+                // このメニューをトグル
+                stampMenu.classList.toggle('active');
+            });
             
-            transcriptArea.appendChild(item);
-            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            // コメントボタン
+            const commentBtn = document.createElement('button');
+            commentBtn.className = 'action-btn comment-btn';
+            commentBtn.textContent = '💬 コメント';
+            commentBtn.onclick = (e) => {
+                e.stopPropagation();
+                toggleCommentInput(transcriptId);
+            };
             
-            transcriptItems.push({ id, text, timestamp: new Date() });
+            // マークボタン
+            const markBtn = document.createElement('button');
+            markBtn.className = 'action-btn mark-btn';
+            markBtn.textContent = '🎨 マーク';
+            markBtn.id = `mark-btn-${transcriptId}`;
             
-            // ファシリテーターカードをアクティブに
-            const facilitatorCard = document.getElementById('facilitatorCard');
-            facilitatorCard.classList.add('speaking');
-            setTimeout(() => {
-                facilitatorCard.classList.remove('speaking');
-            }, 2000);
+            const markMenu = document.createElement('div');
+            markMenu.className = 'mark-menu';
+            markMenu.id = `mark-menu-${transcriptId}`;
+            
+            const markColors = [
+                { value: 'yellow', label: '🟨 黄' },
+                { value: 'pink', label: '🟥 ピンク' },
+                { value: 'blue', label: '🟦 青' },
+                { value: 'green', label: '🟩 緑' },
+                { value: 'purple', label: '🟪 紫' },
+                { value: 'orange', label: '🟧 オレンジ' }
+            ];
+            
+            markColors.forEach(color => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'mark-menu-item';
+                item.textContent = color.label;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Mark menu item clicked:', color.value);
+                    addMark(transcriptId, color.value);
+                    markMenu.classList.remove('active');
+                };
+                markMenu.appendChild(item);
+            });
+            
+            markBtn.addEventListener('click', (e) => {
+                console.log('Mark button clicked');
+                e.stopPropagation();
+                // 他のメニューを閉じる
+                const otherMenus = document.querySelectorAll(`.stamp-menu.active`);
+                otherMenus.forEach(menu => menu.classList.remove('active'));
+                // このメニューをトグル
+                markMenu.classList.toggle('active');
+            });
+            
+            // コメント入力ボックス
+            const commentInputBox = document.createElement('div');
+            commentInputBox.className = 'comment-input-box';
+            commentInputBox.id = `comment-input-${transcriptId}`;
+            
+            const textarea = document.createElement('textarea');
+            textarea.placeholder = 'コメントを入力...';
+            textarea.id = `comment-textarea-${transcriptId}`;
+            
+            const inputActions = document.createElement('div');
+            inputActions.className = 'comment-input-actions';
+            
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'comment-submit';
+            submitBtn.textContent = '送信';
+            submitBtn.onclick = () => submitComment(transcriptId);
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'comment-cancel';
+            cancelBtn.textContent = 'キャンセル';
+            cancelBtn.onclick = () => toggleCommentInput(transcriptId);
+            
+            inputActions.appendChild(submitBtn);
+            inputActions.appendChild(cancelBtn);
+            
+            commentInputBox.appendChild(textarea);
+            commentInputBox.appendChild(inputActions);
+            
+            actionButtons.appendChild(stampBtn);
+            actionButtons.appendChild(stampMenu);
+            actionButtons.appendChild(commentBtn);
+            actionButtons.appendChild(markBtn);
+            actionButtons.appendChild(markMenu);
+            
+            panel.appendChild(stampContainer);
+            panel.appendChild(commentsContainer);
+            panel.appendChild(actionButtons);
+            panel.appendChild(commentInputBox);
+            
+            // クリック時にメニューを閉じる（外側のクリックのみ）
+            document.addEventListener('click', (e) => {
+                // パネル内のクリックならメニューを開いたままにする
+                if (!panel.contains(e.target)) {
+                    stampMenu.classList.remove('active');
+                    markMenu.classList.remove('active');
+                }
+            });
+            
+            return panel;
+        }
+        
+        // スタンプを追加
+        async function addStamp(transcriptId, stampType) {
+            console.log('addStamp called:', { transcriptId, stampType });
+            try {
+                const url = `/transcript/${transcriptId}/stamp/add/`;
+                console.log('Fetching URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ stamp_type: stampType })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.status === 'success') {
+                    const stampsContainer = document.getElementById(`stamps-${transcriptId}`);
+                    if (!stampsContainer) {
+                        console.error('Stamps container not found:', `stamps-${transcriptId}`);
+                        return;
+                    }
+                    
+                    // 既存のスタンプが同じタイプの場合は削除
+                    const existingStamp = stampsContainer.querySelector(`[data-stamp-type="${stampType}"]`);
+                    if (existingStamp) {
+                        existingStamp.remove();
+                    }
+                    
+                    // 新しいスタンプバッジを追加
+                    const badge = document.createElement('span');
+                    badge.className = 'stamp-badge';
+                    badge.dataset.stampType = stampType;
+                    badge.dataset.stampId = data.stamp_id;
+                    badge.innerHTML = `
+                        ${data.stamp_display}
+                        <button class="stamp-remove" onclick="removeStamp(${data.stamp_id}, ${transcriptId})">×</button>
+                    `;
+                    stampsContainer.appendChild(badge);
+                    console.log('Stamp added successfully');
+                } else {
+                    console.error('API returned error:', data);
+                    alert('スタンプの追加に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding stamp:', error);
+                alert('スタンプの追加中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // スタンプを削除
+        async function removeStamp(stampId, transcriptId) {
+            try {
+                const response = await fetch(`/stamp/${stampId}/remove/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const badge = document.querySelector(`[data-stamp-id="${stampId}"]`);
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing stamp:', error);
+            }
+        }
+        
+        // コメント入力を表示/非表示
+        function toggleCommentInput(transcriptId) {
+            const input = document.getElementById(`comment-input-${transcriptId}`);
+            input.classList.toggle('active');
+            if (input.classList.contains('active')) {
+                document.getElementById(`comment-textarea-${transcriptId}`).focus();
+            }
+        }
+        
+        // コメントを送信
+        async function submitComment(transcriptId) {
+            console.log('submitComment called:', transcriptId);
+            const textarea = document.getElementById(`comment-textarea-${transcriptId}`);
+            const commentText = textarea.value.trim();
+            
+            if (!commentText) {
+                console.warn('Comment text is empty');
+                return;
+            }
+            
+            try {
+                const url = `/transcript/${transcriptId}/comment/add/`;
+                console.log('Fetching URL:', url);
+                console.log('Sending comment:', commentText);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comment_text: commentText })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.status === 'success') {
+                    const commentsContainer = document.getElementById(`comments-${transcriptId}`);
+                    if (!commentsContainer) {
+                        console.error('Comments container not found:', `comments-${transcriptId}`);
+                        return;
+                    }
+                    
+                    const commentItem = document.createElement('div');
+                    commentItem.className = 'comment-item';
+                    commentItem.dataset.commentId = data.comment_id;
+                    commentItem.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">コメント</span>
+                            <span class="comment-time">${new Date(data.created_at).toLocaleTimeString('ja-JP')}</span>
+                        </div>
+                        <div class="comment-text">${data.comment_text}</div>
+                        <div class="comment-actions">
+                            <button class="comment-edit" onclick="editComment(${data.comment_id}, ${transcriptId})">編集</button>
+                            <button class="comment-delete" onclick="deleteComment(${data.comment_id}, ${transcriptId})">削除</button>
+                        </div>
+                    `;
+                    commentsContainer.appendChild(commentItem);
+                    
+                    textarea.value = '';
+                    toggleCommentInput(transcriptId);
+                    console.log('Comment added successfully');
+                } else {
+                    console.error('API returned error:', data);
+                    alert('コメントの追加に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding comment:', error);
+                alert('コメント追加中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // コメントを編集
+        async function editComment(commentId, transcriptId) {
+            const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
+            if (!commentItem) return;
+            
+            const currentText = commentItem.querySelector('.comment-text').textContent;
+            const newText = prompt('コメントを編集:', currentText);
+            
+            if (newText === null || newText.trim() === '') return;
+            
+            try {
+                const response = await fetch(`/comment/${commentId}/edit/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comment_text: newText.trim() })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    commentItem.querySelector('.comment-text').textContent = data.comment_text;
+                }
+            } catch (error) {
+                console.error('Error editing comment:', error);
+            }
+        }
+        
+        // コメントを削除
+        async function deleteComment(commentId, transcriptId) {
+            if (!confirm('コメントを削除しますか？')) return;
+            
+            try {
+                const response = await fetch(`/comment/${commentId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const commentItem = document.querySelector(`[data-comment-id="${commentId}"]`);
+                    if (commentItem) {
+                        commentItem.remove();
+                    }
+                }
+            } catch (error) {
+                console.error('Error deleting comment:', error);
+            }
+        }
+        
+        // マークを追加
+        async function addMark(transcriptId, color) {
+            console.log('addMark called:', { transcriptId, color });
+            try {
+                const url = `/transcript/${transcriptId}/mark/add/`;
+                console.log('Fetching URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ color: color, note: '' })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.status === 'success') {
+                    const item = document.querySelector(`[data-id="${transcriptId}"]`);
+                    if (!item) {
+                        console.error('Transcript item not found:', `[data-id="${transcriptId}"]`);
+                        return;
+                    }
+                    
+                    // 既存のマークが同じ色の場合は削除
+                    const existingMark = item.querySelector(`[data-mark-color="${color}"]`);
+                    if (existingMark) {
+                        existingMark.remove();
+                    }
+                    
+                    // 新しいマークバッジを追加
+                    const badge = document.createElement('span');
+                    badge.className = `mark-badge ${color}`;
+                    badge.dataset.markColor = color;
+                    badge.dataset.markId = data.mark_id;
+                    badge.innerHTML = `
+                        ${data.color_display}
+                        <button style="background: none; border: none; cursor: pointer; padding: 0; margin-left: 4px;" onclick="removeMark(${data.mark_id}, ${transcriptId})">×</button>
+                    `;
+                    const stampsContainer = document.getElementById(`stamps-${transcriptId}`);
+                    if (stampsContainer) {
+                        stampsContainer.appendChild(badge);
+                    }
+                    
+                    // 背景色を変更
+                    item.style.setProperty('--mark-color', getMarkColorValue(color));
+                    item.classList.add('has-mark');
+                    console.log('Mark added successfully');
+                } else {
+                    console.error('API returned error:', data);
+                    alert('マークの追加に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding mark:', error);
+                alert('マーク追加中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // マークの色コード
+        function getMarkColorValue(color) {
+            const colors = {
+                'yellow': '#fef3c7',
+                'pink': '#fecdd3',
+                'blue': '#bfdbfe',
+                'green': '#dcfce7',
+                'purple': '#e9d5ff',
+                'orange': '#fed7aa'
+            };
+            return colors[color] || '#f9fafb';
+        }
+        
+        // マークを削除
+        async function removeMark(markId, transcriptId) {
+            try {
+                const response = await fetch(`/mark/${markId}/remove/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const badge = document.querySelector(`[data-mark-id="${markId}"]`);
+                    if (badge) {
+                        badge.remove();
+                    }
+                    
+                    // マークが残っていなければ背景色をリセット
+                    const item = document.querySelector(`[data-id="${transcriptId}"]`);
+                    if (item) {
+                        const remainingMarks = document.querySelectorAll(`[data-id="${transcriptId}"] [data-mark-id]`);
+                        if (remainingMarks.length === 0) {
+                            item.style.removeProperty('--mark-color');
+                            item.classList.remove('has-mark');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing mark:', error);
+            }
         }
 
         function addFacilitatorMessage(message, phase, progress) {
@@ -1726,10 +2454,92 @@
             const text = manualInput.value.trim();
             if (!text) return;
             
-            addTranscript(text);
+            // サーバーに保存
+            saveManualTranscript(text);
             manualInput.value = '';
-            transcriptCount++;
-            statTranscripts.textContent = transcriptCount;
+        }
+        
+        // 手動入力トランスクリプトをサーバーに保存
+        async function saveManualTranscript(text) {
+            try {
+                const url = `/meeting/${meetingId}/save-transcript/`;
+                console.log('Saving manual transcript:', { url, text });
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                console.log('Save transcript response:', data);
+                
+                if (data.status === 'success') {
+                    // サーバーから返されたIDでトランスクリプトを表示
+                    addTranscriptToUI(text, data.transcript_id);
+                    transcriptCount++;
+                    statTranscripts.textContent = transcriptCount;
+                } else {
+                    console.error('Failed to save transcript:', data);
+                    alert('トランスクリプトの保存に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving manual transcript:', error);
+                alert('トランスクリプト保存中にエラーが発生しました: ' + error.message);
+            }
+        }
+        
+        // トランスクリプトをUIに追加
+        function addTranscriptToUI(text, transcriptId) {
+            const item = document.createElement('div');
+            item.className = 'bubble human';
+            item.dataset.id = transcriptId;
+            item.dataset.transcriptId = transcriptId;
+            
+            const speaker = document.createElement('div');
+            speaker.className = 'speaker';
+            speaker.textContent = '👤 参加者';
+            
+            const content = document.createElement('div');
+            content.className = 'transcript-content';
+            content.textContent = text;
+            
+            const timestamp = document.createElement('div');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString('ja-JP');
+            
+            const actions = document.createElement('div');
+            actions.className = 'bubble-actions';
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn-small btn-edit';
+            editBtn.textContent = '編集';
+            editBtn.onclick = () => editTranscript(transcriptId);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn-small btn-delete';
+            deleteBtn.textContent = '削除';
+            deleteBtn.onclick = () => deleteTranscript(transcriptId);
+            
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+            
+            // 機能パネル（スタンプ、コメント、マーク）を追加
+            const featuresPanel = createTranscriptFeaturesPanel(transcriptId);
+            
+            item.appendChild(speaker);
+            item.appendChild(content);
+            item.appendChild(timestamp);
+            item.appendChild(actions);
+            item.appendChild(featuresPanel);
+            
+            transcriptArea.appendChild(item);
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            
+            transcriptItems.push({ id: transcriptId, text, timestamp: new Date() });
         }
         
         function editTranscript(id) {

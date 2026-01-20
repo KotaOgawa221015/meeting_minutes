@@ -166,9 +166,10 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     if transcript_text and len(transcript_text.strip()) > 0:
                         elapsed_time = time.time() - self.start_time
                         print(f"[Meeting {self.meeting_id}] 文字起こし成功: {transcript_text[:50]}...")
-                        await self.save_transcript(transcript_text, elapsed_time)
+                        transcript_id = await self.save_transcript(transcript_text, elapsed_time)
                         await self.send(text_data=json.dumps({
                             'type': 'transcript',
+                            'transcript_id': transcript_id,
                             'text': transcript_text,
                             'timestamp': elapsed_time
                         }))
@@ -708,12 +709,13 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
     def save_transcript(self, text, timestamp):
         """文字起こしをデータベースに保存"""
         meeting = Meeting.objects.get(id=self.meeting_id)
-        Transcript.objects.create(
+        transcript = Transcript.objects.create(
             meeting=meeting,
             text=text,
             timestamp=timestamp
         )
-        print(f"[Meeting {self.meeting_id}] DB保存完了: timestamp={timestamp:.1f}秒")
+        print(f"[Meeting {self.meeting_id}] DB保存完了: transcript_id={transcript.id}, timestamp={timestamp:.1f}秒")
+        return transcript.id
 
     @database_sync_to_async
     def set_meeting_start_time(self):
