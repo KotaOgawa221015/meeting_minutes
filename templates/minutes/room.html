@@ -908,6 +908,7 @@
         const rightPanels = document.getElementById('rightPanels');
         const endMeetingBtn = document.getElementById('endMeetingBtn');
         
+        
         console.log('DOM elements initialized:');
         console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
         console.log('- transcriptArea:', transcriptArea ? 'found' : 'NOT FOUND');
@@ -939,6 +940,25 @@
                 console.error('Failed to fetch meeting status:', error);
             }
         }
+
+        // ページロード時に復元
+        (async () => {
+            console.log('Page initialization started');
+            console.log('meetingId:', meetingId);
+            
+            await initializeMeetingStatus();
+            console.log('initializeMeetingStatus completed');
+            
+            // パネル状態を復元
+            restorePanelStates();
+            console.log('Panel states restored');
+            
+            await loadMeetingData();
+            console.log('loadMeetingData completed');
+            
+            connectWebSocket();
+            console.log('connectWebSocket called');
+        })();
 
         // 会議の既存データを取得して復元
         async function loadMeetingData() {
@@ -1033,6 +1053,13 @@
                 icon: '🤖',
                 description: '会議の進行をAIが支援',
                 create: createFacilitatorPanel
+            },
+            {
+                id: 'memo',
+                name: '個人用メモ',
+                icon: '📝',
+                description: '自由に書き込めるメモ帳',
+                create: createMemoPanel
             }
         ];
 
@@ -1075,6 +1102,30 @@
 
         function removePanel(panelId) {
             if (activePanels[panelId]) {
+                const panelType = activePanels[panelId].panelType;
+                
+                if (confirm('このパネルを削除しますか？')) {
+                    // cleanupを実行
+                    if (activePanels[panelId].cleanup) {
+                        activePanels[panelId].cleanup();
+                    }
+                    
+                    // パネル状態を削除
+                    if (panelType) {
+                        PanelStateManager.removePanelState(meetingId, panelType, panelId);
+                    }
+                    
+                    // パネルをDOMから削除
+                    activePanels[panelId].element.remove();
+                    delete activePanels[panelId];
+                    
+                    console.log(`Panel ${panelId} removed`);
+                }
+            }
+        }
+
+        function removeMemoPanel(panelId) {
+            if (activePanels[panelId]) {
                 if (activePanels[panelId].cleanup) {
                     activePanels[panelId].cleanup();
                 }
@@ -1082,560 +1133,731 @@
                 activePanels[panelId].element.remove();
                 delete activePanels[panelId];
             }
+            txtClear();
         }
 
-
-
-    function createTimerPanel(panelId) {
-        const panel = document.createElement('section');
-        panel.className = 'panel';
-        panel.id = panelId;
-        
-        const header = document.createElement('div');
-        header.className = 'panel-header';
-        header.innerHTML = `<span class="panel-title">⏰ カスタムタイマー</span>`;
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'panel-close';
-        closeBtn.textContent = '×';
-        closeBtn.onclick = () => removePanel(panelId);
-        header.appendChild(closeBtn);
-        
-        const body = document.createElement('div');
-        body.className = 'panel-body';
-        
-        const timerData = {
-            targetMinutes: 25,
-            targetSeconds: 0,
-            currentSeconds: 0,
-            interval: null,
-            isRunning: false,
-            isPaused: false
-        };
-        
-        body.innerHTML = `
-            <button class="toggle-settings-btn" id="toggle-${panelId}">
-                <span class="arrow">▼</span>
-                <span class="toggle-text">時間設定を隠す</span>
-            </button>
-            <div class="timer-settings" id="settings-${panelId}">
-                <div class="input-group">
-                    <label>目標時間 (分)</label>
-                    <input type="number" class="timer-minutes" value="25" min="0" max="999">
-                </div>
-                <div class="input-group">
-                    <label>目標時間 (秒)</label>
-                    <input type="number" class="timer-seconds" value="0" min="0" max="59">
-                </div>
-            </div>
-            <div class="timer-display" id="display-${panelId}">
-                <div class="timer-time">25:00</div>
-            </div>
-            <div class="timer-controls">
-                <button class="btn primary timer-start">開始</button>
-                <button class="btn timer-pause" style="display:none;">一時停止</button>
-                <button class="btn danger timer-reset">リセット</button>
-            </div>
-        `;
-        
-        panel.appendChild(header);
-        panel.appendChild(body);
-        
-        const toggleBtn = body.querySelector(`#toggle-${panelId}`);
-        const toggleText = toggleBtn.querySelector('.toggle-text');
-        const settingsDiv = body.querySelector(`#settings-${panelId}`);
-        const displayDiv = body.querySelector(`#display-${panelId}`);
-        const minutesInput = body.querySelector('.timer-minutes');
-        const secondsInput = body.querySelector('.timer-seconds');
-        const timeDisplay = body.querySelector('.timer-time');
-        const startTimerBtn = body.querySelector('.timer-start');
-        const pauseBtn = body.querySelector('.timer-pause');
-        const resetBtn = body.querySelector('.timer-reset');
-        
-        let settingsCollapsed = false;
-        
-        toggleBtn.addEventListener('click', () => {
-            settingsCollapsed = !settingsCollapsed;
-            if (settingsCollapsed) {
-                settingsDiv.classList.add('collapsed');
-                toggleBtn.classList.add('collapsed');
-                toggleText.textContent = '時間設定を表示';
-            } else {
-                settingsDiv.classList.remove('collapsed');
-                toggleBtn.classList.remove('collapsed');
-                toggleText.textContent = '時間設定を隠す';
-            }
-        });
-        
-        function updateDisplay() {
-            const totalSeconds = timerData.targetMinutes * 60 + timerData.targetSeconds - timerData.currentSeconds;
-            const mins = Math.floor(Math.abs(totalSeconds) / 60);
-            const secs = Math.abs(totalSeconds) % 60;
-            const sign = totalSeconds < 0 ? '-' : '';
-            
-            timeDisplay.textContent = `${sign}${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-            
-            timeDisplay.className = 'timer-time';
-            const remaining = totalSeconds;
-            if (remaining < 0) {
-                timeDisplay.classList.add('danger');
-            } else if (remaining < 60) {
-                timeDisplay.classList.add('warning');
-            }
-        }
-        
-        function startTimer() {
-            if (timerData.isRunning) return;
-            
-            if (!timerData.isPaused) {
-                timerData.targetMinutes = parseInt(minutesInput.value) || 0;
-                timerData.targetSeconds = parseInt(secondsInput.value) || 0;
-                timerData.currentSeconds = 0;
-            }
-            
-            timerData.isRunning = true;
-            timerData.isPaused = false;
-            
-            timerData.interval = setInterval(() => {
-                timerData.currentSeconds++;
-                updateDisplay();
+        const PanelStateManager = {
+            /**
+             * パネルの状態をlocalStorageに保存
+             */
+            savePanelState(meetingId, panelType, panelId, state) {
+                const storageKey = `panel-state-${meetingId}`;
+                let panelStates = JSON.parse(localStorage.getItem(storageKey)) || {};
                 
-                const totalSeconds = timerData.targetMinutes * 60 + timerData.targetSeconds;
-                if (timerData.currentSeconds === totalSeconds) {
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification('タイマー終了', {
-                            body: 'カスタムタイマーが終了しました'
-                        });
-                    }
+                if (!panelStates[panelType]) {
+                    panelStates[panelType] = [];
                 }
-            }, 1000);
-            
-            if (!settingsCollapsed) {
-                settingsDiv.classList.add('collapsed');
-                toggleBtn.classList.add('collapsed');
-                toggleText.textContent = '時間設定を表示';
-                settingsCollapsed = true;
-            }
-            
-            displayDiv.classList.add('compact');
-            startTimerBtn.style.display = 'none';
-            pauseBtn.style.display = 'block';
-            pauseBtn.textContent = '一時停止';
-        }
-        
-        function pauseTimer() {
-            if (!timerData.isRunning) return;
-            
-            clearInterval(timerData.interval);
-            timerData.isRunning = false;
-            timerData.isPaused = true;
-            
-            pauseBtn.textContent = '再開';
-            pauseBtn.onclick = startTimer;
-        }
-        
-        function resetTimer() {
-            clearInterval(timerData.interval);
-            timerData.isRunning = false;
-            timerData.isPaused = false;
-            timerData.currentSeconds = 0;
-            
-            updateDisplay();
-            
-            settingsDiv.classList.remove('collapsed');
-            toggleBtn.classList.remove('collapsed');
-            toggleText.textContent = '時間設定を隠す';
-            settingsCollapsed = false;
-            
-            displayDiv.classList.remove('compact');
-            startTimerBtn.style.display = 'block';
-            pauseBtn.style.display = 'none';
-            pauseBtn.textContent = '一時停止';
-            pauseBtn.onclick = pauseTimer;
-        }
-        
-        minutesInput.addEventListener('input', () => {
-            if (!timerData.isRunning && !timerData.isPaused) {
-                timerData.targetMinutes = parseInt(minutesInput.value) || 0;
-                updateDisplay();
-            }
-        });
-        
-        secondsInput.addEventListener('input', () => {
-            if (!timerData.isRunning && !timerData.isPaused) {
-                timerData.targetSeconds = parseInt(secondsInput.value) || 0;
-                updateDisplay();
-            }
-        });
-        
-        startTimerBtn.addEventListener('click', startTimer);
-        pauseBtn.addEventListener('click', pauseTimer);
-        resetBtn.addEventListener('click', resetTimer);
-        
-        activePanels[panelId] = {
-            element: panel,
-            cleanup: () => {
-                if (timerData.interval) {
-                    clearInterval(timerData.interval);
-                }
-            }
-        };
-        
-        return panel;
-    }
-
-    function createFacilitatorPanel(panelId) {
-        const panel = document.createElement('section');
-        panel.className = 'panel';
-        panel.id = panelId;
-        
-        const header = document.createElement('div');
-        header.className = 'panel-header';
-        header.innerHTML = `<span class="panel-title">🤖 AIファシリテーター</span>`;
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'panel-close';
-        closeBtn.textContent = '×';
-        closeBtn.onclick = () => removePanel(panelId);
-        header.appendChild(closeBtn);
-        
-        const body = document.createElement('div');
-        body.className = 'panel-body';
-        
-        const facilitatorData = {
-            durationMinutes: 60,
-            durationSeconds: 0,
-            isActive: false,
-            startTime: null,
-            totalSeconds: 0,
-            interval: null
-        };
-        
-        body.innerHTML = `
-            <button class="toggle-settings-btn" id="toggle-${panelId}">
-                <span class="arrow">▼</span>
-                <span class="toggle-text">時間設定を隠す</span>
-            </button>
-            <div class="timer-settings" id="settings-${panelId}">
-                <div class="input-group">
-                    <label>会議予定時間（分）</label>
-                    <input type="number" class="facilitator-minutes" value="60" min="1" max="999">
-                </div>
-                <div class="input-group">
-                    <label>会議予定時間（秒）</label>
-                    <input type="number" class="facilitator-seconds" value="0" min="0" max="59">
-                </div>
-            </div>
-            <div class="timer-display" id="display-${panelId}">
-                <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">✓ 設定時間: <span id="display-time-${panelId}">60:00</span></div>
-                <div style="display:none;" id="countdown-${panelId}">
-                    <div style="font-size: 36px; font-weight: 700; color: #667eea; text-align: center; margin: 15px 0;" id="countdown-time-${panelId}">60:00</div>
-                    <div style="background: #e5e7eb; border-radius: 8px; height: 8px; margin: 15px 0; overflow: hidden;">
-                        <div id="progress-bar-${panelId}" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
-                    </div>
-                    <div style="font-size: 12px; color: #6b7280; text-align: center;" id="progress-text-${panelId}">0%</div>
-                </div>
-            </div>
-            <div class="timer-controls">
-                <button class="btn primary facilitator-start">スタート</button>
-                <button class="btn danger facilitator-stop" style="display:none;">停止</button>
-            </div>
-        `;
-        
-        panel.appendChild(header);
-        panel.appendChild(body);
-        
-        const toggleBtn = body.querySelector(`#toggle-${panelId}`);
-        const toggleText = toggleBtn.querySelector('.toggle-text');
-        const settingsDiv = body.querySelector(`#settings-${panelId}`);
-        const displayDiv = body.querySelector(`#display-${panelId}`);
-        const minutesInput = body.querySelector('.facilitator-minutes');
-        const secondsInput = body.querySelector('.facilitator-seconds');
-        const displayTimeSpan = body.querySelector(`#display-time-${panelId}`);
-        const startBtn = body.querySelector('.facilitator-start');
-        const stopBtn = body.querySelector('.facilitator-stop');
-        const countdownDiv = body.querySelector(`#countdown-${panelId}`);
-        const countdownTimeDisplay = body.querySelector(`#countdown-time-${panelId}`);
-        const progressBar = body.querySelector(`#progress-bar-${panelId}`);
-        const progressText = body.querySelector(`#progress-text-${panelId}`);
-        
-        let settingsCollapsed = false;
-        
-        function updateDisplayTime() {
-            facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
-            facilitatorData.durationSeconds = parseInt(secondsInput.value) || 0;
-            
-            const mins = String(facilitatorData.durationMinutes).padStart(2, '0');
-            const secs = String(facilitatorData.durationSeconds).padStart(2, '0');
-            displayTimeSpan.textContent = `${mins}:${secs}`;
-        }
-        
-        function updateCountdown() {
-            const elapsedSeconds = Math.floor((Date.now() - facilitatorData.startTime) / 1000);
-            const remainingSeconds = facilitatorData.totalSeconds - elapsedSeconds;
-            
-            if (remainingSeconds <= 0) {
-                // カウントダウン完了
-                clearInterval(facilitatorData.interval);
-                countdownTimeDisplay.textContent = '00:00';
-                progressBar.style.width = '100%';
-                progressText.textContent = '100%';
                 
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('ファシリテーター機能', {
-                        body: '設定時間が終了しました'
+                // 既存のパネルがあれば上書き、なければ追加
+                const existingIndex = panelStates[panelType].findIndex(p => p.panelId === panelId);
+                if (existingIndex >= 0) {
+                    panelStates[panelType][existingIndex] = {
+                        panelId,
+                        ...state
+                    };
+                } else {
+                    panelStates[panelType].push({
+                        panelId,
+                        ...state
                     });
                 }
-                return;
+                
+                localStorage.setItem(storageKey, JSON.stringify(panelStates));
+                console.log(`Panel state saved: ${meetingId} - ${panelType} - ${panelId}`);
+            },
+            
+            /**
+             * 保存されたパネル状態を取得
+             */
+            getPanelStates(meetingId) {
+                const storageKey = `panel-state-${meetingId}`;
+                return JSON.parse(localStorage.getItem(storageKey)) || {};
+            },
+            
+            /**
+             * 特定のパネルタイプの状態を取得
+             */
+            getPanelTypeStates(meetingId, panelType) {
+                const allStates = this.getPanelStates(meetingId);
+                return allStates[panelType] || [];
+            },
+            
+            /**
+             * パネルの状態をクリア（パネル削除時）
+             */
+            removePanelState(meetingId, panelType, panelId) {
+                const storageKey = `panel-state-${meetingId}`;
+                let panelStates = JSON.parse(localStorage.getItem(storageKey)) || {};
+                
+                if (panelStates[panelType]) {
+                    panelStates[panelType] = panelStates[panelType].filter(p => p.panelId !== panelId);
+                    if (panelStates[panelType].length === 0) {
+                        delete panelStates[panelType];
+                    }
+                }
+                
+                localStorage.setItem(storageKey, JSON.stringify(panelStates));
+                console.log(`Panel state removed: ${meetingId} - ${panelType} - ${panelId}`);
+            },
+            
+            /**
+             * ミーティングの全パネル状態をクリア
+             */
+            clearMeetingPanels(meetingId) {
+                const storageKey = `panel-state-${meetingId}`;
+                localStorage.removeItem(storageKey);
+                console.log(`All panel states cleared for meeting: ${meetingId}`);
+            }
+        };
+
+        function restorePanelStates() {
+            const panelStates = PanelStateManager.getPanelStates(meetingId);
+            
+            console.log('Restoring panel states:', panelStates);
+            
+            // タイマーパネルの復元
+            if (panelStates.timer && panelStates.timer.length > 0) {
+                panelStates.timer.forEach(state => {
+                    const panelId = state.panelId;
+                    const panel = createTimerPanel(panelId);
+                    rightPanels.insertBefore(panel, featureSelector);
+                    
+                    // 保存された状態を復元
+                    const minutesInput = panel.querySelector('.timer-minutes');
+                    const secondsInput = panel.querySelector('.timer-seconds');
+                    if (minutesInput) minutesInput.value = state.minutes || 25;
+                    if (secondsInput) secondsInput.value = state.seconds || 0;
+                    
+                    // panelIdCounterを更新（重複を避けるため）
+                    const panelNumber = parseInt(panelId.split('-').pop());
+                    if (panelNumber >= panelIdCounter) {
+                        panelIdCounter = panelNumber + 1;
+                    }
+                });
             }
             
-            const mins = Math.floor(remainingSeconds / 60);
-            const secs = remainingSeconds % 60;
-            countdownTimeDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            // メモパネルの復元
+            if (panelStates.memo && panelStates.memo.length > 0) {
+                panelStates.memo.forEach(state => {
+                    const panelId = state.panelId;
+                    const panel = createMemoPanel(panelId);
+                    rightPanels.insertBefore(panel, featureSelector);
+                    
+                    // panelIdCounterを更新
+                    const panelNumber = parseInt(panelId.split('-').pop());
+                    if (panelNumber >= panelIdCounter) {
+                        panelIdCounter = panelNumber + 1;
+                    }
+                });
+            }
             
-            const progress = ((elapsedSeconds / facilitatorData.totalSeconds) * 100);
-            progressBar.style.width = `${progress}%`;
-            progressText.textContent = `${Math.round(progress)}%`;
+            // ファシリテーターパネルの復元
+            if (panelStates.facilitator && panelStates.facilitator.length > 0) {
+                panelStates.facilitator.forEach(state => {
+                    const panelId = state.panelId;
+                    const panel = createFacilitatorPanel(panelId);
+                    rightPanels.insertBefore(panel, featureSelector);
+                    
+                    // 保存された状態を復元
+                    const minutesInput = panel.querySelector('.facilitator-minutes');
+                    const secondsInput = panel.querySelector('.facilitator-seconds');
+                    if (minutesInput) minutesInput.value = state.minutes || 60;
+                    if (secondsInput) secondsInput.value = state.seconds || 0;
+                    
+                    // panelIdCounterを更新
+                    const panelNumber = parseInt(panelId.split('-').pop());
+                    if (panelNumber >= panelIdCounter) {
+                        panelIdCounter = panelNumber + 1;
+                    }
+                });
+            }
+            
+            console.log('Panel states restored. panelIdCounter:', panelIdCounter);
         }
-        
-        toggleBtn.addEventListener('click', () => {
-            settingsCollapsed = !settingsCollapsed;
-            if (settingsCollapsed) {
-                settingsDiv.classList.add('collapsed');
-                toggleBtn.classList.add('collapsed');
-                toggleText.textContent = '時間設定を表示';
-            } else {
+
+        function createTimerPanel(panelId) {
+            const panel = document.createElement('section');
+            panel.className = 'panel';
+            panel.id = panelId;
+            
+            const header = document.createElement('div');
+            header.className = 'panel-header';
+            header.innerHTML = `<span class="panel-title">⏰ カスタムタイマー</span>`;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'panel-close';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => removePanel(panelId);
+            header.appendChild(closeBtn);
+            
+            const body = document.createElement('div');
+            body.className = 'panel-body';
+            
+            const timerData = {
+                targetMinutes: 25,
+                targetSeconds: 0,
+                currentSeconds: 0,
+                interval: null,
+                isRunning: false,
+                isPaused: false
+            };
+            
+            body.innerHTML = `
+                <button class="toggle-settings-btn" id="toggle-${panelId}">
+                    <span class="arrow">▼</span>
+                    <span class="toggle-text">時間設定を隠す</span>
+                </button>
+                <div class="timer-settings" id="settings-${panelId}">
+                    <div class="input-group">
+                        <label>目標時間 (分)</label>
+                        <input type="number" class="timer-minutes" value="25" min="0" max="999">
+                    </div>
+                    <div class="input-group">
+                        <label>目標時間 (秒)</label>
+                        <input type="number" class="timer-seconds" value="0" min="0" max="59">
+                    </div>
+                </div>
+                <div class="timer-display" id="display-${panelId}">
+                    <div class="timer-time">25:00</div>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn primary timer-start">開始</button>
+                    <button class="btn timer-pause" style="display:none;">一時停止</button>
+                    <button class="btn danger timer-reset">リセット</button>
+                </div>
+            `;
+            
+            panel.appendChild(header);
+            panel.appendChild(body);
+            
+            const toggleBtn = body.querySelector(`#toggle-${panelId}`);
+            const toggleText = toggleBtn.querySelector('.toggle-text');
+            const settingsDiv = body.querySelector(`#settings-${panelId}`);
+            const displayDiv = body.querySelector(`#display-${panelId}`);
+            const minutesInput = body.querySelector('.timer-minutes');
+            const secondsInput = body.querySelector('.timer-seconds');
+            const timeDisplay = body.querySelector('.timer-time');
+            const startTimerBtn = body.querySelector('.timer-start');
+            const pauseBtn = body.querySelector('.timer-pause');
+            const resetBtn = body.querySelector('.timer-reset');
+            
+            let settingsCollapsed = false;
+            
+            // パネル状態を保存する関数
+            function savePanelState() {
+                PanelStateManager.savePanelState(meetingId, 'timer', panelId, {
+                    minutes: parseInt(minutesInput.value) || 25,
+                    seconds: parseInt(secondsInput.value) || 0
+                });
+            }
+            
+            toggleBtn.addEventListener('click', () => {
+                settingsCollapsed = !settingsCollapsed;
+                if (settingsCollapsed) {
+                    settingsDiv.classList.add('collapsed');
+                    toggleBtn.classList.add('collapsed');
+                    toggleText.textContent = '時間設定を表示';
+                } else {
+                    settingsDiv.classList.remove('collapsed');
+                    toggleBtn.classList.remove('collapsed');
+                    toggleText.textContent = '時間設定を隠す';
+                }
+            });
+            
+            function updateDisplay() {
+                const totalSeconds = timerData.targetMinutes * 60 + timerData.targetSeconds - timerData.currentSeconds;
+                const mins = Math.floor(Math.abs(totalSeconds) / 60);
+                const secs = Math.abs(totalSeconds) % 60;
+                const sign = totalSeconds < 0 ? '-' : '';
+                
+                timeDisplay.textContent = `${sign}${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                
+                timeDisplay.className = 'timer-time';
+                const remaining = totalSeconds;
+                if (remaining < 0) {
+                    timeDisplay.classList.add('danger');
+                } else if (remaining < 60) {
+                    timeDisplay.classList.add('warning');
+                }
+            }
+            
+            function startTimer() {
+                if (timerData.isRunning) return;
+                
+                if (!timerData.isPaused) {
+                    timerData.targetMinutes = parseInt(minutesInput.value) || 0;
+                    timerData.targetSeconds = parseInt(secondsInput.value) || 0;
+                    timerData.currentSeconds = 0;
+                }
+                
+                timerData.isRunning = true;
+                timerData.isPaused = false;
+                
+                timerData.interval = setInterval(() => {
+                    timerData.currentSeconds++;
+                    updateDisplay();
+                    
+                    const totalSeconds = timerData.targetMinutes * 60 + timerData.targetSeconds;
+                    if (timerData.currentSeconds === totalSeconds) {
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            new Notification('タイマー終了', {
+                                body: 'カスタムタイマーが終了しました'
+                            });
+                        }
+                    }
+                }, 1000);
+                
+                if (!settingsCollapsed) {
+                    settingsDiv.classList.add('collapsed');
+                    toggleBtn.classList.add('collapsed');
+                    toggleText.textContent = '時間設定を表示';
+                    settingsCollapsed = true;
+                }
+                
+                displayDiv.classList.add('compact');
+                startTimerBtn.style.display = 'none';
+                pauseBtn.style.display = 'block';
+                pauseBtn.textContent = '一時停止';
+            }
+            
+            function pauseTimer() {
+                if (!timerData.isRunning) return;
+                
+                clearInterval(timerData.interval);
+                timerData.isRunning = false;
+                timerData.isPaused = true;
+                
+                pauseBtn.textContent = '再開';
+                pauseBtn.onclick = startTimer;
+            }
+            
+            function resetTimer() {
+                clearInterval(timerData.interval);
+                timerData.isRunning = false;
+                timerData.isPaused = false;
+                timerData.currentSeconds = 0;
+                
+                updateDisplay();
+                
                 settingsDiv.classList.remove('collapsed');
                 toggleBtn.classList.remove('collapsed');
                 toggleText.textContent = '時間設定を隠す';
-            }
-        });
-        
-        minutesInput.addEventListener('input', () => {
-            if (!facilitatorData.isActive) {
-                updateDisplayTime();
-            }
-        });
-        
-        secondsInput.addEventListener('input', () => {
-            if (!facilitatorData.isActive) {
-                updateDisplayTime();
-            }
-        });
-        
-        startBtn.addEventListener('click', () => {
-            if (facilitatorData.isActive) return;
-            
-            facilitatorData.isActive = true;
-            facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
-            facilitatorData.durationSeconds = parseInt(secondsInput.value) || 0;
-            facilitatorData.totalSeconds = facilitatorData.durationMinutes * 60 + facilitatorData.durationSeconds;
-            facilitatorData.startTime = Date.now();
-            
-            // カウントダウン表示を開始
-            countdownDiv.style.display = 'block';
-            countdownTimeDisplay.textContent = `${String(facilitatorData.durationMinutes).padStart(2, '0')}:${String(facilitatorData.durationSeconds).padStart(2, '0')}`;
-            progressBar.style.width = '0%';
-            progressText.textContent = '0%';
-            
-            // 毎秒更新
-            if (facilitatorData.interval) {
-                clearInterval(facilitatorData.interval);
-            }
-            facilitatorData.interval = setInterval(updateCountdown, 1000);
-            updateCountdown();  // 即座に最初の更新
-            
-            // サーバーに facilitator 機能の有効化を送信
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'enable_facilitator',
-                    duration_seconds: facilitatorData.totalSeconds
-                }));
-                console.log('Facilitator enabled with duration:', facilitatorData.totalSeconds);
-            }
-            
-            // UI を更新
-            if (!settingsCollapsed) {
-                settingsDiv.classList.add('collapsed');
-                toggleBtn.classList.add('collapsed');
-                toggleText.textContent = '時間設定を表示';
-                settingsCollapsed = true;
-            }
-            
-            startBtn.style.display = 'none';
-            stopBtn.style.display = 'block';
-        });
-        
-        stopBtn.addEventListener('click', () => {
-            if (!facilitatorData.isActive) return;
-            
-            facilitatorData.isActive = false;
-            
-            // カウントダウンを停止
-            if (facilitatorData.interval) {
-                clearInterval(facilitatorData.interval);
-                facilitatorData.interval = null;
-            }
-            countdownDiv.style.display = 'none';
-            
-            // サーバーに facilitator 機能の無効化を送信
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'disable_facilitator'
-                }));
-                console.log('Facilitator disabled');
-            }
-            
-            settingsDiv.classList.remove('collapsed');
-            toggleBtn.classList.remove('collapsed');
-            toggleText.textContent = '時間設定を隠す';
-            settingsCollapsed = false;
-            
-            startBtn.style.display = 'block';
-            stopBtn.style.display = 'none';
-        });
-        
-        // 初期表示時に時間を更新
-        updateDisplayTime();
-        
-        activePanels[panelId] = {
-            element: panel,
-            cleanup: () => {
-                if (facilitatorData.interval) {
-                    clearInterval(facilitatorData.interval);
-                }
-                if (facilitatorData.isActive) {
-                    stopBtn.click();
-                }
-            }
-        };
-        
-        return panel;
-    }
-
-    function connectWebSocket() {
-        socket = new WebSocket(wsUrl);
-
-        socket.onopen = () => {
-            console.log('WebSocket接続成功');
-            statusText.textContent = '接続完了 - 録音準備完了';
-        };
-
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('WebSocket message:', data);
+                settingsCollapsed = false;
                 
-                if (data.type === 'transcript') {
-                    addTranscript(data.text);
-                    transcriptCount++;
-                    statTranscripts.textContent = transcriptCount;
-                } else if (data.type === 'facilitator_message') {
-                    addFacilitatorMessage(data.message, data.phase, data.progress);
-                } else if (data.type === 'facilitator_enabled') {
-                    console.log('Facilitator enabled with duration:', data.duration_seconds);
-                } else if (data.type === 'facilitator_disabled') {
-                    console.log('Facilitator disabled');
-                } else if (data.type === 'summary_complete') {
-                    displaySummary(data.summary);
-                } else if (data.type === 'error') {
-                    alert('エラー: ' + data.message);
+                displayDiv.classList.remove('compact');
+                startTimerBtn.style.display = 'block';
+                pauseBtn.style.display = 'none';
+                pauseBtn.textContent = '一時停止';
+                pauseBtn.onclick = pauseTimer;
+            }
+            
+            minutesInput.addEventListener('input', () => {
+                if (!timerData.isRunning && !timerData.isPaused) {
+                    timerData.targetMinutes = parseInt(minutesInput.value) || 0;
+                    updateDisplay();
+                    savePanelState();
+                }
+            });
+            
+            secondsInput.addEventListener('input', () => {
+                if (!timerData.isRunning && !timerData.isPaused) {
+                    timerData.targetSeconds = parseInt(secondsInput.value) || 0;
+                    updateDisplay();
+                    savePanelState();
+                }
+            });
+            
+            startTimerBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            resetBtn.addEventListener('click', resetTimer);
+            
+            savePanelState();  // 初期状態を保存
+            console.log('Initial timer state saved:', {minutes: 25, seconds: 0});
+
+            activePanels[panelId] = {
+                element: panel,
+                panelType: 'timer',
+                cleanup: () => {
+                    if (timerData.interval) {
+                        clearInterval(timerData.interval);
+                    }
                 }
             };
 
-        socket.onerror = (error) => {
-            console.error('WebSocketエラー:', error);
-            statusText.textContent = 'エラー: 接続に失敗しました';
-        };
+            activePanels[panelId] = {
+                element: panel,
+                panelType: 'timer',
+                cleanup: () => {
+                    if (timerData.interval) {
+                        clearInterval(timerData.interval);
+                    }
+                }
+            };
+            
+            return panel;
+        }
 
-        socket.onclose = () => {
-            console.log('WebSocket接続終了');
-        };
-    }
+        function createMemoPanel(panelId) {
+            const panel = document.createElement('section');
+            panel.className = 'panel';
+            panel.id = panelId;
+                
+            const header = document.createElement('div');
+            header.className = 'panel-header';
+            header.innerHTML = `<span class="panel-title">📝 個人用メモ</span>`;
+                
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'panel-close';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => removePanel(panelId);
+            header.appendChild(closeBtn);
+                
+            const body = document.createElement('div');
+            body.className = 'panel-body';
+            body.style.padding = '15px';
+                
+            const memoData = {
+                content: '',
+                autoSaveTimer: null,
+                meetingId: meetingId,
+                panelId: panelId
+            };
+            
+            body.innerHTML = `
+                <div style="display: flex; flex-direction: column; height: 100%; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <small style="color: #9ca3af; font-size: 12px;" class="save-status">自動保存されました</small>
+                        <button class="btn-small" style="background: #3b82f6; color: white; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer;" id="clear-memo-${panelId}">クリア</button>
+                    </div>
+                    <textarea 
+                        class="memo-textarea" 
+                        placeholder="ここにメモを入力..."
+                        style="flex: 1; width: 100%; min-height: 200px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-family: inherit; font-size: 14px; resize: vertical; transition: all 0.3s;"
+                    ></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #9ca3af;">
+                        <span class="char-count">0文字</span>
+                        <span class="word-count">0単語</span>
+                    </div>
+                </div>
+            `;
+                
+            panel.appendChild(header);
+            panel.appendChild(body);
+                
+            const textarea = body.querySelector('.memo-textarea');
+            const saveStatus = body.querySelector('.save-status');
+            const charCount = body.querySelector('.char-count');
+            const wordCount = body.querySelector('.word-count');
+            const clearBtn = body.querySelector(`#clear-memo-${panelId}`);
+            
+            const storageKey = `${memoData.meetingId}${memoData.panelId}`;
+            const savedMemo = localStorage.getItem(storageKey);
+            if (savedMemo) {
+                textarea.value = savedMemo;
+                memoData.content = savedMemo;
+                updateCounts();
+            }
+                
+            function updateCounts() {
+                const text = textarea.value;
+                charCount.textContent = `${text.length}文字`;
+                const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+                wordCount.textContent = `${words}単語`;
+            }
+                
+            function autoSave() {
+                memoData.content = textarea.value;
+                localStorage.setItem(storageKey, memoData.content);
+                saveStatus.textContent = '自動保存されました';
+                saveStatus.style.color = '#10b981';
+                    
+                setTimeout(() => {
+                    saveStatus.style.color = '#9ca3af';
+                }, 2000);
+            }
 
-    async function startRecording() {
-        if (isRecording) return;
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    sampleRate: 44100
-                } 
+            function clearMemo() {
+                if (confirm('メモをクリアしますか？この操作は取り消せません。')) {
+                    textarea.value = '';
+                    memoData.content = '';
+                    localStorage.removeItem(storageKey);
+                    updateCounts();
+                    saveStatus.textContent = 'クリアされました';
+                }
+            }
+                
+            textarea.addEventListener('input', () => {
+                updateCounts();
+                saveStatus.textContent = '保存中...';
+                saveStatus.style.color = '#f59e0b';
+                
+                if (memoData.autoSaveTimer) {
+                    clearTimeout(memoData.autoSaveTimer);
+                }
+                
+                memoData.autoSaveTimer = setTimeout(autoSave, 1000);
+            });
+            
+            textarea.addEventListener('focus', function() {
+                this.style.borderColor = '#667eea';
+                this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+            });
+            
+            textarea.addEventListener('blur', function() {
+                this.style.borderColor = '#e5e7eb';
+                this.style.boxShadow = 'none';
+            });
+            
+            clearBtn.addEventListener('click', () => {
+                clearMemo();
             });
 
-            setupVisualizer(stream);
+            PanelStateManager.savePanelState(meetingId, 'memo', panelId, {});
+            console.log('Initial memo state saved for panelId:', panelId);
 
-            mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm'
-            });
+            activePanels[panelId] = {
+                element: panel,
+                panelType: 'memo',
+                cleanup: () => {
+                    if (memoData.autoSaveTimer) {
+                        clearTimeout(memoData.autoSaveTimer);
+                    }
+                    localStorage.setItem(storageKey, textarea.value);
+                }
+            };
+            
+            return panel;
+        }
 
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0 && socket && socket.readyState === WebSocket.OPEN) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        const base64Audio = reader.result.split(',')[1];
-                        socket.send(JSON.stringify({
-                            type: 'audio_chunk',
-                            audio: base64Audio
-                        }));
-                    };
-                    reader.readAsDataURL(event.data);
+        function createFacilitatorPanel(panelId) {
+            const panel = document.createElement('section');
+            panel.className = 'panel';
+            panel.id = panelId;
+            
+            const header = document.createElement('div');
+            header.className = 'panel-header';
+            header.innerHTML = `<span class="panel-title">🤖 AIファシリテーター</span>`;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'panel-close';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => removePanel(panelId);
+            header.appendChild(closeBtn);
+            
+            const body = document.createElement('div');
+            body.className = 'panel-body';
+            
+            const facilitatorData = {
+                durationMinutes: 60,
+                durationSeconds: 0,
+                isActive: false,
+                startTime: null,
+                totalSeconds: 0,
+                interval: null
+            };
+            
+            body.innerHTML = `
+                <button class="toggle-settings-btn" id="toggle-${panelId}">
+                    <span class="arrow">▼</span>
+                    <span class="toggle-text">時間設定を隠す</span>
+                </button>
+                <div class="timer-settings" id="settings-${panelId}">
+                    <div class="input-group">
+                        <label>会議予定時間（分）</label>
+                        <input type="number" class="facilitator-minutes" value="60" min="1" max="999">
+                    </div>
+                    <div class="input-group">
+                        <label>会議予定時間（秒）</label>
+                        <input type="number" class="facilitator-seconds" value="0" min="0" max="59">
+                    </div>
+                </div>
+                <div class="timer-display" id="display-${panelId}">
+                    <div style="font-size: 14px; color: #6b7280; margin-bottom: 15px;">✓ 設定時間: <span id="display-time-${panelId}">60:00</span></div>
+                    <div style="display:none;" id="countdown-${panelId}">
+                        <div style="font-size: 36px; font-weight: 700; color: #667eea; text-align: center; margin: 15px 0;" id="countdown-time-${panelId}">60:00</div>
+                        <div style="background: #e5e7eb; border-radius: 8px; height: 8px; margin: 15px 0; overflow: hidden;">
+                            <div id="progress-bar-${panelId}" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="font-size: 12px; color: #6b7280; text-align: center;" id="progress-text-${panelId}">0%</div>
+                    </div>
+                </div>
+                <div class="timer-controls">
+                    <button class="btn primary facilitator-start">スタート</button>
+                    <button class="btn danger facilitator-stop" style="display:none;">停止</button>
+                </div>
+            `;
+            
+            panel.appendChild(header);
+            panel.appendChild(body);
+            
+            const minutesInput = body.querySelector('.facilitator-minutes');
+            const secondsInput = body.querySelector('.facilitator-seconds');
+            
+            // パネル状態を保存する関数
+            function savePanelState() {
+                PanelStateManager.savePanelState(meetingId, 'facilitator', panelId, {
+                    minutes: parseInt(minutesInput.value) || 60,
+                    seconds: parseInt(secondsInput.value) || 0
+                });
+            }
+            
+            minutesInput.addEventListener('input', savePanelState);
+            secondsInput.addEventListener('input', savePanelState);
+            
+            savePanelState();  // 初期状態を保存
+            console.log('Initial facilitator state saved:', {minutes: 60, seconds: 0});
+
+            activePanels[panelId] = {
+                element: panel,
+                panelType: 'facilitator',
+                cleanup: () => {
+                    // ...
                 }
             };
 
-            mediaRecorder.start(500);
-            isRecording = true;
-
-            startBtn.textContent = '録音停止';
-            startBtn.className = 'btn danger';
-            statusText.textContent = '録音中...';
-            // transcriptArea.innerHTML = '';  // 前回のデータを保持するためコメントアウト
-            
-            // 時間計測開始（初回のみリセット）
-            if (!hasStartedRecording) {
-                durationSeconds = 0;
-                hasStartedRecording = true;
-            }
-            if (durationInterval) clearInterval(durationInterval);
-            durationInterval = setInterval(() => {
-                durationSeconds++;
-                const minutes = Math.floor(durationSeconds / 60);
-                const seconds = durationSeconds % 60;
-                statDuration.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            }, 1000);
-
-        } catch (error) {
-            console.error('マイクアクセスエラー:', error);
-            alert('マイクへのアクセスが拒否されました。ブラウザの設定を確認してください。');
-        }
-    }
-
-    function stopRecording() {
-        if (!isRecording) return;
-        if (mediaRecorder) {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            isRecording = false;
-
-            startBtn.textContent = '録音開始';
-            startBtn.className = 'btn primary';
-            statusText.textContent = '録音停止 - 議事録を生成中...';
-            
-            // 経過時間計測は継続する（clearIntervalを削除）
-            // if (durationInterval) {
-            //     clearInterval(durationInterval);
-            //     durationInterval = null;
-            // }
-
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'stop_recording'
-                }));
+            activePanels[panelId] = {
+                element: panel,
+                panelType: 'facilitator',
+                cleanup: () => {
+                    if (facilitatorData.interval) {
+                        clearInterval(facilitatorData.interval);
+                    }
+                    if (facilitatorData.isActive) {
+                        // 停止ボタンをクリックして終了
+                        const stopBtn = body.querySelector('.facilitator-stop');
+                        if (stopBtn && stopBtn.style.display !== 'none') {
+                            stopBtn.click();
+                        }
+                    }
+                }
             }
 
-            summarySection.classList.add('active');
+            return panel;
         }
-    }
+
+        function connectWebSocket() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('WebSocket接続成功');
+                statusText.textContent = '接続完了 - 録音準備完了';
+            };
+
+                socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('WebSocket message:', data);
+                    
+                    if (data.type === 'transcript') {
+                        addTranscript(data.text);
+                        transcriptCount++;
+                        statTranscripts.textContent = transcriptCount;
+                    } else if (data.type === 'facilitator_message') {
+                        addFacilitatorMessage(data.message, data.phase, data.progress);
+                    } else if (data.type === 'facilitator_enabled') {
+                        console.log('Facilitator enabled with duration:', data.duration_seconds);
+                    } else if (data.type === 'facilitator_disabled') {
+                        console.log('Facilitator disabled');
+                    } else if (data.type === 'summary_complete') {
+                        displaySummary(data.summary);
+                    } else if (data.type === 'error') {
+                        alert('エラー: ' + data.message);
+                    }
+                };
+
+            socket.onerror = (error) => {
+                console.error('WebSocketエラー:', error);
+                statusText.textContent = 'エラー: 接続に失敗しました';
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket接続終了');
+            };
+        }
+
+        async function startRecording() {
+            if (isRecording) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    } 
+                });
+
+                setupVisualizer(stream);
+
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && socket && socket.readyState === WebSocket.OPEN) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result.split(',')[1];
+                            socket.send(JSON.stringify({
+                                type: 'audio_chunk',
+                                audio: base64Audio
+                            }));
+                        };
+                        reader.readAsDataURL(event.data);
+                    }
+                };
+
+                mediaRecorder.start(500);
+                isRecording = true;
+
+                startBtn.textContent = '録音停止';
+                startBtn.className = 'btn danger';
+                statusText.textContent = '録音中...';
+                // transcriptArea.innerHTML = '';  // 前回のデータを保持するためコメントアウト
+                
+                // 時間計測開始（初回のみリセット）
+                if (!hasStartedRecording) {
+                    durationSeconds = 0;
+                    hasStartedRecording = true;
+                }
+                if (durationInterval) clearInterval(durationInterval);
+                durationInterval = setInterval(() => {
+                    durationSeconds++;
+                    const minutes = Math.floor(durationSeconds / 60);
+                    const seconds = durationSeconds % 60;
+                    statDuration.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }, 1000);
+
+            } catch (error) {
+                console.error('マイクアクセスエラー:', error);
+                alert('マイクへのアクセスが拒否されました。ブラウザの設定を確認してください。');
+            }
+        }
+
+        function stopRecording() {
+            if (!isRecording) return;
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+
+                startBtn.textContent = '録音開始';
+                startBtn.className = 'btn primary';
+                statusText.textContent = '録音停止 - 議事録を生成中...';
+                
+                // 経過時間計測は継続する（clearIntervalを削除）
+                // if (durationInterval) {
+                //     clearInterval(durationInterval);
+                //     durationInterval = null;
+                // }
+
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'stop_recording'
+                    }));
+                }
+
+                summarySection.classList.add('active');
+            }
+        }
 
         function addTranscript(text) {
             const id = Date.now();
@@ -1807,220 +2029,220 @@
             return btn;
         }
 
-    function displaySummary(summary, isLoadMode = false) {
-        console.log('displaySummary called with:', { summary, isLoadMode });
-        
-        if (!summary) {
-            console.warn('Summary data is null or undefined');
-            return;
-        }
-        
-        console.log('Summary has text:', summary.summary);
-        console.log('summarySection element:', summarySection);
-        
-        let html = '<div class="summary-content">';
-        html += `<h4>📌 要約</h4><p>${summary.summary || 'データなし'}</p>`;
-        
-        if (summary.key_points && summary.key_points.length > 0) {
-            html += '<h4>🔑 重要ポイント</h4><ul style="padding-left: 20px;">';
-            summary.key_points.forEach(point => {
-                html += `<li>${point}</li>`;
-            });
-            html += '</ul>';
-        }
-        
-        if (summary.action_items && summary.action_items.length > 0) {
-            html += '<h4>✅ アクションアイテム</h4>';
-            summary.action_items.forEach(item => {
-                html += `<div class="action-item">
-                    <strong>${item.task || item}</strong>
-                    ${item.assignee ? ` - 担当: ${item.assignee}` : ''}
-                </div>`;
-            });
-        }
-        
-        if (summary.decisions && summary.decisions.length > 0) {
-            html += '<h4>📋 決定事項</h4><ul style="padding-left: 20px;">';
-            summary.decisions.forEach(decision => {
-                html += `<li>${decision}</li>`;
-            });
-            html += '</ul>';
-        }
-        
-        html += '</div>';
-        html += '<div style="margin-top: 20px; text-align: center;">';
-        html += `<a href="/meeting/${meetingId}/detail/" style="padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; display: inline-block;">詳細ページを見る</a>`;
-        html += '</div>';
-        
-        console.log('Generated HTML:', html.substring(0, 200));
-        
-        // ロードモード（ページ読み込み時）は上書き、リアルタイムモードは追記
-        if (isLoadMode) {
-            console.log('Load mode: setting summaryContent directly');
-            // 初期ロード時は上書き
-            const summaryContent = document.getElementById('summaryContent');
-            if (summaryContent) {
-                console.log('Setting summaryContent innerHTML directly');
-                summaryContent.innerHTML = html;
-                console.log('summaryContent innerHTML set:', summaryContent.innerHTML.substring(0, 200));
-            } else {
-                console.log('summaryContent not found, using summarySection');
-                summarySection.innerHTML = html;
-            }
-        } else {
-            console.log('Realtime mode: appending summary');
-            // 録音中の新しい要約は追記
-            const existingContent = summarySection.innerHTML;
-            const hasContent = existingContent && existingContent.includes('summary-content');
-            if (hasContent) {
-                // 既存データがある場合は区切り線を入れて追記
-                summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
-            } else {
-                // 初回の場合はそのまま設定
-                summarySection.innerHTML = html;
-            }
-        }
-        
-        statusText.textContent = '議事録生成完了！';
-        console.log('displaySummary completed');
-    }
-
-    function setupVisualizer(stream) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        analyser.fftSize = 256;
-
-        const canvas = document.getElementById('visualizer');
-        const canvasContext = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-        
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        function draw() {
-            if (!isRecording) return;
+        function displaySummary(summary, isLoadMode = false) {
+            console.log('displaySummary called with:', { summary, isLoadMode });
             
-            requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
-
-            canvasContext.fillStyle = '#f9fafb';
-            canvasContext.fillRect(0, 0, canvas.width, canvas.height);
-
-            const barWidth = (canvas.width / bufferLength) * 2.5;
-            let barHeight;
-            let x = 0;
-
-            for (let i = 0; i < bufferLength; i++) {
-                barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
-                
-                const gradient = canvasContext.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-                gradient.addColorStop(0, '#667eea');
-                gradient.addColorStop(1, '#764ba2');
-                
-                canvasContext.fillStyle = gradient;
-                canvasContext.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
-                x += barWidth + 1;
+            if (!summary) {
+                console.warn('Summary data is null or undefined');
+                return;
             }
-        }
-
-        draw();
-    }
-
-    startBtn.addEventListener('click', () => {
-        if (isMeetingEnded) {
-            alert('会議は終了しています。録音はできません。');
-            return;
-        }
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
-    });
-    
-    endMeetingBtn.addEventListener('click', () => {
-        if (confirm('会議を終了しますか？この操作は元に戻せません。')) {
-            fetch(`/meeting/${meetingId}/end/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
-                    'Content-Type': 'application/json'
+            
+            console.log('Summary has text:', summary.summary);
+            console.log('summarySection element:', summarySection);
+            
+            let html = '<div class="summary-content">';
+            html += `<h4>📌 要約</h4><p>${summary.summary || 'データなし'}</p>`;
+            
+            if (summary.key_points && summary.key_points.length > 0) {
+                html += '<h4>🔑 重要ポイント</h4><ul style="padding-left: 20px;">';
+                summary.key_points.forEach(point => {
+                    html += `<li>${point}</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            if (summary.action_items && summary.action_items.length > 0) {
+                html += '<h4>✅ アクションアイテム</h4>';
+                summary.action_items.forEach(item => {
+                    html += `<div class="action-item">
+                        <strong>${item.task || item}</strong>
+                        ${item.assignee ? ` - 担当: ${item.assignee}` : ''}
+                    </div>`;
+                });
+            }
+            
+            if (summary.decisions && summary.decisions.length > 0) {
+                html += '<h4>📋 決定事項</h4><ul style="padding-left: 20px;">';
+                summary.decisions.forEach(decision => {
+                    html += `<li>${decision}</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            html += '</div>';
+            html += '<div style="margin-top: 20px; text-align: center;">';
+            html += `<a href="/meeting/${meetingId}/detail/" style="padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; display: inline-block;">詳細ページを見る</a>`;
+            html += '</div>';
+            
+            console.log('Generated HTML:', html.substring(0, 200));
+            
+            // ロードモード（ページ読み込み時）は上書き、リアルタイムモードは追記
+            if (isLoadMode) {
+                console.log('Load mode: setting summaryContent directly');
+                // 初期ロード時は上書き
+                const summaryContent = document.getElementById('summaryContent');
+                if (summaryContent) {
+                    console.log('Setting summaryContent innerHTML directly');
+                    summaryContent.innerHTML = html;
+                    console.log('summaryContent innerHTML set:', summaryContent.innerHTML.substring(0, 200));
+                } else {
+                    console.log('summaryContent not found, using summarySection');
+                    summarySection.innerHTML = html;
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    isMeetingEnded = true;
-                    
-                    // 録音停止
-                    if (isRecording) {
-                        stopRecording();
-                    }
-                    
-                    // ボタン等の無効化
-                    disableRecordingButtons();
-                    
-                    // 状態更新
-                    statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+            } else {
+                console.log('Realtime mode: appending summary');
+                // 録音中の新しい要約は追記
+                const existingContent = summarySection.innerHTML;
+                const hasContent = existingContent && existingContent.includes('summary-content');
+                if (hasContent) {
+                    // 既存データがある場合は区切り線を入れて追記
+                    summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
+                } else {
+                    // 初回の場合はそのまま設定
+                    summarySection.innerHTML = html;
                 }
-            })
-            .catch(error => {
-                console.error('Error ending meeting:', error);
-                alert('会議の終了処理に失敗しました。');
-            });
+            }
+            
+            statusText.textContent = '議事録生成完了！';
+            console.log('displaySummary completed');
         }
-    });
 
-    sendBtn.addEventListener('click', addManualTranscript);
-    addPanelBtn.addEventListener('click', showAddFeatureModal);
-    closeSelectorBtn.addEventListener('click', hideAddFeatureModal);
-    
-    manualInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            addManualTranscript();
+        function setupVisualizer(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+
+            const canvas = document.getElementById('visualizer');
+            const canvasContext = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                if (!isRecording) return;
+                
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+
+                canvasContext.fillStyle = '#f9fafb';
+                canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+                    
+                    const gradient = canvasContext.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+                    gradient.addColorStop(0, '#667eea');
+                    gradient.addColorStop(1, '#764ba2');
+                    
+                    canvasContext.fillStyle = gradient;
+                    canvasContext.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+                    x += barWidth + 1;
+                }
+            }
+
+            draw();
         }
-    });
 
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-
-    // ページロード時に会議終了状態を確認して既存データを復元
-    (async () => {
-        console.log('Page initialization started');
-        console.log('meetingId:', meetingId);
-        
-        await initializeMeetingStatus();
-        console.log('initializeMeetingStatus completed');
-        
-        console.log('About to call loadMeetingData');
-        await loadMeetingData();
-        console.log('loadMeetingData completed');
-        
-        console.log('About to connect WebSocket');
-        connectWebSocket();
-        console.log('connectWebSocket called');
-    })();
-
-    window.addEventListener('beforeunload', () => {
-        if (isRecording) {
-            stopRecording();
-        }
-        if (socket) {
-            socket.close();
-        }
-        
-        Object.keys(activePanels).forEach(panelId => {
-            if (activePanels[panelId].cleanup) {
-                activePanels[panelId].cleanup();
+        startBtn.addEventListener('click', () => {
+            if (isMeetingEnded) {
+                alert('会議は終了しています。録音はできません。');
+                return;
+            }
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
             }
         });
-    });
+    
+        endMeetingBtn.addEventListener('click', () => {
+            if (confirm('会議を終了しますか？この操作は元に戻せません。')) {
+                fetch(`/meeting/${meetingId}/end/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        isMeetingEnded = true;
+                        
+                        // 録音停止
+                        if (isRecording) {
+                            stopRecording();
+                        }
+                        
+                        // ボタン等の無効化
+                        disableRecordingButtons();
+                        
+                        // 状態更新
+                        statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error ending meeting:', error);
+                    alert('会議の終了処理に失敗しました。');
+                });
+            }
+        });
+
+        sendBtn.addEventListener('click', addManualTranscript);
+        addPanelBtn.addEventListener('click', showAddFeatureModal);
+        closeSelectorBtn.addEventListener('click', hideAddFeatureModal);
+        
+        manualInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addManualTranscript();
+            }
+        });
+
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // ページロード時に会議終了状態を確認して既存データを復元
+        (async () => {
+            console.log('Page initialization started');
+            console.log('meetingId:', meetingId);
+            
+            await initializeMeetingStatus();
+            console.log('initializeMeetingStatus completed');
+            
+            console.log('About to call loadMeetingData');
+            await loadMeetingData();
+            console.log('loadMeetingData completed');
+            
+            console.log('About to connect WebSocket');
+            connectWebSocket();
+            console.log('connectWebSocket called');
+        })();
+
+        window.addEventListener('beforeunload', () => {
+            if (isRecording) {
+                stopRecording();
+            }
+            if (socket) {
+                socket.close();
+            }
+            
+            Object.keys(activePanels).forEach(panelId => {
+                if (activePanels[panelId].cleanup) {
+                    activePanels[panelId].cleanup();
+                }
+            });
+        });
 </script>
 </body>
 </html>
