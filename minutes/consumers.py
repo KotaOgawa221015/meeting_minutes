@@ -650,7 +650,9 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             }
         )
         
-        meeting.status = 'completed'
-        meeting.save()
+        # ステータス更新は「会議終了ボタン押下時」にのみ実施
+        # 録音停止だけでは'recording'を保持（何度でも再開可能に）
+        # meeting.status = 'completed'
+        # meeting.save()
         
         print(f"[Meeting {self.meeting_id}] 議事録DB保存完了")

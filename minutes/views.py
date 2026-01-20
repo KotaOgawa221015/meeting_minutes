@@ -59,6 +59,7 @@ def end_meeting(request, meeting_id):
     if request.method == 'POST':
         meeting = get_object_or_404(Meeting, id=meeting_id)
         meeting.is_ended = True
+        meeting.status = 'completed'  # 会議終了時のみstatusを変更
         meeting.save()
         return JsonResponse({'status': 'success', 'is_ended': meeting.is_ended})
     return JsonResponse({'status': 'error'}, status=405)
@@ -72,6 +73,53 @@ def get_meeting_status(request, meeting_id):
         'status': meeting.status,
         'duration_seconds': meeting.duration_seconds
     })
+
+
+def get_meeting_data(request, meeting_id):
+    """会議のトランスクリプトと要約データを取得"""
+    meeting = get_object_or_404(Meeting, id=meeting_id)
+    
+    # トランスクリプトデータを取得
+    transcripts = meeting.transcripts.all().order_by('timestamp')
+    transcript_list = [
+        {
+            'id': t.id,
+            'timestamp': t.timestamp,
+            'speaker': t.speaker,
+            'text': t.text
+        }
+        for t in transcripts
+    ]
+    
+    # 要約データを取得
+    summary_data = None
+    try:
+        summary = meeting.summary
+        # action_itemsは辞書のリストなので、JSONエンコード可能にする
+        action_items = summary.action_items if isinstance(summary.action_items, list) else []
+        key_points = summary.key_points if isinstance(summary.key_points, list) else []
+        decisions = summary.decisions if isinstance(summary.decisions, list) else []
+        
+        summary_data = {
+            'summary': summary.summary,
+            'key_points': key_points,
+            'action_items': action_items,
+            'decisions': decisions
+        }
+        print(f"[DEBUG] Summary loaded for meeting {meeting_id}: {summary_data}")
+    except MinuteSummary.DoesNotExist:
+        print(f"[DEBUG] No summary found for meeting {meeting_id}")
+    except Exception as e:
+        print(f"[DEBUG] Error loading summary: {e}")
+    
+    response_data = {
+        'transcripts': transcript_list,
+        'summary': summary_data,
+        'transcript_count': len(transcript_list)
+    }
+    print(f"[DEBUG] API Response for meeting {meeting_id}: {response_data}")
+    
+    return JsonResponse(response_data, safe=False)
 
 
 def readme(request):

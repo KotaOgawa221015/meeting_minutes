@@ -908,6 +908,13 @@
         const rightPanels = document.getElementById('rightPanels');
         const endMeetingBtn = document.getElementById('endMeetingBtn');
         
+        console.log('DOM elements initialized:');
+        console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
+        console.log('- transcriptArea:', transcriptArea ? 'found' : 'NOT FOUND');
+        console.log('- summarySection:', summarySection ? 'found' : 'NOT FOUND');
+        console.log('- summarySection innerHTML:', summarySection ? summarySection.innerHTML.substring(0, 100) : 'N/A');
+        console.log('- statusText:', statusText ? 'found' : 'NOT FOUND');
+        
         let transcriptItems = [];
         let panelIdCounter = 0;
         let activePanels = {};
@@ -930,6 +937,76 @@
                 }
             } catch (error) {
                 console.error('Failed to fetch meeting status:', error);
+            }
+        }
+
+        // 会議の既存データを取得して復元
+        async function loadMeetingData() {
+            console.log('loadMeetingData started');
+            try {
+                const url = `/meeting/${meetingId}/data/`;
+                console.log('Fetching from URL:', url);
+                
+                const response = await fetch(url);
+                console.log('Fetch response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Raw API response:', data);
+                console.log('Summary from API:', data.summary);
+                console.log('Transcripts from API:', data.transcripts);
+                
+                // トランスクリプトデータを復元
+                if (data.transcripts && data.transcripts.length > 0) {
+                    console.log('Restoring transcripts...');
+                    data.transcripts.forEach(transcript => {
+                        const item = document.createElement('div');
+                        item.className = 'bubble human';
+                        item.dataset.id = transcript.id;
+                        
+                        const speaker = document.createElement('div');
+                        speaker.className = 'speaker';
+                        speaker.textContent = '👤 参加者';
+                        
+                        const content = document.createElement('div');
+                        content.className = 'transcript-content';
+                        content.textContent = transcript.text;
+                        
+                        const timestamp = document.createElement('div');
+                        timestamp.className = 'timestamp';
+                        timestamp.textContent = new Date(transcript.timestamp * 1000).toLocaleTimeString('ja-JP');
+                        
+                        item.appendChild(speaker);
+                        item.appendChild(content);
+                        item.appendChild(timestamp);
+                        
+                        transcriptArea.appendChild(item);
+                        transcriptCount++;
+                    });
+                    statTranscripts.textContent = transcriptCount;
+                    console.log('Transcripts restored. Count:', transcriptCount);
+                }
+                
+                // 要約データを復元
+                console.log('Checking summary data...');
+                if (data.summary) {
+                    console.log('Summary data found:', data.summary);
+                    
+                    // summaryContent要素全体をリセット
+                    const summaryContent = document.getElementById('summaryContent');
+                    if (summaryContent) {
+                        console.log('Found summaryContent, clearing and resetting');
+                        summaryContent.innerHTML = '';
+                    }
+                    
+                    console.log('About to call displaySummary with:', data.summary);
+                    displaySummary(data.summary, true);
+                    console.log('displaySummary called');
+                } else {
+                    console.log('No summary data found in API response');
+                }
+            } catch (error) {
+                console.error('Failed to load meeting data:', error);
+                console.error('Error stack:', error.stack);
             }
         }
 
@@ -1512,7 +1589,7 @@
             startBtn.textContent = '録音停止';
             startBtn.className = 'btn danger';
             statusText.textContent = '録音中...';
-            transcriptArea.innerHTML = '';
+            // transcriptArea.innerHTML = '';  // 前回のデータを保持するためコメントアウト
             
             // 時間計測開始（初回のみリセット）
             if (!hasStartedRecording) {
@@ -1557,8 +1634,8 @@
             }
 
             summarySection.classList.add('active');
+        }
     }
-}
 
         function addTranscript(text) {
             const id = Date.now();
@@ -1730,9 +1807,19 @@
             return btn;
         }
 
-    function displaySummary(summary) {
+    function displaySummary(summary, isLoadMode = false) {
+        console.log('displaySummary called with:', { summary, isLoadMode });
+        
+        if (!summary) {
+            console.warn('Summary data is null or undefined');
+            return;
+        }
+        
+        console.log('Summary has text:', summary.summary);
+        console.log('summarySection element:', summarySection);
+        
         let html = '<div class="summary-content">';
-        html += `<h4>📌 要約</h4><p>${summary.summary}</p>`;
+        html += `<h4>📌 要約</h4><p>${summary.summary || 'データなし'}</p>`;
         
         if (summary.key_points && summary.key_points.length > 0) {
             html += '<h4>🔑 重要ポイント</h4><ul style="padding-left: 20px;">';
@@ -1746,7 +1833,7 @@
             html += '<h4>✅ アクションアイテム</h4>';
             summary.action_items.forEach(item => {
                 html += `<div class="action-item">
-                    <strong>${item.task}</strong>
+                    <strong>${item.task || item}</strong>
                     ${item.assignee ? ` - 担当: ${item.assignee}` : ''}
                 </div>`;
             });
@@ -1765,8 +1852,37 @@
         html += `<a href="/meeting/${meetingId}/detail/" style="padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; display: inline-block;">詳細ページを見る</a>`;
         html += '</div>';
         
-        summarySection.innerHTML = html;
+        console.log('Generated HTML:', html.substring(0, 200));
+        
+        // ロードモード（ページ読み込み時）は上書き、リアルタイムモードは追記
+        if (isLoadMode) {
+            console.log('Load mode: setting summaryContent directly');
+            // 初期ロード時は上書き
+            const summaryContent = document.getElementById('summaryContent');
+            if (summaryContent) {
+                console.log('Setting summaryContent innerHTML directly');
+                summaryContent.innerHTML = html;
+                console.log('summaryContent innerHTML set:', summaryContent.innerHTML.substring(0, 200));
+            } else {
+                console.log('summaryContent not found, using summarySection');
+                summarySection.innerHTML = html;
+            }
+        } else {
+            console.log('Realtime mode: appending summary');
+            // 録音中の新しい要約は追記
+            const existingContent = summarySection.innerHTML;
+            const hasContent = existingContent && existingContent.includes('summary-content');
+            if (hasContent) {
+                // 既存データがある場合は区切り線を入れて追記
+                summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
+            } else {
+                // 初回の場合はそのまま設定
+                summarySection.innerHTML = html;
+            }
+        }
+        
         statusText.textContent = '議事録生成完了！';
+        console.log('displaySummary completed');
     }
 
     function setupVisualizer(stream) {
@@ -1874,10 +1990,22 @@
         Notification.requestPermission();
     }
 
-    // ページロード時に会議終了状態を確認
-    initializeMeetingStatus();
-    
-    connectWebSocket();
+    // ページロード時に会議終了状態を確認して既存データを復元
+    (async () => {
+        console.log('Page initialization started');
+        console.log('meetingId:', meetingId);
+        
+        await initializeMeetingStatus();
+        console.log('initializeMeetingStatus completed');
+        
+        console.log('About to call loadMeetingData');
+        await loadMeetingData();
+        console.log('loadMeetingData completed');
+        
+        console.log('About to connect WebSocket');
+        connectWebSocket();
+        console.log('connectWebSocket called');
+    })();
 
     window.addEventListener('beforeunload', () => {
         if (isRecording) {
