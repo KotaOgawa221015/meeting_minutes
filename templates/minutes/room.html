@@ -1429,6 +1429,11 @@
                 console.log('Summary from API:', data.summary);
                 console.log('Transcripts from API:', data.transcripts);
                 
+                // トランスクリプトデータを復元する前に既存データをクリア
+                transcriptArea.innerHTML = '';
+                transcriptCount = 0;
+                transcriptItems = [];
+                
                 // トランスクリプトデータを復元
                 if (data.transcripts && data.transcripts.length > 0) {
                     console.log('Restoring transcripts...');
@@ -1536,18 +1541,6 @@
                                 item.classList.add('has-mark');
                                 item.dataset.markId = mark.id;
                                 item.dataset.markColor = mark.color;
-                                
-                                // ×ボタンを追加
-                                const removeBtn = document.createElement('button');
-                                removeBtn.className = 'mark-remove-btn';
-                                removeBtn.type = 'button';
-                                removeBtn.textContent = '×';
-                                removeBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 18px; color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s;';
-                                removeBtn.onmouseover = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.3)';
-                                removeBtn.onmouseout = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.2)';
-                                removeBtn.onclick = () => removeMark(mark.id, transcript.id);
-                                item.style.position = 'relative';
-                                item.appendChild(removeBtn);
                             }
                         }
                         
@@ -2795,6 +2788,7 @@
             markMenu.id = `mark-menu-${transcriptId}`;
             
             const markColors = [
+                { value: 'none', label: '⭕ マーキングなし' },
                 { value: 'yellow', label: '🟨 黄' },
                 { value: 'pink', label: '🟥 ピンク' },
                 { value: 'blue', label: '🟦 青' },
@@ -3095,6 +3089,21 @@
                     return;
                 }
                 
+                // 「マーキングなし」が選択された場合はマークを削除
+                if (color === 'none') {
+                    const existingMarkId = item.dataset.markId;
+                    if (existingMarkId) {
+                        console.log('Removing mark:', existingMarkId);
+                        const removed = await removeMark(existingMarkId, transcriptId);
+                        if (removed) {
+                            console.log('Mark removed successfully');
+                        }
+                    } else {
+                        console.log('No mark to remove');
+                    }
+                    return;
+                }
+                
                 // 既存のマークがある場合は先に削除
                 const existingMarkId = item.dataset.markId;
                 if (existingMarkId) {
@@ -3126,21 +3135,6 @@
                     // マークIDをデータ属性に保存（削除時に参照）
                     item.dataset.markId = data.mark_id;
                     item.dataset.markColor = color;
-                    
-                    // ×ボタンを追加
-                    let removeBtn = item.querySelector('.mark-remove-btn');
-                    if (!removeBtn) {
-                        removeBtn = document.createElement('button');
-                        removeBtn.className = 'mark-remove-btn';
-                        removeBtn.type = 'button';
-                        removeBtn.textContent = '×';
-                        removeBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 18px; color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s;';
-                        removeBtn.onmouseover = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.3)';
-                        removeBtn.onmouseout = () => removeBtn.style.backgroundColor = 'rgba(0,0,0,0.2)';
-                        removeBtn.onclick = () => removeMark(data.mark_id, transcriptId);
-                        item.style.position = 'relative';
-                        item.appendChild(removeBtn);
-                    }
                     
                     console.log('Mark added successfully');
                 } else {
@@ -3185,14 +3179,10 @@
                     const item = document.querySelector(`[data-id="${transcriptId}"]`);
                     if (item) {
                         item.classList.remove('has-mark');
-                        item.style.backgroundColor = '#f8fafc';
+                        // 背景色をリセット（インラインスタイルを削除）
+                        item.style.backgroundColor = '';
                         item.dataset.markId = '';
                         item.dataset.markColor = '';
-                        // ×ボタンを削除
-                        const removeBtn = item.querySelector('.mark-remove-btn');
-                        if (removeBtn) {
-                            removeBtn.remove();
-                        }
                     }
                     return true;
                 } else {
