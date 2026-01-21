@@ -25,6 +25,10 @@ def create_meeting(request):
         return redirect('meeting_room', meeting_id=meeting.id)
     return render(request, 'minutes/create.html')
 
+def meeting_detail(request, meeting_id):
+    meeting = Meeting.objects.get(id=meeting_id)
+    return render(request, 'meeting_detail.html', {'meeting': meeting})
+
 
 def meeting_room(request, meeting_id):
     """会議ルーム（録音画面）"""
