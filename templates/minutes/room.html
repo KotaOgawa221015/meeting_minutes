@@ -1343,6 +1343,38 @@
             aiMembers: {}        // AIメンバー: { id: {name, personality} }
         };
         
+        // AIメンバー削除処理（グローバル関数）
+        function deleteAIMember(memberId) {
+            fetch(`/ai-member/${memberId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    removeAIMemberFromUI(memberId);
+                    // 参加者リストをリロード（aside）
+                    renderParticipants();
+                    
+                    // すべてのAIMembersパネルをリロード
+                    Object.values(activePanels).forEach(panel => {
+                        if (panel.reloadAIMembers) {
+                            panel.reloadAIMembers();
+                        }
+                    });
+                } else {
+                    alert('AIメンバーの削除に失敗しました');
+                }
+            })
+            .catch(error => {
+                console.error('Failed to delete AI member:', error);
+                alert('エラーが発生しました: ' + error.message);
+            });
+        }
+        
         // 統計用の時間計測
         let durationSeconds = 0;
         let durationInterval = null;
@@ -1583,6 +1615,16 @@
                     </div>
                 `;
                 aiMembersContainer.appendChild(facilitatorCard);
+                
+                // ファシリテーター削除ボタンのイベントリスナーを追加
+                const facilitatorBtn = facilitatorCard.querySelector('.participant-remove-btn');
+                facilitatorBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (confirm('AIファシリテーターを削除しますか？')) {
+                        removeFacilitatorFromUI();
+                    }
+                });
             }
             
             // AIメンバーを表示
@@ -1617,23 +1659,14 @@
                     </div>
                 `;
                 aiMembersContainer.appendChild(memberCard);
-            });
-            
-            // 削除ボタンのイベントリスナーを追加
-            document.querySelectorAll('.participant-remove-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
+                
+                // AIメンバー削除ボタンのイベントリスナーを追加
+                const memberBtn = memberCard.querySelector('.participant-remove-btn');
+                memberBtn.addEventListener('click', async (e) => {
                     e.preventDefault();
-                    const type = btn.getAttribute('data-type');
-                    const id = btn.getAttribute('data-id');
-                    
-                    if (type === 'facilitator') {
-                        if (confirm('AIファシリテーターを削除しますか？')) {
-                            removeFacilitatorFromUI();
-                        }
-                    } else if (type === 'ai_member') {
-                        if (confirm('このAIメンバーを削除しますか？')) {
-                            await deleteAIMember(id);
-                        }
+                    e.stopPropagation();
+                    if (confirm('このAIメンバーを削除しますか？')) {
+                        await deleteAIMember(id);
                     }
                 });
             });
@@ -1648,6 +1681,27 @@
         // AIファシリテーターをUIから削除
         function removeFacilitatorFromUI() {
             participants.facilitator = null;
+            
+            // ファシリテーター機能が実行中なら停止
+            const facilitatorPanel = document.querySelector('[id^="panel-facilitator-"]');
+            if (facilitatorPanel) {
+                const closeBtn = facilitatorPanel.querySelector('.panel-close');
+                if (closeBtn) {
+                    closeBtn.click();
+                } else {
+                    // 手動でクリーンアップ
+                    removePanel(facilitatorPanel.id);
+                }
+            } else {
+                // パネルがなくても、バックエンド機能を停止
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'disable_facilitator'
+                    }));
+                    console.log('Facilitator disabled');
+                }
+            }
+            
             renderParticipants();
         }
         
@@ -2466,33 +2520,18 @@
                 aiMembersList.querySelectorAll('.delete-ai-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const memberId = btn.getAttribute('data-member-id');
-                        deleteAIMember(memberId);
+                        if (confirm('このAIメンバーを削除しますか？')) {
+                            // グローバルの deleteAIMember を呼び出し
+                            // これにより、aside と すべてのパネルが同時に更新される
+                            deleteAIMember(memberId);
+                        }
                     });
                 });
             }
             
-            function deleteAIMember(memberId) {
-                if (!confirm('このAIメンバーを削除しますか？')) {
-                    return;
-                }
-                
-                fetch(`/ai-member/${memberId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        removeAIMemberFromUI(memberId);
-                        loadAIMembers();
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to delete AI member:', error);
-                });
+            function deleteAIMember_Panel(memberId) {
+                // この関数は不要になったため削除
+                // グローバルの deleteAIMember を使用
             }
             
             addAIBtn.addEventListener('click', () => {
@@ -2533,7 +2572,8 @@
             
             activePanels[panelId] = {
                 element: panel,
-                cleanup: () => {}
+                cleanup: () => {},
+                reloadAIMembers: loadAIMembers  // パネル内のAIメンバー一覧をリロードする関数
             };
             
             return panel;
