@@ -1679,7 +1679,7 @@
         }
         
         // AIファシリテーターをUIから削除
-        function removeFacilitatorFromUI() {
+        function removeFacilitatorFromUI(fromServer = false) {
             participants.facilitator = null;
             
             // ファシリテーター機能が実行中なら停止
@@ -1694,11 +1694,11 @@
                 }
             } else {
                 // パネルがなくても、バックエンド機能を停止
-                if (socket && socket.readyState === WebSocket.OPEN) {
+                if (!fromServer && socket && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         type: 'disable_facilitator'
                     }));
-                    console.log('Facilitator disabled');
+                    console.log('Facilitator disabled request sent');
                 }
             }
             
@@ -2604,8 +2604,8 @@
                     console.log('Facilitator enabled with duration:', data.duration_seconds);
                     addFacilitatorToUI();
                 } else if (data.type === 'facilitator_disabled') {
-                    console.log('Facilitator disabled');
-                    removeFacilitatorFromUI();
+                    console.log('Facilitator disabled confirmed by server');
+                    removeFacilitatorFromUI(true);
                 } else if (data.type === 'partial_summary') {
                     console.log('📊 Received partial_summary:', data);
                     displayPartialSummary(data.summary, data.segment_count, data.timestamp);
