@@ -1933,7 +1933,6 @@
             Object.entries(participants.aiMembers).forEach(([id, member]) => {
                 const personalityIcons = {
                     'idea': '💡',
-                    'facilitator': '🎯',
                     'cheerful': '😊',
                     'negative': '😟',
                     'angry': '😠'
@@ -1941,7 +1940,6 @@
                 
                 const personalityLabels = {
                     'idea': '新たなアイディア',
-                    'facilitator': '議論促進',
                     'cheerful': '明るい',
                     'negative': 'ネガティブ',
                     'angry': '怒りっぽい'
@@ -2234,9 +2232,9 @@
             
             // パネル状態を保存する関数
             function savePanelState() {
-                PanelStateManager.savePanelState(meetingId, 'timer', panelId, {
-                    minutes: parseInt(minutesInput.value) || 25,
-                    seconds: parseInt(secondsInput.value) || 0
+                PanelStateManager.savePanelState(meetingId, 'facilitator', panelId, {
+                    minutes: facilitatorData.durationMinutes,
+                    seconds: facilitatorData.durationSeconds
                 });
             }
             
@@ -2516,6 +2514,13 @@
         }
 
         function createFacilitatorPanel(panelId) {
+            // 既に開いているファシリテーターパネルをチェック
+            const existingFacilitatorPanel = document.querySelector('[id^="panel-facilitator-"]');
+            if (existingFacilitatorPanel && existingFacilitatorPanel.id !== panelId) {
+                alert('AIファシリテーターパネルは1つのみ追加できます。既存のパネルを閉じてから追加してください。');
+                return null;
+            }
+            
             const panel = document.createElement('section');
             panel.className = 'panel';
             panel.id = panelId;
@@ -2620,7 +2625,7 @@
                     progressText.textContent = '100%';
                     
                     if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification('ファシリテーター機能', {
+                        new Notification('AIファシリテーター', {
                             body: '設定時間が終了しました'
                         });
                     }
@@ -2738,6 +2743,7 @@
             
             activePanels[panelId] = {
                 element: panel,
+                panelType: 'facilitator',
                 cleanup: () => {
                     if (facilitatorData.interval) {
                         clearInterval(facilitatorData.interval);
@@ -2747,6 +2753,12 @@
                     }
                 }
             };
+            
+            // パネル状態を保存
+            PanelStateManager.savePanelState(meetingId, 'facilitator', panelId, {
+                minutes: facilitatorData.durationMinutes,
+                seconds: facilitatorData.durationSeconds
+            });
             
             return panel;
         }
@@ -2780,7 +2792,6 @@
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">AIメンバーの性格</label>
                         <select class="ai-personality" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                             <option value="idea">💡 新たなアイディアを提案</option>
-                            <option value="facilitator">🎯 議論を促進</option>
                             <option value="cheerful">😊 明るい</option>
                             <option value="negative">😟 ネガティブ</option>
                             <option value="angry">😠 怒りっぽい</option>
@@ -2811,13 +2822,14 @@
             const aiMembersList = body.querySelector(`#ai-members-list-${panelId}`);
             
             let aiMembers = [];
-            
+                        
             function loadAIMembers() {
                 fetch(`/meeting/${meetingId}/ai-members/`)
                     .then(response => response.json())
                     .then(data => {
                         aiMembers = data.ai_members;
                         renderAIMembers();
+                        
                     })
                     .catch(error => {
                         console.error('Failed to load AI members:', error);
@@ -2828,40 +2840,41 @@
                 aiMembersList.innerHTML = '';
                 
                 if (aiMembers.length === 0) {
-                    aiMembersList.innerHTML = '<p style="color: #9ca3af; font-size: 13px; text-align: center;">まだAIメンバーはいません</p>';
+                    aiMembersList.innerHTML = '<p style="color: #9ca3af; font-size: 13px; text-align: center;">まだ AIメンバーはいません</p>';
                     return;
                 }
                 
                 aiMembers.forEach(member => {
+                    const personalityIcons = {
+                        'idea': '💡',
+                        'cheerful': '😊',
+                        'negative': '😟',
+                        'angry': '😠'
+                    };
+                    
                     const memberDiv = document.createElement('div');
                     memberDiv.style.cssText = 'padding: 10px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: center;';
+                    
                     memberDiv.innerHTML = `
                         <div>
-                            <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${member.name}</div>
+                            <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${personalityIcons[member.personality] || '🤖'} ${member.name}</div>
                             <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
                             <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
                         </div>
-                        <button data-member-id="${member.id}" class="delete-ai-btn" style="background: #fee2e2; border: none; color: #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">削除</button>
+                        <button data-member-id="${member.id}" class="delete-ai-btn" style="background: ${member.personality === 'facilitator' ? '#d1d5db' : '#fee2e2'}; border: none; color: ${member.personality === 'facilitator' ? '#9ca3af' : '#ef4444'}; padding: 4px 8px; border-radius: 4px; cursor: ${member.personality === 'facilitator' ? 'not-allowed' : 'pointer'}; font-size: 12px;" ${member.personality === 'facilitator' ? 'disabled' : ''}>削除</button>
                     `;
                     aiMembersList.appendChild(memberDiv);
                 });
                 
                 // 削除ボタンのイベントリスナーを追加
-                aiMembersList.querySelectorAll('.delete-ai-btn').forEach(btn => {
+                aiMembersList.querySelectorAll('.delete-ai-btn:not([disabled])').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const memberId = btn.getAttribute('data-member-id');
                         if (confirm('このAIメンバーを削除しますか？')) {
-                            // グローバルの deleteAIMember を呼び出し
-                            // これにより、aside と すべてのパネルが同時に更新される
                             deleteAIMember(memberId);
                         }
                     });
                 });
-            }
-            
-            function deleteAIMember_Panel(memberId) {
-                // この関数は不要になったため削除
-                // グローバルの deleteAIMember を使用
             }
             
             addAIBtn.addEventListener('click', () => {
@@ -2876,7 +2889,7 @@
                     },
                     body: JSON.stringify({
                         personality: personality,
-                        count: count
+                        count: personality === 'facilitator' ? 1 : count
                     })
                 })
                 .then(response => response.json())
@@ -2888,12 +2901,14 @@
                         });
                         loadAIMembers();
                         countInput.value = 1;
-                        alert(`${count}個のAIメンバーを追加しました`);
+                        alert(`${data.ai_members.length}個のAIメンバーを追加しました`);
+                    } else {
+                        alert('エラー: ' + (data.message || 'AIメンバーの追加に失敗しました'));
                     }
                 })
                 .catch(error => {
                     console.error('Failed to add AI member:', error);
-                    alert('AIメンバーの追加に失敗しました');
+                    alert('AIメンバーの追加中にエラーが発生しました: ' + error.message);
                 });
             });
             
@@ -2903,7 +2918,7 @@
             activePanels[panelId] = {
                 element: panel,
                 cleanup: () => {},
-                reloadAIMembers: loadAIMembers  // パネル内のAIメンバー一覧をリロードする関数
+                reloadAIMembers: loadAIMembers
             };
             
             return panel;

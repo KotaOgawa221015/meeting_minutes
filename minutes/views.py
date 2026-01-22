@@ -441,18 +441,36 @@ def get_transcript_marks(request, transcript_id):
 
 @require_http_methods(["POST"])
 def add_ai_member(request, meeting_id):
-    """AIメンバーを追加"""
+    """AIメンバーを追加 (ファシリテーター機能とは独立)"""
     try:
         meeting = get_object_or_404(Meeting, id=meeting_id)
         data = json.loads(request.body)
-        personality = data.get('personality', 'facilitator')
-        count = data.get('count', 1)
+        personality = data.get('personality', 'idea')
+        count = int(data.get('count', 1))
         
         # personality のバリデーション
         valid_personalities = [choice[0] for choice in AIMember.PERSONALITY_CHOICES]
         if personality not in valid_personalities:
             return JsonResponse({'status': 'error', 'message': 'Invalid personality'}, status=400)
         
+        # ファシリテーター機能としてのAIメンバー追加の制限チェック
+        # personality == 'facilitator' の場合のみ1人に制限
+        if personality == 'facilitator':
+            existing_facilitators = meeting.ai_members.filter(
+                personality='facilitator',
+                is_active=True
+            ).exists()
+            
+            if existing_facilitators:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'ファシリテーターは既に1人います。複数のファシリテーターは追加できません。'
+                }, status=400)
+            
+            # ファシリテーターAIメンバーは複数要求があっても1人のみ
+            count = 1
+        
+        # AIメンバーを作成
         ai_members = []
         for i in range(count):
             ai_member = AIMember.objects.create(
@@ -467,6 +485,7 @@ def add_ai_member(request, meeting_id):
                 'personality': ai_member.personality,
                 'personality_display': ai_member.get_personality_display(),
                 'is_active': ai_member.is_active,
+                'response_count': ai_member.responses.count(),
                 'created_at': ai_member.created_at.isoformat()
             })
         
@@ -475,9 +494,11 @@ def add_ai_member(request, meeting_id):
             'ai_members': ai_members,
             'total_count': len(ai_members)
         })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
+    
 
 @require_http_methods(["GET"])
 def get_ai_members(request, meeting_id):
