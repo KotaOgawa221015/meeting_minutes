@@ -687,46 +687,112 @@
         }
         
         .bubble-actions {
-            display: none;
-            gap: 8px;
-            position: absolute; /* 絶対位置指定 */
-            top: 10px;          /* 上からの位置 */
-            right: 10px;        /* 右からの位置 */
-            z-index: 10;
-            background: rgba(255, 255, 255, 0.9); /* 背景を少し白くして視認性を上げる */
-            padding: 4px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .bubble:hover .bubble-actions {
             display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: absolute; /* 絶対位置指定 */
+            top: 8px;          /* 上からの位置 */
+            right: 8px;        /* 右からの位置 */
+            z-index: 10;
+            align-items: flex-end;
         }
+        
+        .action-indicator {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            font-size: 14px;
+            color: #333;
+            user-select: none;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+        }
+        
+        .action-indicator::before {
+            content: '⋮';
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        /* ホバーエリアを広くする */
+        .action-indicator::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+        }
+        
+        .action-indicator:hover::after {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        .action-indicator.active {
+            color: #0066cc;
+        }
+        
+        .action-group {
+            display: flex;
+            gap: 4px;
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            border: none;
+        }
+        
+        .edit-group {
+            display: flex;
+            flex-direction: row;
+        }
+        
+        .feature-group {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        
         .bubble .transcript-content {
-            padding-right: 80px; /* ボタンが表示されるスペースをあらかじめ確保 */
+            padding-right: 30px; /* ボタンが表示されるスペースをあらかじめ確保 */
         }
         
         .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-            border: none;
-            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 11px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            background: #f9fafb;
+            color: #374151;
+            flex-shrink: 0;
+        }
+        .btn-small:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
         }
         .btn-edit {
-            background: #3b82f6;
-            color: white;
+            background: #f0f4ff;
+            border-color: #c7d2fe;
+            color: #3b82f6;
         }
         .btn-edit:hover {
-            background: #2563eb;
+            background: #e0e7ff;
+            border-color: #a5b4fc;
         }
         .btn-delete {
-            background: #ef4444;
-            color: white;
+            background: #fee2e2;
+            border-color: #fecaca;
+            color: #ef4444;
         }
         .btn-delete:hover {
-            background: #dc2626;
+            background: #fecaca;
+            border-color: #fca5a5;
         }
         .btn-save {
             background: #10b981;
@@ -808,8 +874,8 @@
         
         .transcript-features {
             display: flex;
+            flex-direction: column;
             gap: 8px;
-            flex-wrap: wrap;
             margin-top: 8px;
             padding-top: 8px;
             border-top: 1px solid #e5e7eb;
@@ -819,6 +885,9 @@
             display: flex;
             gap: 4px;
             flex-wrap: wrap;
+            flex-shrink: 0;
+            max-width: 100%;
+            align-content: flex-start;
         }
         
         .stamp-badge {
@@ -954,6 +1023,46 @@
             color: #ef4444;
         }
         
+        .comments-toggle-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 0;
+            margin-top: 4px;
+            transition: color 0.2s;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        .comments-toggle-btn:hover {
+            color: #5568d3;
+            text-decoration: underline;
+        }
+        
+        .comments-hide-btn {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+            display: block;
+        }
+        
+        .comments-expand-container {
+            display: none;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 8px;
+        }
+        
+        .comments-expand-container.show {
+            display: block;
+        }
+        
+        .comment-delete:hover {
+            color: #ef4444;
+        }
+        
         .transcript-action-buttons {
             display: flex;
             gap: 6px;
@@ -963,47 +1072,49 @@
         }
         
         .action-btn {
-            padding: 4px 8px;
+            padding: 5px 10px;
             font-size: 11px;
-            border: 1px solid #e5e7eb;
-            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
             color: #6b7280;
+            flex-shrink: 0;
         }
         
         .action-btn:hover {
-            background: #e5e7eb;
-            border-color: #d1d5db;
+            background: #f3f4f6;
+            border-color: #9ca3af;
         }
         
         .action-btn.stamp-btn:hover {
-            border-color: #667eea;
+            border-color: #a5b4fc;
             color: #667eea;
+            background: #f0f4ff;
         }
         
         .action-btn.comment-btn:hover {
-            border-color: #3b82f6;
+            border-color: #93c5fd;
             color: #3b82f6;
+            background: #eff6ff;
         }
         
         .action-btn.mark-btn:hover {
-            border-color: #f59e0b;
+            border-color: #fed7aa;
             color: #f59e0b;
+            background: #fffbeb;
         }
         
         .stamp-menu, .mark-menu {
             display: none;
-            position: absolute;
-            top: 100%;
-            margin-top: 4px;
+            position: fixed;
             background: white;
             border: 1px solid #e5e7eb;
             border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            z-index: 1000;
-            min-width: 150px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            min-width: 160px;
         }
         
         .stamp-menu.active, .mark-menu.active {
@@ -1457,6 +1568,43 @@
             console.log('connectWebSocket called');
         })();
 
+        // 戻るボタンの処理：ページを離れる前にWebSocketと定期処理を停止
+        const backBtn = document.getElementById('backBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', (e) => {
+                console.log('Back button clicked - closing resources');
+                
+                // 録音中の場合は停止
+                if (isRecording) {
+                    stopRecording();
+                }
+                
+                // WebSocketを明示的にクローズ（これがサーバー側のdisconnectを呼ぶ）
+                if (socket) {
+                    console.log('Closing WebSocket...');
+                    socket.close();
+                    socket = null;
+                }
+                
+                // 定期実行タイマーをクリア
+                if (durationInterval) {
+                    clearInterval(durationInterval);
+                    durationInterval = null;
+                    console.log('Duration interval cleared');
+                }
+                
+                // パネルのクリーンアップ
+                Object.keys(activePanels).forEach(panelId => {
+                    if (activePanels[panelId].cleanup) {
+                        activePanels[panelId].cleanup();
+                    }
+                });
+                
+                console.log('Resources cleaned up - navigating to home');
+                // ナビゲーションはaタグのデフォルト動作で行われる
+            });
+        }
+
         // 会議の既存データを取得して復元
         async function loadMeetingData() {
             console.log('loadMeetingData started');
@@ -1500,6 +1648,18 @@
                         const actions = document.createElement('div');
                         actions.className = 'bubble-actions';
                         
+                        // 目印アイコン
+                        const indicator = document.createElement('div');
+                        indicator.className = 'action-indicator';
+                        indicator.title = '機能を表示';
+                        
+                        // 機能パネル（スタンプ、コメント、マーク）を追加
+                        const { featureButtons, featurePanel } = createTranscriptFeaturesPanel(transcript.id);
+                        
+                        // 編集削除ボタングループ
+                        const editDeleteGroup = document.createElement('div');
+                        editDeleteGroup.className = 'action-group edit-group';
+                        
                         const editBtn = document.createElement('button');
                         editBtn.className = 'btn-small btn-edit';
                         editBtn.textContent = '編集';
@@ -1510,17 +1670,36 @@
                         deleteBtn.textContent = '削除';
                         deleteBtn.onclick = () => deleteTranscript(transcript.id);
                         
-                        actions.appendChild(editBtn);
-                        actions.appendChild(deleteBtn);
+                        editDeleteGroup.appendChild(editBtn);
+                        editDeleteGroup.appendChild(deleteBtn);
                         
-                        // 機能パネル（スタンプ、コメント、マーク）を追加
-                        const featuresPanel = createTranscriptFeaturesPanel(transcript.id);
+                        // 機能ボタングループ
+                        const featureGroup = document.createElement('div');
+                        featureGroup.className = 'action-group feature-group';
+                        featureButtons.forEach(btn => featureGroup.appendChild(btn));
+                        
+                        actions.appendChild(indicator);
+                        actions.appendChild(editDeleteGroup);
+                        actions.appendChild(featureGroup);
+                        
+                        // 初期状態を非表示に設定
+                        editDeleteGroup.style.display = 'none';
+                        featureGroup.style.display = 'none';
+                        
+                        // 目印のクリックイベントを追加
+                        indicator.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const isVisible = editDeleteGroup.style.display === 'flex';
+                            editDeleteGroup.style.display = isVisible ? 'none' : 'flex';
+                            featureGroup.style.display = isVisible ? 'none' : 'flex';
+                            indicator.classList.toggle('active');
+                        });
                         
                         item.appendChild(speaker);
                         item.appendChild(content);
                         item.appendChild(timestamp);
                         item.appendChild(actions);
-                        item.appendChild(featuresPanel);
+                        item.appendChild(featurePanel);
                         
                         // スタンプを復元
                         if (transcript.stamps && transcript.stamps.length > 0) {
@@ -1555,7 +1734,87 @@
                         if (transcript.comments && transcript.comments.length > 0) {
                             const commentsContainer = document.getElementById(`comments-${transcript.id}`);
                             if (commentsContainer) {
-                                transcript.comments.forEach(comment => {
+                                // 複数のコメントがある場合、折りたたみを実装
+                                if (transcript.comments.length > 1) {
+                                    // 最初のコメントだけ表示
+                                    const firstComment = transcript.comments[0];
+                                    const commentEl = document.createElement('div');
+                                    commentEl.className = 'comment-item';
+                                    commentEl.dataset.commentId = firstComment.id;
+                                    const createdTime = new Date(firstComment.created_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                                    commentEl.innerHTML = `
+                                        <div class="comment-header">
+                                            <span class="comment-user">${firstComment.created_by__username || 'Unknown'}</span>
+                                            <span class="comment-time">${createdTime}</span>
+                                        </div>
+                                        <div class="comment-text">${firstComment.comment_text}</div>
+                                        <div class="comment-actions">
+                                            <button class="comment-edit-btn" onclick="editComment(${firstComment.id}, ${transcript.id})">編集</button>
+                                            <button class="comment-delete-btn" onclick="deleteComment(${firstComment.id}, ${transcript.id})">削除</button>
+                                        </div>
+                                    `;
+                                    commentsContainer.appendChild(commentEl);
+                                    
+                                    // 折りたたみコンテナを作成
+                                    const expandContainer = document.createElement('div');
+                                    expandContainer.className = 'comments-expand-container';
+                                    expandContainer.id = `comments-expand-${transcript.id}`;
+                                    
+                                    // 折りたたみコメントを保存
+                                    for (let i = 1; i < transcript.comments.length; i++) {
+                                        const comment = transcript.comments[i];
+                                        const commentEl = document.createElement('div');
+                                        commentEl.className = 'comment-item';
+                                        commentEl.dataset.commentId = comment.id;
+                                        const createdTime = new Date(comment.created_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                                        commentEl.innerHTML = `
+                                            <div class="comment-header">
+                                                <span class="comment-user">${comment.created_by__username || 'Unknown'}</span>
+                                                <span class="comment-time">${createdTime}</span>
+                                            </div>
+                                            <div class="comment-text">${comment.comment_text}</div>
+                                            <div class="comment-actions">
+                                                <button class="comment-edit-btn" onclick="editComment(${comment.id}, ${transcript.id})">編集</button>
+                                                <button class="comment-delete-btn" onclick="deleteComment(${comment.id}, ${transcript.id})">削除</button>
+                                            </div>
+                                        `;
+                                        expandContainer.appendChild(commentEl);
+                                    }
+                                    
+                                    // 「もっと見る」ボタン
+                                    const toggleBtn = document.createElement('button');
+                                    toggleBtn.className = 'comments-toggle-btn';
+                                    toggleBtn.textContent = `この他 ${transcript.comments.length - 1} 件のコメント`;
+                                    
+                                    // 非表示ボタンを折りたたみコンテナ内に追加
+                                    const hideBtn = document.createElement('button');
+                                    hideBtn.className = 'comments-toggle-btn comments-hide-btn';
+                                    hideBtn.textContent = 'コメントを非表示';
+                                    hideBtn.style.display = 'none';
+                                    
+                                    toggleBtn.onclick = () => {
+                                        const isExpanded = expandContainer.style.display === 'block';
+                                        expandContainer.style.display = isExpanded ? 'none' : 'block';
+                                        hideBtn.style.display = isExpanded ? 'none' : 'block';
+                                        toggleBtn.style.display = isExpanded ? 'block' : 'none';
+                                    };
+                                    
+                                    hideBtn.onclick = () => {
+                                        expandContainer.style.display = 'none';
+                                        hideBtn.style.display = 'none';
+                                        toggleBtn.style.display = 'block';
+                                    };
+                                    
+                                    commentsContainer.appendChild(toggleBtn);
+                                    expandContainer.appendChild(hideBtn);
+                                    commentsContainer.appendChild(expandContainer);
+                                    
+                                    // 初期状態を折りたたみに設定
+                                    expandContainer.style.display = 'none';
+                                    hideBtn.style.display = 'none';
+                                } else {
+                                    // 1件だけの場合は通常表示
+                                    const comment = transcript.comments[0];
                                     const commentEl = document.createElement('div');
                                     commentEl.className = 'comment-item';
                                     commentEl.dataset.commentId = comment.id;
@@ -1572,7 +1831,7 @@
                                         </div>
                                     `;
                                     commentsContainer.appendChild(commentEl);
-                                });
+                                }
                             }
                         }
                         
@@ -1599,11 +1858,18 @@
                 if (data.summary) {
                     console.log('Summary data found:', data.summary);
                     
-                    // summaryContent要素全体をリセット
-                    const summaryContent = document.getElementById('summaryContent');
-                    if (summaryContent) {
-                        console.log('Found summaryContent, clearing and resetting');
-                        summaryContent.innerHTML = '';
+                    // summarySection 内をリセット（summaryContent は保持）
+                    const summarySection = document.getElementById('summarySection');
+                    if (summarySection) {
+                        console.log('Found summarySection, clearing its content');
+                        summarySection.innerHTML = '';
+                    }
+                    
+                    // 既存の partialSummaryContainer があれば削除
+                    const existingPartialContainer = document.getElementById('partialSummaryContainer');
+                    if (existingPartialContainer) {
+                        console.log('Removing existing partialSummaryContainer');
+                        existingPartialContainer.remove();
                     }
                     
                     console.log('About to call displaySummary with:', data.summary);
@@ -2672,6 +2938,12 @@
         }
 
         function connectWebSocket() {
+            // 既存のソケットがあればクローズ
+            if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+                console.log('Closing existing WebSocket before reconnecting');
+                socket.close();
+            }
+            
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
@@ -2819,9 +3091,8 @@
             commentsContainer.className = 'comments-section';
             commentsContainer.id = `comments-${transcriptId}`;
             
-            // アクションボタン
-            const actionButtons = document.createElement('div');
-            actionButtons.className = 'transcript-action-buttons';
+            // アクションボタン用配列
+            const featureButtons = [];
             
             // スタンプボタン
             const stampBtn = document.createElement('button');
@@ -2864,7 +3135,15 @@
                 const otherMenus = document.querySelectorAll(`.mark-menu.active`);
                 otherMenus.forEach(menu => menu.classList.remove('active'));
                 // このメニューをトグル
-                stampMenu.classList.toggle('active');
+                if (stampMenu.classList.contains('active')) {
+                    stampMenu.classList.remove('active');
+                } else {
+                    stampMenu.classList.add('active');
+                    // 位置を計算
+                    const rect = stampBtn.getBoundingClientRect();
+                    stampMenu.style.top = (rect.bottom + 4) + 'px';
+                    stampMenu.style.left = (rect.left - 50) + 'px';
+                }
             });
             
             // コメントボタン
@@ -2918,7 +3197,15 @@
                 const otherMenus = document.querySelectorAll(`.stamp-menu.active`);
                 otherMenus.forEach(menu => menu.classList.remove('active'));
                 // このメニューをトグル
-                markMenu.classList.toggle('active');
+                if (markMenu.classList.contains('active')) {
+                    markMenu.classList.remove('active');
+                } else {
+                    markMenu.classList.add('active');
+                    // 位置を計算
+                    const rect = markBtn.getBoundingClientRect();
+                    markMenu.style.top = (rect.bottom + 4) + 'px';
+                    markMenu.style.left = (rect.left - 50) + 'px';
+                }
             });
             
             // コメント入力ボックス
@@ -2949,15 +3236,15 @@
             commentInputBox.appendChild(textarea);
             commentInputBox.appendChild(inputActions);
             
-            actionButtons.appendChild(stampBtn);
-            actionButtons.appendChild(stampMenu);
-            actionButtons.appendChild(commentBtn);
-            actionButtons.appendChild(markBtn);
-            actionButtons.appendChild(markMenu);
+            // featureButtonsに追加
+            featureButtons.push(stampBtn);
+            featureButtons.push(stampMenu);
+            featureButtons.push(commentBtn);
+            featureButtons.push(markBtn);
+            featureButtons.push(markMenu);
             
             panel.appendChild(stampContainer);
             panel.appendChild(commentsContainer);
-            panel.appendChild(actionButtons);
             panel.appendChild(commentInputBox);
             
             // クリック時にメニューを閉じる（外側のクリックのみ）
@@ -2969,7 +3256,7 @@
                 }
             });
             
-            return panel;
+            return { featureButtons, featurePanel: panel };
         }
         
         // スタンプを追加
@@ -3108,7 +3395,71 @@
                             <button class="comment-delete" onclick="deleteComment(${data.comment_id}, ${transcriptId})">削除</button>
                         </div>
                     `;
-                    commentsContainer.appendChild(commentItem);
+                    
+                    // 既存のコメント数を確認
+                    const existingComments = commentsContainer.querySelectorAll('.comment-item').length;
+                    const existingToggleBtn = commentsContainer.querySelector('.comments-toggle-btn:not(.comments-hide-btn)');
+                    const existingExpandContainer = document.getElementById(`comments-expand-${transcriptId}`);
+                    
+                    if (existingComments === 0) {
+                        // 最初のコメント
+                        commentsContainer.appendChild(commentItem);
+                    } else if (existingComments === 1 && !existingToggleBtn) {
+                        // 2番目のコメント - 折りたたみ機能を追加（まだ折りたたみ機能がない場合）
+                        const toggleBtn = document.createElement('button');
+                        toggleBtn.className = 'comments-toggle-btn';
+                        toggleBtn.textContent = 'この他 1 件のコメント';
+                        
+                        const expandContainer = document.createElement('div');
+                        expandContainer.className = 'comments-expand-container';
+                        expandContainer.id = `comments-expand-${transcriptId}`;
+                        expandContainer.appendChild(commentItem);
+                        expandContainer.style.display = 'none';
+                        
+                        // 非表示ボタンを折りたたみコンテナ内に追加
+                        const hideBtn = document.createElement('button');
+                        hideBtn.className = 'comments-toggle-btn comments-hide-btn';
+                        hideBtn.textContent = 'コメントを非表示';
+                        hideBtn.style.display = 'none';
+                        expandContainer.appendChild(hideBtn);
+                        
+                        toggleBtn.onclick = () => {
+                            const isExpanded = expandContainer.style.display === 'block';
+                            expandContainer.style.display = isExpanded ? 'none' : 'block';
+                            hideBtn.style.display = isExpanded ? 'none' : 'block';
+                            toggleBtn.style.display = isExpanded ? 'block' : 'none';
+                        };
+                        
+                        hideBtn.onclick = () => {
+                            expandContainer.style.display = 'none';
+                            hideBtn.style.display = 'none';
+                            toggleBtn.style.display = 'block';
+                        };
+                        
+                        commentsContainer.appendChild(toggleBtn);
+                        commentsContainer.appendChild(expandContainer);
+                    } else if (existingExpandContainer) {
+                        // 3件目以上のコメント - 既存の折りたたみコンテナに追加
+                        const hideBtn = existingExpandContainer.querySelector('.comments-hide-btn');
+                        const toggleBtn = existingToggleBtn || commentsContainer.querySelector('.comments-toggle-btn:not(.comments-hide-btn)');
+                        
+                        if (hideBtn) {
+                            // 非表示ボタンの前にコメントを挿入
+                            existingExpandContainer.insertBefore(commentItem, hideBtn);
+                        } else {
+                            // 非表示ボタンがない場合はそのまま追加
+                            existingExpandContainer.appendChild(commentItem);
+                        }
+                        
+                        // 「もっと見る」ボタンのテキストを更新
+                        if (toggleBtn) {
+                            const commentCount = commentsContainer.querySelectorAll('.comment-item').length;
+                            toggleBtn.textContent = `この他 ${commentCount - 1} 件のコメント`;
+                        }
+                    } else {
+                        // フォールバック
+                        commentsContainer.appendChild(commentItem);
+                    }
                     
                     textarea.value = '';
                     toggleCommentInput(transcriptId);
@@ -3412,6 +3763,18 @@
             const actions = document.createElement('div');
             actions.className = 'bubble-actions';
             
+            // 目印アイコン
+            const indicator = document.createElement('div');
+            indicator.className = 'action-indicator';
+            indicator.title = '機能を表示';
+            
+            // 機能パネル（スタンプ、コメント、マーク）を追加
+            const { featureButtons, featurePanel } = createTranscriptFeaturesPanel(transcriptId);
+            
+            // 編集削除ボタングループ
+            const editDeleteGroup = document.createElement('div');
+            editDeleteGroup.className = 'action-group edit-group';
+            
             const editBtn = document.createElement('button');
             editBtn.className = 'btn-small btn-edit';
             editBtn.textContent = '編集';
@@ -3422,17 +3785,36 @@
             deleteBtn.textContent = '削除';
             deleteBtn.onclick = () => deleteTranscript(transcriptId);
             
-            actions.appendChild(editBtn);
-            actions.appendChild(deleteBtn);
+            editDeleteGroup.appendChild(editBtn);
+            editDeleteGroup.appendChild(deleteBtn);
             
-            // 機能パネル（スタンプ、コメント、マーク）を追加
-            const featuresPanel = createTranscriptFeaturesPanel(transcriptId);
+            // 機能ボタングループ
+            const featureGroup = document.createElement('div');
+            featureGroup.className = 'action-group feature-group';
+            featureButtons.forEach(btn => featureGroup.appendChild(btn));
+            
+            actions.appendChild(indicator);
+            actions.appendChild(editDeleteGroup);
+            actions.appendChild(featureGroup);
+            
+            // 初期状態を非表示に設定
+            editDeleteGroup.style.display = 'none';
+            featureGroup.style.display = 'none';
+            
+            // 目印のクリックイベントを追加
+            indicator.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = editDeleteGroup.style.display === 'flex';
+                editDeleteGroup.style.display = isVisible ? 'none' : 'flex';
+                featureGroup.style.display = isVisible ? 'none' : 'flex';
+                indicator.classList.toggle('active');
+            });
             
             item.appendChild(speaker);
             item.appendChild(content);
             item.appendChild(timestamp);
             item.appendChild(actions);
-            item.appendChild(featuresPanel);
+            item.appendChild(featurePanel);
             
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
@@ -3589,6 +3971,13 @@
                     summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
                     console.log('After insert - summarySection innerHTML preview:', summarySection.innerHTML.substring(0, 150));
                 }
+            } else {
+                // 既存のコンテナがある場合でも、displaySummaryで作成されたコンテンツを保持しつつ、
+                // partialSummaryContainerを確実に前に配置
+                console.log('Partial summary container already exists, ensuring it is first');
+                if (summarySection && partialSummaryContainer.parentElement !== summarySection) {
+                    summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
+                }
             }
             
             // 定期要約コンテンツを生成
@@ -3635,8 +4024,72 @@
             console.log('Summary has text:', summary.summary);
             console.log('summarySection element:', summarySection);
             
+            // ロードモード時は、定期要約コンテナとして初期化
+            if (isLoadMode) {
+                console.log('Load mode: initializing as partial summary container');
+                
+                // 既存の partialSummaryContainer があれば削除
+                let existingPartialContainer = document.getElementById('partialSummaryContainer');
+                if (existingPartialContainer) {
+                    existingPartialContainer.remove();
+                }
+                
+                // 新しい partialSummaryContainer を作成
+                let partialSummaryContainer = document.createElement('div');
+                partialSummaryContainer.id = 'partialSummaryContainer';
+                partialSummaryContainer.style.cssText = `
+                    display: block !important;
+                    background: #f0f4ff;
+                    border-left: 4px solid #667eea;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    color: #666;
+                `;
+                
+                // 初期要約内容を生成（ページ復帰後の保存済み要約を表示）
+                let html = `<div style="margin-bottom: 10px; font-weight: 600; color: #667eea;">
+                    📌 保存済み要約
+                </div>`;
+                
+                html += `<p style="margin: 8px 0;">${summary.summary || 'データなし'}</p>`;
+                
+                if (summary.key_points && summary.key_points.length > 0) {
+                    html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">🔑 重要ポイント:</div>';
+                    html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+                    summary.key_points.slice(0, 3).forEach(point => {
+                        html += `<li style="font-size: 12px;">${point}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                if (summary.action_items && summary.action_items.length > 0) {
+                    const tasks = summary.action_items.filter(item => item.task);
+                    if (tasks.length > 0) {
+                        html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">✅ アクション:</div>';
+                        html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+                        tasks.slice(0, 2).forEach(item => {
+                            html += `<li style="font-size: 12px;">${item.task}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                }
+                
+                partialSummaryContainer.innerHTML = html;
+                
+                // summarySection に追加
+                if (summarySection) {
+                    summarySection.innerHTML = '';
+                    summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
+                    console.log('✅ Initial summary loaded into partialSummaryContainer');
+                }
+                return;
+            }
+            
+            // リアルタイムモード（summary_complete）の処理
             let html = '<div class="summary-content">';
-            html += `<h4>📌 要約</h4><p>${summary.summary || 'データなし'}</p>`;
+            html += `<h4>📌 最終要約</h4><p>${summary.summary || 'データなし'}</p>`;
             
             if (summary.key_points && summary.key_points.length > 0) {
                 html += '<h4>🔑 重要ポイント</h4><ul style="padding-left: 20px;">';
@@ -3670,36 +4123,11 @@
             html += '</div>';
             
             console.log('Generated HTML:', html.substring(0, 200));
+            console.log('Realtime mode: appending final summary to summarySection');
             
-            // ロードモード（ページ読み込み時）は上書き、リアルタイムモードは追記
-            if (isLoadMode) {
-                console.log('Load mode: setting summaryContent directly');
-                // 初期ロード時は上書き
-                const summaryContent = document.getElementById('summaryContent');
-                if (summaryContent) {
-                    console.log('Setting summaryContent innerHTML directly');
-                    summaryContent.innerHTML = html;
-                    console.log('summaryContent innerHTML set:', summaryContent.innerHTML.substring(0, 200));
-                } else {
-                    console.log('summaryContent not found, using summarySection');
-                    summarySection.innerHTML = html;
-                }
-            } else {
-                console.log('Realtime mode: appending summary');
-                // 録音中の新しい要約は追記
-                const existingContent = summarySection.innerHTML;
-                const hasContent = existingContent && existingContent.includes('summary-content');
-                if (hasContent) {
-                    // 既存データがある場合は区切り線を入れて追記
-                    summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
-                } else {
-                    // 初回の場合はそのまま設定
-                    summarySection.innerHTML = html;
-                }
-            }
-            
-            statusText.textContent = '議事録生成完了！';
-            console.log('displaySummary completed');
+            // 録音中の最終要約を追記（定期要約の下に追加）
+            const existingContent = summarySection.innerHTML;
+            summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
         }
 
         function setupVisualizer(stream) {
@@ -3841,6 +4269,31 @@
                 }
             });
         });
+
+        // グローバルクリックリスナー：外側をクリックした時に全てのボタンを閉じる（一度だけ登録）
+        document.addEventListener('click', (e) => {
+            // クリックした要素が .action-indicator の場合はスキップ（indicator のハンドラが処理）
+            if (e.target.closest('.action-indicator')) {
+                return;
+            }
+            
+            // クリックした要素が .action-btn の場合もスキップ（ボタンのハンドラが処理）
+            if (e.target.closest('.action-btn')) {
+                return;
+            }
+            
+            // 外側をクリックした場合、全ての .bubble-actions 内の .action-group を隠す
+            const allActions = document.querySelectorAll('.bubble-actions');
+            allActions.forEach(actions => {
+                const editGroup = actions.querySelector('.edit-group');
+                const featureGroup = actions.querySelector('.feature-group');
+                const indicator = actions.querySelector('.action-indicator');
+                
+                if (editGroup) editGroup.style.display = 'none';
+                if (featureGroup) featureGroup.style.display = 'none';
+                if (indicator) indicator.classList.remove('active');
+            });
+        }, true); // キャプチャフェーズで実行
 </script>
 </body>
 </html>
