@@ -3001,8 +3001,6 @@
                     } 
                 });
 
-                setupVisualizer(stream);
-
                 mediaRecorder = new MediaRecorder(stream, {
                     mimeType: 'audio/webm'
                 });
@@ -4128,51 +4126,6 @@
             // 録音中の最終要約を追記（定期要約の下に追加）
             const existingContent = summarySection.innerHTML;
             summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
-        }
-
-        function setupVisualizer(stream) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioContext.createAnalyser();
-            const source = audioContext.createMediaStreamSource(stream);
-            source.connect(analyser);
-            analyser.fftSize = 256;
-
-            const canvas = document.getElementById('visualizer');
-            const canvasContext = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-
-            function draw() {
-                if (!isRecording) return;
-                
-                requestAnimationFrame(draw);
-                analyser.getByteFrequencyData(dataArray);
-
-                canvasContext.fillStyle = '#f9fafb';
-                canvasContext.fillRect(0, 0, canvas.width, canvas.height);
-
-                const barWidth = (canvas.width / bufferLength) * 2.5;
-                let barHeight;
-                let x = 0;
-
-                for (let i = 0; i < bufferLength; i++) {
-                    barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
-                    
-                    const gradient = canvasContext.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-                    gradient.addColorStop(0, '#667eea');
-                    gradient.addColorStop(1, '#764ba2');
-                    
-                    canvasContext.fillStyle = gradient;
-                    canvasContext.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
-                    x += barWidth + 1;
-                }
-            }
-
-            draw();
         }
 
         startBtn.addEventListener('click', () => {
