@@ -1526,6 +1526,43 @@
             console.log('connectWebSocket called');
         })();
 
+        // 戻るボタンの処理：ページを離れる前にWebSocketと定期処理を停止
+        const backBtn = document.getElementById('backBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', (e) => {
+                console.log('Back button clicked - closing resources');
+                
+                // 録音中の場合は停止
+                if (isRecording) {
+                    stopRecording();
+                }
+                
+                // WebSocketを明示的にクローズ（これがサーバー側のdisconnectを呼ぶ）
+                if (socket) {
+                    console.log('Closing WebSocket...');
+                    socket.close();
+                    socket = null;
+                }
+                
+                // 定期実行タイマーをクリア
+                if (durationInterval) {
+                    clearInterval(durationInterval);
+                    durationInterval = null;
+                    console.log('Duration interval cleared');
+                }
+                
+                // パネルのクリーンアップ
+                Object.keys(activePanels).forEach(panelId => {
+                    if (activePanels[panelId].cleanup) {
+                        activePanels[panelId].cleanup();
+                    }
+                });
+                
+                console.log('Resources cleaned up - navigating to home');
+                // ナビゲーションはaタグのデフォルト動作で行われる
+            });
+        }
+
         // 会議の既存データを取得して復元
         async function loadMeetingData() {
             console.log('loadMeetingData started');
@@ -1779,11 +1816,18 @@
                 if (data.summary) {
                     console.log('Summary data found:', data.summary);
                     
-                    // summaryContent要素全体をリセット
-                    const summaryContent = document.getElementById('summaryContent');
-                    if (summaryContent) {
-                        console.log('Found summaryContent, clearing and resetting');
-                        summaryContent.innerHTML = '';
+                    // summarySection 内をリセット（summaryContent は保持）
+                    const summarySection = document.getElementById('summarySection');
+                    if (summarySection) {
+                        console.log('Found summarySection, clearing its content');
+                        summarySection.innerHTML = '';
+                    }
+                    
+                    // 既存の partialSummaryContainer があれば削除
+                    const existingPartialContainer = document.getElementById('partialSummaryContainer');
+                    if (existingPartialContainer) {
+                        console.log('Removing existing partialSummaryContainer');
+                        existingPartialContainer.remove();
                     }
                     
                     console.log('About to call displaySummary with:', data.summary);
@@ -2796,6 +2840,12 @@
         }
 
         function connectWebSocket() {
+            // 既存のソケットがあればクローズ
+            if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+                console.log('Closing existing WebSocket before reconnecting');
+                socket.close();
+            }
+            
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
@@ -3823,6 +3873,13 @@
                     summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
                     console.log('After insert - summarySection innerHTML preview:', summarySection.innerHTML.substring(0, 150));
                 }
+            } else {
+                // 既存のコンテナがある場合でも、displaySummaryで作成されたコンテンツを保持しつつ、
+                // partialSummaryContainerを確実に前に配置
+                console.log('Partial summary container already exists, ensuring it is first');
+                if (summarySection && partialSummaryContainer.parentElement !== summarySection) {
+                    summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
+                }
             }
             
             // 定期要約コンテンツを生成
@@ -3869,8 +3926,72 @@
             console.log('Summary has text:', summary.summary);
             console.log('summarySection element:', summarySection);
             
+            // ロードモード時は、定期要約コンテナとして初期化
+            if (isLoadMode) {
+                console.log('Load mode: initializing as partial summary container');
+                
+                // 既存の partialSummaryContainer があれば削除
+                let existingPartialContainer = document.getElementById('partialSummaryContainer');
+                if (existingPartialContainer) {
+                    existingPartialContainer.remove();
+                }
+                
+                // 新しい partialSummaryContainer を作成
+                let partialSummaryContainer = document.createElement('div');
+                partialSummaryContainer.id = 'partialSummaryContainer';
+                partialSummaryContainer.style.cssText = `
+                    display: block !important;
+                    background: #f0f4ff;
+                    border-left: 4px solid #667eea;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    color: #666;
+                `;
+                
+                // 初期要約内容を生成（ページ復帰後の保存済み要約を表示）
+                let html = `<div style="margin-bottom: 10px; font-weight: 600; color: #667eea;">
+                    📌 保存済み要約
+                </div>`;
+                
+                html += `<p style="margin: 8px 0;">${summary.summary || 'データなし'}</p>`;
+                
+                if (summary.key_points && summary.key_points.length > 0) {
+                    html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">🔑 重要ポイント:</div>';
+                    html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+                    summary.key_points.slice(0, 3).forEach(point => {
+                        html += `<li style="font-size: 12px;">${point}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                if (summary.action_items && summary.action_items.length > 0) {
+                    const tasks = summary.action_items.filter(item => item.task);
+                    if (tasks.length > 0) {
+                        html += '<div style="margin-top: 8px; font-weight: 500; color: #667eea;">✅ アクション:</div>';
+                        html += '<ul style="padding-left: 20px; margin: 5px 0;">';
+                        tasks.slice(0, 2).forEach(item => {
+                            html += `<li style="font-size: 12px;">${item.task}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                }
+                
+                partialSummaryContainer.innerHTML = html;
+                
+                // summarySection に追加
+                if (summarySection) {
+                    summarySection.innerHTML = '';
+                    summarySection.insertBefore(partialSummaryContainer, summarySection.firstChild);
+                    console.log('✅ Initial summary loaded into partialSummaryContainer');
+                }
+                return;
+            }
+            
+            // リアルタイムモード（summary_complete）の処理
             let html = '<div class="summary-content">';
-            html += `<h4>📌 要約</h4><p>${summary.summary || 'データなし'}</p>`;
+            html += `<h4>📌 最終要約</h4><p>${summary.summary || 'データなし'}</p>`;
             
             if (summary.key_points && summary.key_points.length > 0) {
                 html += '<h4>🔑 重要ポイント</h4><ul style="padding-left: 20px;">';
@@ -3904,36 +4025,11 @@
             html += '</div>';
             
             console.log('Generated HTML:', html.substring(0, 200));
+            console.log('Realtime mode: appending final summary to summarySection');
             
-            // ロードモード（ページ読み込み時）は上書き、リアルタイムモードは追記
-            if (isLoadMode) {
-                console.log('Load mode: setting summaryContent directly');
-                // 初期ロード時は上書き
-                const summaryContent = document.getElementById('summaryContent');
-                if (summaryContent) {
-                    console.log('Setting summaryContent innerHTML directly');
-                    summaryContent.innerHTML = html;
-                    console.log('summaryContent innerHTML set:', summaryContent.innerHTML.substring(0, 200));
-                } else {
-                    console.log('summaryContent not found, using summarySection');
-                    summarySection.innerHTML = html;
-                }
-            } else {
-                console.log('Realtime mode: appending summary');
-                // 録音中の新しい要約は追記
-                const existingContent = summarySection.innerHTML;
-                const hasContent = existingContent && existingContent.includes('summary-content');
-                if (hasContent) {
-                    // 既存データがある場合は区切り線を入れて追記
-                    summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
-                } else {
-                    // 初回の場合はそのまま設定
-                    summarySection.innerHTML = html;
-                }
-            }
-            
-            statusText.textContent = '議事録生成完了！';
-            console.log('displaySummary completed');
+            // 録音中の最終要約を追記（定期要約の下に追加）
+            const existingContent = summarySection.innerHTML;
+            summarySection.innerHTML = existingContent + '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">' + html;
         }
 
         function setupVisualizer(stream) {

@@ -71,15 +71,31 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         print(f"[Meeting {self.meeting_id}] WebSocket接続成功")
 
     async def disconnect(self, close_code):
+        print(f"[Meeting {self.meeting_id}] WebSocket切断処理開始")
+        
+        # ファシリテータータスクをキャンセル
         if self.facilitator_task:
+            print(f"[Meeting {self.meeting_id}] ファシリテータータスクをキャンセル中...")
             self.facilitator_task.cancel()
+            try:
+                await self.facilitator_task
+            except asyncio.CancelledError:
+                print(f"[Meeting {self.meeting_id}] ファシリテータータスクのキャンセルが完了")
+        
+        # 定期要約タスクをキャンセル
         if self.periodic_summary_task:
+            print(f"[Meeting {self.meeting_id}] 定期要約タスクをキャンセル中...")
             self.periodic_summary_task.cancel()
+            try:
+                await self.periodic_summary_task
+            except asyncio.CancelledError:
+                print(f"[Meeting {self.meeting_id}] 定期要約タスクのキャンセルが完了")
+        
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        print(f"[Meeting {self.meeting_id}] WebSocket切断")
+        print(f"[Meeting {self.meeting_id}] WebSocket切断完了")
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -696,6 +712,9 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 
                 print(f"[Meeting {self.meeting_id}] 定期要約生成完了: {summary_json.get('summary', '')[:50]}")
                 
+                # 定期要約をDBに保存（ページ再訪問時に復元できるように）
+                await self.save_summary_async(full_text, summary_json)
+                
                 # クライアントに定期要約を送信
                 send_data = {
                     'type': 'partial_summary',
@@ -762,6 +781,28 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         meeting.duration_seconds = duration_seconds
         meeting.save()
         return meeting
+
+    async def save_summary_async(self, full_text, summary_data):
+        """定期要約をDBに保存（非同期版）"""
+        await self._save_summary_to_db(full_text, summary_data)
+        print(f"[Meeting {self.meeting_id}] 定期要約DB保存完了")
+
+    @database_sync_to_async
+    def _save_summary_to_db(self, full_text, summary_data):
+        """定期要約をDBに保存（同期版）"""
+        from .models import MinuteSummary
+        meeting = Meeting.objects.get(id=self.meeting_id)
+        
+        MinuteSummary.objects.update_or_create(
+            meeting=meeting,
+            defaults={
+                'full_transcript': full_text,
+                'summary': summary_data.get('summary', ''),
+                'key_points': summary_data.get('key_points', []),
+                'action_items': summary_data.get('action_items', []),
+                'decisions': summary_data.get('decisions', [])
+            }
+        )
 
     @database_sync_to_async
     def save_summary(self, full_text, summary_data):
