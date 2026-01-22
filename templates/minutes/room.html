@@ -207,6 +207,16 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .panel.collapsed {
+            height: auto;
+        }
+        .panel.collapsed .panel-body {
+            display: none;
+        }
+        .panel.collapsed .input-container {
+            display: none;
         }
         .panel-header {
             padding: 15px 20px;
@@ -217,16 +227,48 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .panel-header:hover {
+            background: #f3f4f6;
+        }
+        .panel-header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
         .panel-title {
             flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .panel-body {
-            padding: 20px;
+            padding: 20px 20px 10px 20px;
             overflow-y: auto;
             flex: 1;
         }
-        
+        .panel-collapse-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 16px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .panel-collapse-btn:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .panel-collapse-btn.collapsed {
+            transform: rotate(180deg);
+        }
         .talk {
             display: flex;
             flex-direction: column;
@@ -1858,12 +1900,17 @@
             header.className = 'panel-header';
             header.innerHTML = `<span class="panel-title">⏰ カスタムタイマー</span>`;
             
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'panel-header-controls';
+
             const closeBtn = document.createElement('button');
             closeBtn.className = 'panel-close';
             closeBtn.textContent = '×';
             closeBtn.onclick = () => removePanel(panelId);
             header.appendChild(closeBtn);
             
+            header.appendChild(controlsDiv);
+
             const body = document.createElement('div');
             body.className = 'panel-body';
             
@@ -1904,6 +1951,8 @@
             panel.appendChild(header);
             panel.appendChild(body);
             
+            setupPanelCollapse(panel, header);
+
             const toggleBtn = body.querySelector(`#toggle-${panelId}`);
             const toggleText = toggleBtn.querySelector('.toggle-text');
             const settingsDiv = body.querySelector(`#settings-${panelId}`);
@@ -2069,13 +2118,18 @@
             const header = document.createElement('div');
             header.className = 'panel-header';
             header.innerHTML = `<span class="panel-title">📝 個人用メモ</span>`;
-                
+            
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'panel-header-controls';
+
             const closeBtn = document.createElement('button');
             closeBtn.className = 'panel-close';
             closeBtn.textContent = '×';
             closeBtn.onclick = () => removePanel(panelId);
             header.appendChild(closeBtn);
-                
+            
+            header.appendChild(controlsDiv);
+
             const body = document.createElement('div');
             body.className = 'panel-body';
             body.style.padding = '15px';
@@ -2107,7 +2161,9 @@
                 
             panel.appendChild(header);
             panel.appendChild(body);
-                
+            
+            setupPanelCollapse(panel, header);
+
             const textarea = body.querySelector('.memo-textarea');
             const saveStatus = body.querySelector('.save-status');
             const charCount = body.querySelector('.char-count');
@@ -2202,12 +2258,17 @@
             header.className = 'panel-header';
             header.innerHTML = `<span class="panel-title">🤖 AIファシリテーター</span>`;
             
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'panel-header-controls';
+
             const closeBtn = document.createElement('button');
             closeBtn.className = 'panel-close';
             closeBtn.textContent = '×';
             closeBtn.onclick = () => removePanel(panelId);
             header.appendChild(closeBtn);
             
+            header.appendChild(controlsDiv);
+
             const body = document.createElement('div');
             body.className = 'panel-body';
             
@@ -2254,6 +2315,8 @@
             panel.appendChild(header);
             panel.appendChild(body);
             
+            setupPanelCollapse(panel, header);
+
             const toggleBtn = body.querySelector(`#toggle-${panelId}`);
             const toggleText = toggleBtn.querySelector('.toggle-text');
             const settingsDiv = body.querySelector(`#settings-${panelId}`);
@@ -2426,17 +2489,22 @@
             const panel = document.createElement('section');
             panel.className = 'panel';
             panel.id = panelId;
-            
+
             const header = document.createElement('div');
             header.className = 'panel-header';
             header.innerHTML = `<span class="panel-title">🤖 AIメンバー</span>`;
             
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'panel-header-controls';
+
             const closeBtn = document.createElement('button');
             closeBtn.className = 'panel-close';
             closeBtn.textContent = '×';
             closeBtn.onclick = () => removePanel(panelId);
             header.appendChild(closeBtn);
             
+            header.appendChild(controlsDiv);
+
             const body = document.createElement('div');
             body.className = 'panel-body';
             
@@ -2469,6 +2537,8 @@
             panel.appendChild(header);
             panel.appendChild(body);
             
+            setupPanelCollapse(panel, header);
+
             const personalitySelect = body.querySelector('.ai-personality');
             const countInput = body.querySelector('.ai-count');
             const addAIBtn = body.querySelector(`#add-ai-btn-${panelId}`);
@@ -2571,6 +2641,34 @@
             };
             
             return panel;
+        }
+
+        function setupPanelCollapse(panelElement, headerElement) {
+            if (!panelElement || !headerElement) return;
+            
+            // ヘッダーのコントロール部分を取得
+            const controlsDiv = headerElement.querySelector('.panel-header-controls');
+            if (!controlsDiv) return;
+            
+            // 既に最小化ボタンがあれば追加しない
+            if (controlsDiv.querySelector('.panel-collapse-btn')) return;
+            
+            // 最小化ボタンを作成
+            const collapseBtn = document.createElement('button');
+            collapseBtn.className = 'panel-collapse-btn';
+            collapseBtn.textContent = '−';
+            collapseBtn.type = 'button';
+            collapseBtn.title = '最小化/展開';
+            
+            collapseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panelElement.classList.toggle('collapsed');
+                collapseBtn.classList.toggle('collapsed');
+                collapseBtn.textContent = panelElement.classList.contains('collapsed') ? '+' : '-';
+            });
+            
+            // 最小化ボタンをコントロール要素の前に挿入
+            controlsDiv.insertBefore(collapseBtn, controlsDiv.firstChild);
         }
 
         function connectWebSocket() {
