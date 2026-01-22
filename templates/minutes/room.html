@@ -1624,7 +1624,6 @@
             Object.entries(participants.aiMembers).forEach(([id, member]) => {
                 const personalityIcons = {
                     'idea': '💡',
-                    'facilitator': '🎯',
                     'cheerful': '😊',
                     'negative': '😟',
                     'angry': '😠'
@@ -1632,7 +1631,6 @@
                 
                 const personalityLabels = {
                     'idea': '新たなアイディア',
-                    'facilitator': '議論促進',
                     'cheerful': '明るい',
                     'negative': 'ネガティブ',
                     'angry': '怒りっぽい'
@@ -2459,7 +2457,6 @@
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">AIメンバーの性格</label>
                         <select class="ai-personality" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                             <option value="idea">💡 新たなアイディアを提案</option>
-                            <option value="facilitator">🎯 議論を促進</option>
                             <option value="cheerful">😊 明るい</option>
                             <option value="negative">😟 ネガティブ</option>
                             <option value="angry">😠 怒りっぽい</option>
@@ -2468,9 +2465,6 @@
                     <div style="margin-bottom: 10px;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">追加する数</label>
                         <input type="number" class="ai-count" value="1" min="1" max="10" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
-                    </div>
-                    <div style="display: none; color: #ef4444; font-size: 12px; margin-bottom: 10px; padding: 8px; background: #fee2e2; border-radius: 4px;" class="facilitator-warning">
-                        ⚠️ ファシリテーターは1人のみ追加できます。
                     </div>
                     <button class="btn primary" style="width: 100%; margin-top: 10px;" id="add-ai-btn-${panelId}">AIメンバーを追加</button>
                 </div>
@@ -2489,37 +2483,9 @@
             const countInput = body.querySelector('.ai-count');
             const addAIBtn = body.querySelector(`#add-ai-btn-${panelId}`);
             const aiMembersList = body.querySelector(`#ai-members-list-${panelId}`);
-            const facilitatorWarning = body.querySelector('.facilitator-warning');
             
             let aiMembers = [];
-            
-            // 性格選択時にファシリテーター警告を表示/非表示
-            personalitySelect.addEventListener('change', () => {
-                if (personalitySelect.value === 'facilitator') {
-                    // 既存のファシリテーターをチェック
-                    const hasFacilitator = aiMembers.some(m => m.personality === 'facilitator');
-                    if (hasFacilitator) {
-                        facilitatorWarning.style.display = 'block';
-                        addAIBtn.disabled = true;
-                        addAIBtn.style.opacity = '0.5';
-                        addAIBtn.style.cursor = 'not-allowed';
-                    } else {
-                        facilitatorWarning.style.display = 'block';
-                        countInput.max = '1';
-                        countInput.value = '1';
-                        addAIBtn.disabled = false;
-                        addAIBtn.style.opacity = '1';
-                        addAIBtn.style.cursor = 'pointer';
-                    }
-                } else {
-                    facilitatorWarning.style.display = 'none';
-                    countInput.max = '10';
-                    addAIBtn.disabled = false;
-                    addAIBtn.style.opacity = '1';
-                    addAIBtn.style.cursor = 'pointer';
-                }
-            });
-            
+                        
             function loadAIMembers() {
                 fetch(`/meeting/${meetingId}/ai-members/`)
                     .then(response => response.json())
@@ -2527,14 +2493,6 @@
                         aiMembers = data.ai_members;
                         renderAIMembers();
                         
-                        // ファシリテーター存在チェック
-                        const hasFacilitator = aiMembers.some(m => m.personality === 'facilitator');
-                        if (hasFacilitator && personalitySelect.value === 'facilitator') {
-                            facilitatorWarning.style.display = 'block';
-                            addAIBtn.disabled = true;
-                            addAIBtn.style.opacity = '0.5';
-                            addAIBtn.style.cursor = 'not-allowed';
-                        }
                     })
                     .catch(error => {
                         console.error('Failed to load AI members:', error);
@@ -2552,7 +2510,6 @@
                 aiMembers.forEach(member => {
                     const personalityIcons = {
                         'idea': '💡',
-                        'facilitator': '🎯',
                         'cheerful': '😊',
                         'negative': '😟',
                         'angry': '😠'
@@ -2561,12 +2518,10 @@
                     const memberDiv = document.createElement('div');
                     memberDiv.style.cssText = 'padding: 10px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: center;';
                     
-                    const personalityLabel = member.personality === 'facilitator' ? '⚠️ ファシリテーター (削除不可)' : member.personality_display;
-                    
                     memberDiv.innerHTML = `
                         <div>
                             <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${personalityIcons[member.personality] || '🤖'} ${member.name}</div>
-                            <div style="font-size: 12px; color: #6b7280;">${personalityLabel}</div>
+                            <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
                             <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
                         </div>
                         <button data-member-id="${member.id}" class="delete-ai-btn" style="background: ${member.personality === 'facilitator' ? '#d1d5db' : '#fee2e2'}; border: none; color: ${member.personality === 'facilitator' ? '#9ca3af' : '#ef4444'}; padding: 4px 8px; border-radius: 4px; cursor: ${member.personality === 'facilitator' ? 'not-allowed' : 'pointer'}; font-size: 12px;" ${member.personality === 'facilitator' ? 'disabled' : ''}>削除</button>
@@ -2588,15 +2543,6 @@
             addAIBtn.addEventListener('click', () => {
                 const personality = personalitySelect.value;
                 const count = parseInt(countInput.value) || 1;
-                
-                // ファシリテーター追加制限
-                if (personality === 'facilitator') {
-                    const existingFacilitators = aiMembers.filter(m => m.personality === 'facilitator');
-                    if (existingFacilitators.length > 0) {
-                        alert('ファシリテーターは既に1人います。複数のファシリテーターは追加できません。');
-                        return;
-                    }
-                }
                 
                 fetch(`/meeting/${meetingId}/add-ai-member/`, {
                     method: 'POST',
