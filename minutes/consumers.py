@@ -41,10 +41,9 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         self.facilitator_task = None
         self.last_phase = None  # 初期状態はNoneに設定
         
-        # AIメンバー機能
-        self.last_transcript_timestamp = 0.0
-        self.min_interval_for_ai_response = 15  # AIは15秒以上間隔があるときに返答を検討
-
+        # AIメンバー機能 - 個別のタイミング管理
+        self.ai_member_last_responses = {}  # {ai_member_id: last_response_timestamp}
+        self.ai_member_intervals = {}  # {ai_member_id: min_interval_seconds}
         
         # 定期要約機能
         self.periodic_summary_task = None
@@ -787,40 +786,120 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         print(f"[Meeting {self.meeting_id}] 議事録DB保存完了")
 
     async def trigger_ai_member_response(self, transcript_id, elapsed_time):
-        """トランスクリプトに基づいてAIメンバーの返答をトリガー"""
+        """トランスクリプトに基づいて複数のAIメンバーが個別のタイミングで返答"""
         try:
             ai_members = await self.get_ai_members()
             
             if not ai_members or len(ai_members) == 0:
                 return
             
-            # 時間間隔をチェック（最小15秒）
-            time_diff = elapsed_time - self.last_transcript_timestamp
-            if time_diff < self.min_interval_for_ai_response:
-                print(f"[Meeting {self.meeting_id}] AI返答: 時間間隔が短いためスキップ ({time_diff:.1f}秒 < {self.min_interval_for_ai_response}秒)")
-                return
-            
-            self.last_transcript_timestamp = elapsed_time
-            
             # 最新のトランスクリプトを取得
             transcripts = await self.get_all_transcripts()
             if not transcripts:
                 return
             
-            # ランダムにAIメンバーを選択して返答を生成
-            import random
-            selected_ai = random.choice(ai_members)
-            
             # 直近の会話ログを取得
-            recent_transcripts = [t for t in transcripts if t.timestamp > (elapsed_time - 120)]  # 直近2分
+            recent_transcripts = [t for t in transcripts if t.timestamp > (elapsed_time - 120)]
             recent_text = "\n".join([f"[{t.timestamp:.0f}秒] {t.text}" for t in recent_transcripts])
             
-            await self.generate_ai_response(selected_ai, recent_text, elapsed_time)
-            
+            # 各AIメンバーについて、発言すべきか判断
+            for ai_member in ai_members:
+                # 初回の場合は間隔を設定
+                if ai_member.id not in self.ai_member_intervals:
+                    # 性格によって発言頻度を変える
+                    interval = self.get_interval_for_personality(ai_member.personality)
+                    self.ai_member_intervals[ai_member.id] = interval
+                    self.ai_member_last_responses[ai_member.id] = 0.0
+                
+                # 最後の発言からの経過時間をチェック
+                last_response_time = self.ai_member_last_responses.get(ai_member.id, 0.0)
+                time_since_last = elapsed_time - last_response_time
+                min_interval = self.ai_member_intervals.get(ai_member.id, 20)
+                
+                # 発言タイミングに達していない場合はスキップ
+                if time_since_last < min_interval:
+                    continue
+                
+                # このAIメンバーが発言すべきか判断
+                should_respond = await self.should_ai_respond(ai_member, recent_text, elapsed_time)
+                
+                if should_respond:
+                    # 非同期タスクとして返答を生成(他のメンバーをブロックしない)
+                    asyncio.create_task(
+                        self.generate_ai_response(ai_member, recent_text, elapsed_time)
+                    )
+                    # 最終発言時刻を更新
+                    self.ai_member_last_responses[ai_member.id] = elapsed_time
+                    
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] AI返答トリガーエラー: {e}")
             import traceback
             traceback.print_exc()
+
+    def get_interval_for_personality(self, personality):
+        """性格タイプに応じた最小発言間隔を返す"""
+        intervals = {
+            'idea': 25,        # アイデア提案型: やや頻繁
+            'facilitator': 30, # ファシリテーター: 適度
+            'cheerful': 20,    # 明るい: 頻繁
+            'negative': 35,    # ネガティブ: 慎重に
+            'angry': 40,       # 怒りっぽい: 控えめ
+        }
+        return intervals.get(personality, 30)
+
+    async def should_ai_respond(self, ai_member, conversation_context, elapsed_time):
+        """このAIメンバーが発言すべきかGPTで判断"""
+        try:
+            personality_descriptions = {
+                'idea': '新たなアイディアや視点を提案するタイプ。議論に新しい可能性をもたらす。',
+                'facilitator': '議論の流れを促進し、誰もが参加しやすい雰囲気を作るタイプ。進行をスムーズにする。',
+                'cheerful': '明るく前向きな雰囲気を作るタイプ。チームのモチベーションを高める。',
+                'negative': 'リスクや課題を指摘して慎重に検討するタイプ。落とし穴を見つけるのが得意。',
+                'angry': '鋭い指摘や厳しい意見を言うタイプ。甘い考えにメスを入れる。',
+            }
+            
+            personality_desc = personality_descriptions.get(ai_member.personality, '')
+            
+            prompt = f"""あなたは会議のAIメンバー判断システムです。
+    AIメンバー名: {ai_member.name}
+    性格タイプ: {ai_member.get_personality_display()}
+    性格説明: {personality_desc}
+
+    これまでの会話:
+    {conversation_context}
+
+    このAIメンバーがこのタイミングで発言すべきかどうかを判断してください。
+    判断基準:
+    1. 性格タイプに合った話題が出ているか
+    2. このメンバーが貢献できる内容があるか
+    3. 会話の流れを妨げないタイミングか
+
+    JSON形式で返してください: {{"should_respond": true/false, "reason": "判断理由"}}
+    """
+            
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            response = await asyncio.to_thread(
+                client.chat.completions.create,
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                response_format={"type": "json_object"}
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            should_respond = result.get('should_respond', False)
+            reason = result.get('reason', '')
+            
+            if should_respond:
+                print(f"[Meeting {self.meeting_id}] {ai_member.name} 発言判断: YES - {reason}")
+            
+            return should_respond
+            
+        except Exception as e:
+            print(f"[Meeting {self.meeting_id}] AI発言判断エラー: {e}")
+            # エラー時はランダムで決定(20%の確率)
+            import random
+            return random.random() < 0.2
 
     async def generate_ai_response(self, ai_member, conversation_context, elapsed_time):
         """AIメンバーが返答を生成"""
