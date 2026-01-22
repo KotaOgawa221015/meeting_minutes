@@ -131,6 +131,7 @@
             overflow: hidden;
         }
         header {
+            height: 80px;
             background: white;
             padding: 20px 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -139,12 +140,15 @@
             align-items: center;
         }
         header strong {
-            font-size: 20px;
+            font-size: 25px;
             display: block;
-            margin-bottom: 5px;
+            
         }
         header small {
             color: #666;
+        }
+        strong.meetingTitle {
+            font-size: 35px;
         }
         .btn {
             padding: 12px 24px;
@@ -1100,7 +1104,7 @@
         <main>
             <header>
                 <div>
-                    <strong id="meetingTitle">{{ meeting.title }}</strong><br />
+                    <strong class="meetingTitle" id="meetingTitle">{{ meeting.title }}</strong>
                     <small id="statusText">準備完了</small>
                 </div>
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -1114,9 +1118,6 @@
                 <section class="panel">
                     <div class="panel-header">📝 文字起こし(リアルタイム)</div>
                     <div class="panel-body talk" id="transcriptArea">
-                    </div>
-                    <div class="visualizer-container">
-                        <canvas id="visualizer"></canvas>
                     </div>
                     <div class="input-container">
                         <div class="input-wrapper">
