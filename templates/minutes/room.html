@@ -3729,12 +3729,21 @@
             const text = manualInput.value.trim();
             if (!text) return;
             
-            // サーバーに保存
-            saveManualTranscript(text);
-            manualInput.value = '';
+            // WebSocket経由でサーバーに送信（AI反応もトリガーされる）
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'manual_transcript',
+                    text: text
+                }));
+                manualInput.value = '';
+                console.log('Sent manual transcript via WebSocket:', text);
+            } else {
+                console.warn('WebSocket is not open, falling back to HTTP');
+                saveManualTranscript(text);
+            }
         }
         
-        // 手動入力トランスクリプトをサーバーに保存
+        // 手動入力トランスクリプトをサーバーに保存（フォールバック用）
         async function saveManualTranscript(text) {
             try {
                 const url = `/meeting/${meetingId}/save-transcript/`;
