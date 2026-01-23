@@ -26,11 +26,15 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
-        
+
         # 音声バッファ
         self.audio_buffer = []
         self.chunk_count = 0
         self.start_time = time.time()
+
+        # --- 追加: AI議論モードの状態フラグ ---
+        self.ai_discussion_mode = False 
+        # ------------------------------------
         
         # --- 追加: WebMヘッダー保持用の変数 ---
         self.webm_header = None
@@ -103,6 +107,11 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         if message_type == 'audio_chunk':
             audio_data = data.get('audio')
             await self.process_audio_chunk(audio_data)
+
+        elif message_type == 'toggle_ai_mode':
+            self.ai_discussion_mode = data.get('enabled', False)
+            mode_status = "ON" if self.ai_discussion_mode else "OFF"
+            print(f"[Meeting {self.meeting_id}] AI議論モード: {mode_status}")
         
         elif message_type == 'stop_recording':
             await self.finalize_transcription()
@@ -826,7 +835,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         
         print(f"[Meeting {self.meeting_id}] 議事録DB保存完了")
 
-    async def trigger_ai_member_response(self, transcript_id, elapsed_time):
+    async def trigger_ai_member_response(self, transcript_id, elapsed_time, exclude_member_id=None):
         """トランスクリプトに基づいて複数のAIメンバーが個別のタイミングで返答"""
         try:
             ai_members = await self.get_ai_members()
@@ -845,6 +854,11 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             
             # 各AIメンバーについて、発言すべきか判断
             for ai_member in ai_members:
+
+                # 指定されたメンバー（直前に発言したAI）はスキップ
+                if exclude_member_id and ai_member.id == exclude_member_id:
+                    continue
+
                 # 初回の場合は間隔を設定
                 if ai_member.id not in self.ai_member_intervals:
                     # 性格によって発言頻度を変える
@@ -940,7 +954,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             import random
             return random.random() < 0.2
 
-    async def generate_ai_response(self, ai_member, conversation_context, elapsed_time):
+    async def generate_ai_response(self, ai_member, conversation_context, elapsed_time, transcript_id=None):
         """AIメンバーが返答を生成"""
         try:
             personality_descriptions = {
@@ -992,6 +1006,24 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
                 }))
                 
                 print(f"[Meeting {self.meeting_id}] AI返答: {ai_member.name} ({ai_member.get_personality_display()}): {response_text}")
+
+                # AI議論モードがONの場合、連鎖反応をトリガー 
+                if self.ai_discussion_mode:
+                    # # 自然な間隔（3秒程度）を空ける
+                    # await asyncio.sleep(1)
+                    
+                    # 現在の時間を再計算
+                    current_elapsed = time.time() - self.start_time
+                    
+                    # 自分を除外して、再度トリガーをかける（AI同士の会話ループ）
+                    # transcript_id は文脈維持のため元のIDを引き継ぐか、Noneでも context取得ロジックが最新を見るなら動きます
+                    asyncio.create_task(
+                        self.trigger_ai_member_response(
+                            transcript_id=transcript_id,  # 元の発言ID、またはNone
+                            elapsed_time=current_elapsed,
+                            exclude_member_id=ai_member.id # 自分を除外
+                        )
+                    )
         
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] AI返答生成エラー: {e}")
