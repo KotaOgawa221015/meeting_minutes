@@ -12,6 +12,7 @@ urlpatterns = [
     path('<int:debate_id>/statement/add/', views.save_debate_statement, name='save_debate_statement'),
     path('<int:debate_id>/ai-response/', views.get_ai_response, name='get_ai_response'),
     path('<int:debate_id>/judge/', views.judge_debate, name='judge_debate'),
+    path('<int:debate_id>/positions/', views.assign_debate_positions, name='assign_debate_positions'),
     
     # Speech-to-Text API
     path('transcribe/', views.transcribe_audio, name='transcribe_audio'),

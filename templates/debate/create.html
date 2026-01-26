@@ -141,7 +141,17 @@
                 </select>
                 <div class="form-hint">AIのディベートスタイルを選択してください</div>
             </div>
-
+            <div class="form-group">
+                <label for="max_turns">ターン数</label>
+                <select id="max_turns" name="max_turns" required>
+                    <option value="1">瞬間（1ターン）</option>
+                    <option value="2">2ターン</option>
+                    <option value="3" selected>3ターン (推奨)</option>
+                    <option value="4">4ターン</option>
+                    <option value="5">5ターン</option>
+                </select>
+                <div class="form-hint">ディベートの最大ターン数を選択してください</div>
+            </div>
             <div class="button-group">
                 <a href="{% url 'debate_index' %}" class="btn btn-cancel">キャンセル</a>
                 <button type="submit" class="btn btn-create">ディベートを開始</button>

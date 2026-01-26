@@ -22,6 +22,7 @@ class Debate(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     ai_type = models.CharField(max_length=50, choices=AI_TYPE_CHOICES, default='logical')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='setup')
+    max_turns = models.IntegerField(default=3)  # 最大5ターンのきりやりあい
     
     # 先攻後攻: 'user' = ユーザーが先攻, 'ai' = AIが先攻
     first_speaker = models.CharField(

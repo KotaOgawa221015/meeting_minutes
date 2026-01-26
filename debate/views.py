@@ -25,6 +25,7 @@ def debate_create(request):
     if request.method == 'POST':
         title = request.POST.get('title', 'テーマなし')
         ai_type = request.POST.get('ai_type', 'logical')
+        max_turns = int(request.POST.get('max_turns', 3))
         
         # 先攻後攻を自動決定（50%の確率）
         first_speaker = random.choice(['user', 'ai'])
@@ -32,6 +33,7 @@ def debate_create(request):
         debate = Debate.objects.create(
             title=title,
             ai_type=ai_type,
+            max_turns=max_turns,
             created_by=request.user if request.user.is_authenticated else None,
             status='setup',
             first_speaker=first_speaker  # 作成時に設定
@@ -117,6 +119,26 @@ def get_ai_response(request, debate_id):
         })
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def assign_debate_positions(request, debate_id):
+    """テーマに基づいて立場を割り振る"""
+    try:
+        debate = get_object_or_404(Debate, id=debate_id)
+        
+        # AIにテーマ分析させて立場を割り振る
+        user_position, ai_position = assign_positions_ai(debate.title, debate.ai_type)
+        
+        return JsonResponse({
+            'status': 'success',
+            'user_position': user_position,
+            'ai_position': ai_position,
+            'theme': debate.title
+        })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
@@ -394,3 +416,70 @@ def transcribe_audio(request):
     except Exception as e:
         print(f"[Debate] transcribe_audio error: {str(e)}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def assign_positions_ai(theme, ai_type):
+    """AIにテーマを与えて、ユーザーとAIの立場を割り振る"""
+    api_key = os.getenv('OPENAI_API_KEY')
+    
+    if not api_key or not OPENAI_AVAILABLE:
+        # フォールバック：ランダムに立場を割り振る
+        positions = [
+            ("賛成派", "反対派"),
+            ("反対派", "賛成派"),
+        ]
+        return random.choice(positions)
+    
+    try:
+        client = OpenAI(api_key=api_key)
+        
+        prompt = f"""
+以下のテーマについて、ユーザーとAIの立場を決定してください。
+テーマ: {theme}
+
+AIのディベートスタイル: {ai_type}
+
+指示:
+1. テーマに対して、対立する2つの立場を提示してください
+2. 以下の形式で回答してください:
+   ユーザーの立場: [立場1 (20文字以内)]
+   AIの立場: [立場2 (20文字以内)]
+
+例:
+テーマ: AIは人間の雇用を奪うべきか
+ユーザーの立場: 雇用を奪う可能性がある
+AIの立場: 新しい雇用機会も生まれる
+"""
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "あなたはディベートの立場割り振り担当者です。バランスの取れた対立する2つの立場を提案します。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=200
+        )
+        
+        # レスポンスを解析
+        text = response.choices[0].message.content.strip()
+        lines = text.split('\n')
+        
+        user_position = "未決定"
+        ai_position = "未決定"
+        
+        for line in lines:
+            if "ユーザーの立場" in line:
+                user_position = line.split(":", 1)[-1].strip()
+            elif "AIの立場" in line:
+                ai_position = line.split(":", 1)[-1].strip()
+        
+        return user_position, ai_position
+    
+    except Exception as e:
+        print(f"Position assignment error: {str(e)}")
+        # フォールバック
+        positions = [
+            ("賛成派", "反対派"),
+            ("反対派", "賛成派"),
+        ]
+        return random.choice(positions)
