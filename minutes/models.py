@@ -152,6 +152,16 @@ class AIMember(models.Model):
     class Meta:
         ordering = ['created_at']
     
+    def save(self, *args, **kwargs):
+        if not self.name or self.name == 'AI':
+            # デフォルト名を生成: personality + 連番
+            existing_count = AIMember.objects.filter(
+                meeting=self.meeting,
+                personality=self.personality
+            ).count()
+            self.name = f"{self.personality}{existing_count + 1}"
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.name} ({self.get_personality_display()}) - {self.meeting.title}"
 

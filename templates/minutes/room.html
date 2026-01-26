@@ -1221,6 +1221,7 @@
 </head>
 <body>
     {% csrf_token %}
+    <div id="current-user" data-username="{{ user.username }}" data-full-name="{{ user.get_full_name }}" style="display:none;"></div>
     <div class="app">
         <aside>
             <div class="logo">🤖 AI議事録</div>
@@ -1232,7 +1233,7 @@
                     <!-- 参加者がここに動的に追加されます -->
                 </div>
                 
-                <div id="aiMembersContainer" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                <div id="aiMembersContainer" style="margin-top: 15px; padding-top: 15px;">
                     <!-- AIファシリテーター / AIメンバーがここに動的に追加されます -->
                 </div>
                 
@@ -1494,7 +1495,8 @@
         // 参加者管理
         let participants = {
             facilitator: null,  // AIファシリテーター
-            aiMembers: {}        // AIメンバー: { id: {name, personality} }
+            aiMembers: {},       // AIメンバー: { id: {name, personality} }
+            humanParticipants: {} // 人間参加者: { speakerName: true }
         };
         
         // AIメンバー削除処理（グローバル関数）
@@ -1851,6 +1853,14 @@
                     });
                     statTranscripts.textContent = transcriptCount;
                     console.log('Transcripts restored. Count:', transcriptCount);
+                    
+                    // 参加者を収集
+                    participants.humanParticipants = {};
+                    data.transcripts.forEach(transcript => {
+                        if (transcript.speaker && transcript.speaker.trim()) {
+                            participants.humanParticipants[transcript.speaker] = true;
+                        }
+                    });
                 }
                 
                 // 要約データを復元
@@ -1901,7 +1911,44 @@
             participantsList.innerHTML = '';
             aiMembersContainer.innerHTML = '';
             
-            // AIファシリテーターを表示
+            // 人間参加者を表示（participantsList）
+            Object.keys(participants.humanParticipants).forEach(speaker => {
+                const participantCard = document.createElement('div');
+                participantCard.className = 'participant-card';
+                participantCard.innerHTML = `
+                    <div class="participant-header">
+                        <div class="participant-icon">👤</div>
+                        <div class="participant-info">
+                            <input type="text" class="participant-name-input" value="${speaker}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
+                            <div class="participant-role">参加者</div>
+                        </div>
+                        <button class="participant-remove-btn" data-type="facilitator" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                    </div>
+                `;
+                participantsList.appendChild(participantCard);
+                
+                // 名前変更イベント
+                const nameInput = participantCard.querySelector('.participant-name-input');
+                nameInput.addEventListener('blur', () => {
+                    const newName = nameInput.value.trim();
+                    if (newName && newName !== speaker) {
+                        renameSpeaker(speaker, newName);
+                    } else {
+                        nameInput.value = speaker;
+                    }
+                });
+                
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        nameInput.blur();
+                    } else if (e.key === 'Escape') {
+                        nameInput.value = speaker;
+                        nameInput.blur();
+                    }
+                });
+            });
+            
+            // AIファシリテーターを表示（aiMembersContainer）
             if (participants.facilitator) {
                 const facilitatorCard = document.createElement('div');
                 facilitatorCard.className = 'participant-card';
@@ -1929,7 +1976,7 @@
                 });
             }
             
-            // AIメンバーを表示
+            // AIメンバーを表示（aiMembersContainer）
             Object.entries(participants.aiMembers).forEach(([id, member]) => {
                 const personalityIcons = {
                     'idea': '💡',
@@ -1952,13 +1999,33 @@
                     <div class="participant-header">
                         <div class="participant-icon">${personalityIcons[member.personality] || '🤖'}</div>
                         <div class="participant-info">
-                            <div class="participant-name">${member.name}</div>
+                            <input type="text" class="participant-name-input" value="${member.name}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
                             <div class="participant-role">${personalityLabels[member.personality] || member.personality}</div>
                         </div>
                         <button class="participant-remove-btn" data-type="ai_member" data-id="${id}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
                     </div>
                 `;
                 aiMembersContainer.appendChild(memberCard);
+                
+                // 名前変更イベント
+                const nameInput = memberCard.querySelector('.participant-name-input');
+                nameInput.addEventListener('blur', () => {
+                    const newName = nameInput.value.trim();
+                    if (newName && newName !== member.name) {
+                        renameAIMember(id, newName);
+                    } else {
+                        nameInput.value = member.name;
+                    }
+                });
+                
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        nameInput.blur();
+                    } else if (e.key === 'Escape') {
+                        nameInput.value = member.name;
+                        nameInput.blur();
+                    }
+                });
                 
                 // AIメンバー削除ボタンのイベントリスナーを追加
                 const memberBtn = memberCard.querySelector('.participant-remove-btn');
@@ -2232,9 +2299,9 @@
             
             // パネル状態を保存する関数
             function savePanelState() {
-                PanelStateManager.savePanelState(meetingId, 'facilitator', panelId, {
-                    minutes: facilitatorData.durationMinutes,
-                    seconds: facilitatorData.durationSeconds
+                PanelStateManager.savePanelState(meetingId, 'timer', panelId, {
+                    minutes: timerData.targetMinutes,
+                    seconds: timerData.targetSeconds
                 });
             }
             
@@ -2836,6 +2903,77 @@
                     });
             }
             
+            function renameAIMember(memberId, newName) {
+                fetch(`/ai-member/${memberId}/rename/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        name: newName
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // UIを更新
+                        const member = aiMembers.find(m => m.id === memberId);
+                        if (member) {
+                            member.name = newName;
+                            participants.aiMembers[memberId].name = newName; // participantsデータも更新
+                            renderAIMembers(); // AIメンバーパネルを更新
+                            renderParticipants(); // 左側の参加者一覧も更新
+                        }
+                    } else {
+                        alert('エラー: ' + (data.message || '名前の変更に失敗しました'));
+                        loadAIMembers(); // 失敗したら再読み込み
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to rename AI member:', error);
+                    alert('名前の変更中にエラーが発生しました: ' + error.message);
+                    loadAIMembers(); // 失敗したら再読み込み
+                });
+            }
+            
+            function renameSpeaker(oldSpeaker, newSpeaker) {
+                fetch(`/meeting/${meetingId}/rename-speaker/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        old_speaker: oldSpeaker,
+                        new_speaker: newSpeaker
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // UIを更新
+                        delete participants.humanParticipants[oldSpeaker];
+                        participants.humanParticipants[newSpeaker] = true;
+                        renderParticipants();
+                        // トランスクリプトのspeakerも更新
+                        document.querySelectorAll('.speaker').forEach(speakerEl => {
+                            if (speakerEl.textContent === `👤 ${oldSpeaker}`) {
+                                speakerEl.textContent = `👤 ${newSpeaker}`;
+                            }
+                        });
+                    } else {
+                        alert('エラー: ' + (data.message || '名前の変更に失敗しました'));
+                        renderParticipants(); // 失敗したら再描画
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to rename speaker:', error);
+                    alert('名前の変更中にエラーが発生しました: ' + error.message);
+                    renderParticipants(); // 失敗したら再描画
+                });
+            }
+            
             function renderAIMembers() {
                 aiMembersList.innerHTML = '';
                 
@@ -2855,14 +2993,49 @@
                     const memberDiv = document.createElement('div');
                     memberDiv.style.cssText = 'padding: 10px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: center;';
                     
+                    const nameInput = document.createElement('input');
+                    nameInput.type = 'text';
+                    nameInput.value = member.name;
+                    nameInput.style.cssText = 'font-size: 13px; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; width: 100px; background: transparent;';
+                    nameInput.title = '名前を変更';
+                    
+                    nameInput.addEventListener('focus', () => {
+                        nameInput.style.borderColor = '#667eea';
+                        nameInput.style.background = '#ffffff';
+                    });
+                    
+                    nameInput.addEventListener('blur', () => {
+                        nameInput.style.borderColor = '#e5e7eb';
+                        nameInput.style.background = 'transparent';
+                        const newName = nameInput.value.trim();
+                        if (newName && newName !== member.name) {
+                            renameAIMember(member.id, newName);
+                        } else {
+                            nameInput.value = member.name; // 元に戻す
+                        }
+                    });
+                    
+                    nameInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            nameInput.blur();
+                        } else if (e.key === 'Escape') {
+                            nameInput.value = member.name;
+                            nameInput.blur();
+                        }
+                    });
+                    
                     memberDiv.innerHTML = `
                         <div>
-                            <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${personalityIcons[member.personality] || '🤖'} ${member.name}</div>
+                            
                             <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
                             <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
                         </div>
                         <button data-member-id="${member.id}" class="delete-ai-btn" style="background: ${member.personality === 'facilitator' ? '#d1d5db' : '#fee2e2'}; border: none; color: ${member.personality === 'facilitator' ? '#9ca3af' : '#ef4444'}; padding: 4px 8px; border-radius: 4px; cursor: ${member.personality === 'facilitator' ? 'not-allowed' : 'pointer'}; font-size: 12px;" ${member.personality === 'facilitator' ? 'disabled' : ''}>削除</button>
                     `;
+                    
+                    const nameContainer = memberDiv.querySelector('div > div');
+                    nameContainer.appendChild(nameInput);
+                    
                     aiMembersList.appendChild(memberDiv);
                 });
                 
@@ -4217,6 +4390,19 @@
             console.log('About to call loadMeetingData');
             await loadMeetingData();
             console.log('loadMeetingData completed');
+            
+            // 自分自身を参加者に追加
+            const currentUserElement = document.getElementById('current-user');
+            if (currentUserElement) {
+                const username = currentUserElement.dataset.username;
+                const fullName = currentUserElement.dataset.fullName;
+                const displayName = fullName || username;
+                if (displayName) {
+                    participants.humanParticipants[displayName] = true;
+                }
+            }
+            
+            renderParticipants(); // 参加者一覧を更新
             
             console.log('About to connect WebSocket');
             connectWebSocket();

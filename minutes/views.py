@@ -475,7 +475,6 @@ def add_ai_member(request, meeting_id):
         for i in range(count):
             ai_member = AIMember.objects.create(
                 meeting=meeting,
-                name=f'AI-{personality}',
                 personality=personality,
                 is_active=True
             )
@@ -542,5 +541,65 @@ def delete_ai_member(request, ai_member_id):
             'message': 'AI member deleted',
             'meeting_id': meeting_id
         })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def rename_ai_member(request, ai_member_id):
+    """AIメンバーの名前を変更"""
+    try:
+        ai_member = get_object_or_404(AIMember, id=ai_member_id)
+        data = json.loads(request.body)
+        new_name = data.get('name', '').strip()
+        
+        if not new_name:
+            return JsonResponse({'status': 'error', 'message': 'Name is required'}, status=400)
+        
+        ai_member.name = new_name
+        ai_member.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'ai_member': {
+                'id': ai_member.id,
+                'name': ai_member.name,
+                'personality': ai_member.personality,
+                'personality_display': ai_member.get_personality_display(),
+                'is_active': ai_member.is_active,
+                'response_count': ai_member.responses.count(),
+                'created_at': ai_member.created_at.isoformat()
+            }
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def rename_speaker(request, meeting_id):
+    """参加者の名前を変更"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        data = json.loads(request.body)
+        old_speaker = data.get('old_speaker', '').strip()
+        new_speaker = data.get('new_speaker', '').strip()
+        
+        if not old_speaker or not new_speaker:
+            return JsonResponse({'status': 'error', 'message': 'Speaker names are required'}, status=400)
+        
+        # 同じmeetingのTranscriptでspeakerを更新
+        updated_count = Transcript.objects.filter(
+            meeting=meeting,
+            speaker=old_speaker
+        ).update(speaker=new_speaker)
+        
+        return JsonResponse({
+            'status': 'success',
+            'updated_count': updated_count
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
