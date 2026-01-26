@@ -1252,7 +1252,20 @@
                         <div class="stat-label">発言数</div>
                     </div>
                 </div>
+
+                <div class="section-title">⚙️ 設定</div>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="aiDiscussionToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">AI同士の議論</label>
+                        <input type="checkbox" id="aiDiscussionToggle" style="transform: scale(1.2); cursor: pointer;">
+                    </div>
+                    <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
+                        ONにするとAIの発言に対して他のAIが反応します。
+                    </div>
+                </div>
             </div>
+
+
         </aside>
 
         <main>
@@ -3889,12 +3902,21 @@
             const text = manualInput.value.trim();
             if (!text) return;
             
-            // サーバーに保存
-            saveManualTranscript(text);
-            manualInput.value = '';
+            // WebSocket経由でサーバーに送信（AI反応もトリガーされる）
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'manual_transcript',
+                    text: text
+                }));
+                manualInput.value = '';
+                console.log('Sent manual transcript via WebSocket:', text);
+            } else {
+                console.warn('WebSocket is not open, falling back to HTTP');
+                saveManualTranscript(text);
+            }
         }
         
-        // 手動入力トランスクリプトをサーバーに保存
+        // 手動入力トランスクリプトをサーバーに保存（フォールバック用）
         async function saveManualTranscript(text) {
             try {
                 const url = `/meeting/${meetingId}/save-transcript/`;
@@ -4360,6 +4382,25 @@
                 });
             }
         });
+
+        const aiDiscussionToggle = document.getElementById('aiDiscussionToggle');
+        if (aiDiscussionToggle) {
+            aiDiscussionToggle.addEventListener('change', (e) => {
+                const isEnabled = e.target.checked;
+                console.log('AI Discussion Mode:', isEnabled ? 'ON' : 'OFF');
+                
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'toggle_ai_mode',
+                        enabled: isEnabled
+                    }));
+                } else {
+                    console.warn('WebSocket is not open. Cannot toggle mode.');
+                    // 接続されていない場合は見た目を戻すなどの処理を入れても良い
+                    e.target.checked = !isEnabled;
+                }
+            });
+        }
 
         sendBtn.addEventListener('click', addManualTranscript);
         addPanelBtn.addEventListener('click', showAddFeatureModal);

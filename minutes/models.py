@@ -170,6 +170,8 @@ class AIMemberResponse(models.Model):
     """AIメンバーの返答記録"""
     ai_member = models.ForeignKey(AIMember, on_delete=models.CASCADE, related_name='responses')
     triggered_by = models.ForeignKey(Transcript, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_ai_responses')
+    # AIレスポンスがトリガーソースの場合（AI同士の議論）
+    triggered_by_ai_response = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_ai_responses_chain')
     response_text = models.TextField()
     timestamp = models.FloatField()  # 会議開始からの秒数
     created_at = models.DateTimeField(auto_now_add=True)
