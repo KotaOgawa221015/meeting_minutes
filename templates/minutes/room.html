@@ -2245,9 +2245,9 @@
             
             // パネル状態を保存する関数
             function savePanelState() {
-                PanelStateManager.savePanelState(meetingId, 'facilitator', panelId, {
-                    minutes: facilitatorData.durationMinutes,
-                    seconds: facilitatorData.durationSeconds
+                PanelStateManager.savePanelState(meetingId, 'timer', panelId, {
+                    minutes: timerData.targetMinutes,
+                    seconds: timerData.targetSeconds
                 });
             }
             
