@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIディベートシステム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: rgb(255, 140, 80);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .action-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: rgb(255, 140, 80);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: rgb(245, 130, 70);
+            transform: scale(1.05);
+        }
+        .btn-secondary {
+            background: rgb(200, 200, 200);
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: rgb(180, 180, 180);
+        }
+        .btn-back {
+            background: rgb(100, 150, 200);
+            color: white;
+        }
+        .btn-back:hover {
+            background: rgb(80, 130, 180);
+        }
+        .debates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .debate-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .debate-card:hover {
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+            transform: translateY(-5px);
+        }
+        .debate-card h3 {
+            color: rgb(255, 140, 80);
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        .debate-card p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+        .debate-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        .status-setup {
+            background: #FFE5B4;
+            color: #333;
+        }
+        .status-debating {
+            background: #FFD700;
+            color: #333;
+        }
+        .status-completed {
+            background: #90EE90;
+            color: #333;
+        }
+        .winner-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .winner-user {
+            background: #FFB6C1;
+            color: #8B0000;
+        }
+        .winner-ai {
+            background: #87CEEB;
+            color: #00008B;
+        }
+        .winner-draw {
+            background: #DDA0DD;
+            color: #333;
+        }
+        .debate-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .debate-actions a,
+        .debate-actions button {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        .btn-view {
+            background: rgb(255, 140, 80);
+            color: white;
+        }
+        .btn-view:hover {
+            background: rgb(245, 130, 70);
+        }
+        .btn-delete {
+            background: #FF6B6B;
+            color: white;
+        }
+        .btn-delete:hover {
+            background: #FF5252;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+        .empty-state h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .empty-state p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 AIディベートシステム</h1>
+            <p>ユーザーがAIとディベートで対戦します</p>
+        </div>
+
+        <div class="action-bar">
+            <a href="{% url 'index' %}" class="btn btn-back">← 議事録システムへ戻る</a>
+            <a href="{% url 'debate_create' %}" class="btn btn-primary">新しいディベートを作成</a>
+        </div>
+
+        {% if debates %}
+            <div class="debates-grid">
+                {% for debate in debates %}
+                    <div class="debate-card">
+                        <h3>{{ debate.title }}</h3>
+                        
+                        <div class="debate-meta">
+                            <span class="status-badge status-{{ debate.status }}">
+                                {{ debate.get_status_display }}
+                            </span>
+                            {% if debate.winner %}
+                                <span class="winner-badge winner-{{ debate.winner }}">
+                                    {% if debate.winner == 'user' %}
+                                        👤 ユーザー勝利
+                                    {% elif debate.winner == 'ai' %}
+                                        🤖 AI勝利
+                                    {% else %}
+                                        🤝 引き分け
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <p>
+                            <strong>AIタイプ:</strong> {{ debate.get_ai_type_display }}<br>
+                            <strong>先攻:</strong> 
+                            {% if debate.first_speaker == 'user' %}
+                                👤 ユーザー
+                            {% else %}
+                                🤖 AI
+                            {% endif %}<br>
+                            <strong>作成日:</strong> {{ debate.created_at|date:"Y/m/d H:i" }}
+                        </p>
+
+                        <div class="debate-actions">
+                            <a href="{% url 'debate_room' debate.id %}" class="btn-view">
+                                {% if debate.status == 'setup' %}
+                                    開始
+                                {% else %}
+                                    表示
+                                {% endif %}
+                            </a>
+                            <button class="btn-delete" onclick="deleteDebate({{ debate.id | safe }})">削除</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h2>ディベートがまだ作成されていません</h2>
+                <p>新しいディベートを作成して、AIとの対戦を始めましょう！</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function deleteDebate(debateId) {
+            if (confirm('このディベートを削除してもよろしいですか？')) {
+                fetch(`/debate/${debateId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert('削除に失敗しました: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('エラーが発生しました');
+                });
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

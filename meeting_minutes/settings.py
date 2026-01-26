@@ -20,7 +20,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',
     'corsheaders',
-    'minutes',  # 新しいアプリ
+    'minutes',  # 議事録アプリ
+    'debate',   # ディベートアプリ
 ]
 
 MIDDLEWARE = [

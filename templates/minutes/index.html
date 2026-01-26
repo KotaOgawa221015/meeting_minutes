@@ -45,6 +45,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .btn {
             padding: 15px 30px;
@@ -63,6 +65,14 @@
         }
         .btn-primary:hover {
             background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .btn-debate {
+            background: rgb(255, 140, 80);
+            color: white;
+        }
+        .btn-debate:hover {
+            background: rgb(245, 130, 70);
             transform: translateY(-2px);
         }
         .meetings-list {
@@ -188,7 +198,10 @@
                 <strong>会議一覧</strong>
                 <span style="color: #666; margin-left: 10px;">{{ meetings|length }}件の会議</span>
             </div>
-            <a href="/create/" class="btn btn-primary">+ 新しい会議を作成</a>
+            <div style="display: flex; gap: 10px;">
+                <a href="{% url 'debate_index' %}" class="btn btn-debate">🎤 ディベートシステム</a>
+                <a href="/create/" class="btn btn-primary">+ 新しい会議を作成</a>
+            </div>
         </div>
 
         <div class="meetings-list">

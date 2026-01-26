@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新しいディベートを作成</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: rgb(255, 140, 80);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: rgb(255, 140, 80);
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2em;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1em;
+        }
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: rgb(255, 140, 80);
+        }
+        .form-hint {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        button,
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+        .btn-create {
+            background: rgb(255, 140, 80);
+            color: white;
+        }
+        .btn-create:hover {
+            background: rgb(245, 130, 70);
+            transform: scale(1.02);
+        }
+        .btn-cancel {
+            background: #ccc;
+            color: #333;
+        }
+        .btn-cancel:hover {
+            background: #bbb;
+        }
+        .info-box {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid rgb(255, 140, 80);
+        }
+        .info-box strong {
+            color: rgb(255, 140, 80);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 新しいディベート</h1>
+        
+        <div class="info-box">
+            <strong>ℹ️ ヒント:</strong> ディベートのテーマを決めて、AIタイプを選択してください。先攻後攻は自動で決まります。
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="title">ディベートのテーマ</label>
+                <input 
+                    type="text" 
+                    id="title" 
+                    name="title" 
+                    placeholder="例：AI技術は人間の仕事を奪うべきか？"
+                    required
+                >
+                <div class="form-hint">ディベートのテーマを入力してください（最大200文字）</div>
+            </div>
+
+            <div class="form-group">
+                <label for="ai_type">対戦するAIのタイプ</label>
+                <select id="ai_type" name="ai_type" required>
+                    <option value="logical">論理的 - 理屈で攻める</option>
+                    <option value="creative">創造的 - 新しい視点を提示</option>
+                    <option value="diplomatic">外交的 - 相手の意見を尊重</option>
+                    <option value="aggressive">攻撃的 - 相手の弱点を突く</option>
+                </select>
+                <div class="form-hint">AIのディベートスタイルを選択してください</div>
+            </div>
+
+            <div class="button-group">
+                <a href="{% url 'debate_index' %}" class="btn btn-cancel">キャンセル</a>
+                <button type="submit" class="btn btn-create">ディベートを開始</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
