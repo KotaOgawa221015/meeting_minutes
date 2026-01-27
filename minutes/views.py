@@ -668,3 +668,27 @@ def rename_speaker(request, meeting_id):
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_http_methods(["DELETE"])
+def delete_all_ai_members(request, meeting_id):
+    """ミーティングの全AIメンバーを削除"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        
+        # 全AIメンバーを取得してカウント
+        ai_members = AIMember.objects.filter(meeting=meeting)
+        deleted_count = ai_members.count()
+        
+        # 関連するAIMemberResponseも一緒に削除される（CASCADE）
+        ai_members.delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'deleted_count': deleted_count
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)

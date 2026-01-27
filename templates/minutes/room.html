@@ -1233,8 +1233,14 @@
                     <!-- 参加者がここに動的に追加されます -->
                 </div>
                 
-                <div id="aiMembersContainer" style="margin-top: 15px; padding-top: 15px;">
-                    <!-- AIファシリテーター / AIメンバーがここに動的に追加されます -->
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9);">🤖 AIメンバー</div>
+                        <button id="deleteAllAIMembers" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">全削除</button>
+                    </div>
+                    <div id="aiMembersContainer">
+                        <!-- AIファシリテーター / AIメンバーがここに動的に追加されます -->
+                    </div>
                 </div>
                 
                 <div id="humanParticipants"></div>
@@ -1574,6 +1580,47 @@
             });
         }
         
+        // AIメンバー一括削除処理（グローバル関数）
+        function deleteAllAIMembers() {
+            const aiMemberIds = Object.keys(aiMembersData);
+            
+            if (aiMemberIds.length === 0) {
+                alert('削除するAIメンバーがいません。');
+                return;
+            }
+            
+            if (!confirm(`全てのAIメンバー（${aiMemberIds.length}人）を削除しますか？\nこの操作は取り消せません。`)) {
+                return;
+            }
+            
+            fetch(`/meeting/${meetingId}/delete-all-ai-members/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(`${data.deleted_count}人のAIメンバーを削除しました`);
+                    // 全データをクリア
+                    aiMembersData = {};
+                    participants.aiMembers = {};
+                    renderParticipants();
+                    
+                    // 全パネルを同期
+                    syncAIMembersData();
+                } else {
+                    alert('エラー: ' + (data.message || 'AIメンバーの削除に失敗しました'));
+                }
+            })
+            .catch(error => {
+                console.error('Failed to delete all AI members:', error);
+                alert('エラーが発生しました: ' + error.message);
+            });
+        }
+        
         // 統計用の時間計測
         let durationSeconds = 0;
         let durationInterval = null;
@@ -1611,6 +1658,12 @@
             
             connectWebSocket();
             console.log('connectWebSocket called');
+            
+            // AIメンバー一括削除ボタンのイベントリスナー
+            const deleteAllBtn = document.getElementById('deleteAllAIMembers');
+            if (deleteAllBtn) {
+                deleteAllBtn.addEventListener('click', deleteAllAIMembers);
+            }
         })();
 
         // 戻るボタンの処理：ページを離れる前にWebSocketと定期処理を停止
@@ -1977,7 +2030,7 @@
                     <div class="participant-header">
                         <div class="participant-icon">👤</div>
                         <div class="participant-info">
-                            <input type="text" class="participant-name-input" value="${speaker}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
+                            <input type="text" class="participant-name-input" value="${speaker}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 100%; max-width: 100%; min-width: 0;" />
                             <div class="participant-role">参加者</div>
                         </div>
                         <button class="participant-remove-btn" data-type="facilitator" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
@@ -2057,7 +2110,7 @@
                     <div class="participant-header">
                         <div class="participant-icon">${personalityIcons[member.personality] || '🤖'}</div>
                         <div class="participant-info">
-                            <input type="text" class="participant-name-input" value="${member.name}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
+                            <input type="text" class="participant-name-input" value="${member.name}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 100%; max-width: 100%; min-width: 0;" />
                             <div class="participant-role">${personalityLabels[member.personality] || member.personality}</div>
                         </div>
                         <button class="participant-remove-btn" data-type="ai_member" data-id="${id}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
@@ -3072,12 +3125,12 @@
                     };
                     
                     const memberDiv = document.createElement('div');
-                    memberDiv.style.cssText = 'padding: 10px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: center;';
+                    memberDiv.style.cssText = 'padding: 10px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #667eea; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
                     
                     const nameInput = document.createElement('input');
                     nameInput.type = 'text';
                     nameInput.value = member.name;
-                    nameInput.style.cssText = 'font-size: 13px; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; width: 100px; background: transparent;';
+                    nameInput.style.cssText = 'font-size: 13px; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; width: 100%; max-width: 100%; min-width: 0; background: transparent;';
                     nameInput.title = '名前を変更';
                     
                     nameInput.addEventListener('focus', () => {
@@ -3106,8 +3159,7 @@
                     });
                     
                     memberDiv.innerHTML = `
-                        <div>
-                            
+                        <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
                             <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
                         </div>
