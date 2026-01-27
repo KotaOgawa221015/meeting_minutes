@@ -16,7 +16,7 @@ except ImportError:
 
 def debate_index(request):
     """ディベート一覧"""
-    debates = Debate.objects.all()
+    debates = Debate.objects.only('id', 'title', 'created_at', 'status', 'ai_type').order_by('-created_at')
     return render(request, 'debate/index.html', {'debates': debates})
 
 
@@ -55,7 +55,7 @@ def debate_room(request, debate_id):
 def debate_detail(request, debate_id):
     """ディベート詳細"""
     debate = get_object_or_404(Debate, id=debate_id)
-    statements = debate.statements.all()
+    statements = debate.statements.order_by('order').values('id', 'speaker', 'text', 'order', 'created_at')
     
     return render(request, 'debate/detail.html', {
         'debate': debate,

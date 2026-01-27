@@ -154,8 +154,17 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         try:
             elapsed_time = time.time() - self.start_time
             
-            # テキストをDBに保存
-            transcript_id = await self.save_transcript(text, elapsed_time)
+            # テキストをDBに保存（speaker='手動入力'として保存される）
+            try:
+                transcript_id = await self.save_transcript(text, elapsed_time, speaker='手動入力')
+            except ValueError as e:
+                # 参加者数上限エラー
+                print(f"[Meeting {self.meeting_id}] 参加者数上限エラー: {e}")
+                await self.send(text_data=json.dumps({
+                    'type': 'error',
+                    'message': str(e)
+                }))
+                return
             
             # 最後の発言時刻を更新（無言タイムアウト監視用）
             self.last_transcript_time = time.time()
@@ -230,9 +239,11 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 try:
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
                         temp_file.write(final_audio_data) # combined_audio ではなく final_audio_data を使う
+                        temp_file.flush()  # バッファを明示的にフラッシュ
+                        os.fsync(temp_file.fileno())  # ディスクに同期
                         temp_webm_path = temp_file.name
                     
-                    print(f"[Meeting {self.meeting_id}] 一時WebMファイル作成: {temp_webm_path}")
+                    print(f"[Meeting {self.meeting_id}] 一時WebMファイル作成: {temp_webm_path} ({len(final_audio_data)} bytes)")
                     
                     # WebMをMP3に変換
                     temp_mp3_path = temp_webm_path.replace('.webm', '.mp3')
@@ -243,13 +254,17 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     if success:
                         transcript_text = await self.transcribe_audio(temp_mp3_path)
                     
-                    # クリーンアップ
+                    # クリーンアップ（少し待ってから削除）
+                    await asyncio.sleep(0.1)  # 100ms待機
                     try:
                         if temp_webm_path and os.path.exists(temp_webm_path):
                             os.unlink(temp_webm_path)
+                            print(f"[Meeting {self.meeting_id}] 一時WebMファイル削除: {temp_webm_path}")
                         if temp_mp3_path and os.path.exists(temp_mp3_path):
                             os.unlink(temp_mp3_path)
-                    except:
+                            print(f"[Meeting {self.meeting_id}] 一時MP3ファイル削除: {temp_mp3_path}")
+                    except Exception as cleanup_error:
+                        print(f"[Meeting {self.meeting_id}] ファイル削除警告: {cleanup_error}")
                         pass
                     
                     if transcript_text and len(transcript_text.strip()) > 0:
@@ -341,6 +356,25 @@ class MeetingConsumer(AsyncWebsocketConsumer):
     async def convert_to_mp3(self, input_path, output_path):
         """ffmpegを使ってWebMをMP3に変換 (Windows対応・修正版)"""
         try:
+            # ファイルの存在とサイズを確認（最大3回リトライ）
+            for retry in range(3):
+                if os.path.exists(input_path):
+                    file_size = os.path.getsize(input_path)
+                    if file_size > 100:  # 最小サイズチェック
+                        print(f"[Meeting {self.meeting_id}] 入力ファイル確認OK: {file_size} bytes")
+                        break
+                    else:
+                        print(f"[Meeting {self.meeting_id}] ファイルサイズが小さすぎます: {file_size} bytes, リトライ {retry+1}/3")
+                else:
+                    print(f"[Meeting {self.meeting_id}] ファイルがまだ存在しません, リトライ {retry+1}/3")
+                
+                if retry < 2:
+                    await asyncio.sleep(0.5)  # 500ms待機
+            else:
+                # 3回試しても失敗
+                print(f"[Meeting {self.meeting_id}] 入力ファイルが利用できません: {input_path}")
+                return False
+            
             print(f"[Meeting {self.meeting_id}] ffmpeg変換開始: {input_path} -> {output_path}")
             
             # ffmpegコマンド
@@ -364,7 +398,8 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    check=False
+                    check=False,
+                    timeout=30  # 30秒タイムアウト
                 )
 
             # ここで古い create_subprocess_exec は使いません
@@ -372,16 +407,26 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             # --- 重要な変更点ここまで ---
             
             if process.returncode == 0:
-                print(f"[Meeting {self.meeting_id}] ffmpeg変換成功")
-                return True
+                # 出力ファイルの存在確認
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    print(f"[Meeting {self.meeting_id}] ffmpeg変換成功 ({os.path.getsize(output_path)} bytes)")
+                    return True
+                else:
+                    print(f"[Meeting {self.meeting_id}] ffmpeg変換失敗: 出力ファイルが作成されませんでした")
+                    return False
             else:
                 # stderrのデコード処理
                 error_message = process.stderr.decode('utf-8', errors='ignore')
-                print(f"[Meeting {self.meeting_id}] ffmpeg変換失敗: {error_message}")
+                # エラーメッセージを短縮（最初の500文字のみ）
+                error_summary = error_message[:500] if len(error_message) > 500 else error_message
+                print(f"[Meeting {self.meeting_id}] ffmpeg変換失敗: {error_summary}")
                 return False
                 
         except FileNotFoundError:
             print(f"[Meeting {self.meeting_id}] ffmpegが見つかりません。インストールしてください。")
+            return False
+        except subprocess.TimeoutExpired:
+            print(f"[Meeting {self.meeting_id}] ffmpeg変換タイムアウト（30秒）")
             return False
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] ffmpeg変換エラー: {e}")
@@ -579,7 +624,11 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 try:
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
                         temp_file.write(combined_audio)
+                        temp_file.flush()  # バッファを明示的にフラッシュ
+                        os.fsync(temp_file.fileno())  # ディスクに同期
                         temp_webm_path = temp_file.name
+                    
+                    print(f"[Meeting {self.meeting_id}] 最終バッファファイル作成: {temp_webm_path} ({len(combined_audio)} bytes)")
                     
                     # WebMをMP3に変換
                     temp_mp3_path = temp_webm_path.replace('.webm', '.mp3')
@@ -592,14 +641,17 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                     print(f"[Meeting {self.meeting_id}] 最終処理中のエラー: {e}")
                 
                 finally:
-                    # クリーンアップ処理
+                    # クリーンアップ処理（少し待ってから削除）
+                    await asyncio.sleep(0.1)  # 100ms待機
                     try:
                         if temp_webm_path and os.path.exists(temp_webm_path):
                             os.unlink(temp_webm_path)
+                            print(f"[Meeting {self.meeting_id}] 最終バッファWebM削除: {temp_webm_path}")
                         if temp_mp3_path and os.path.exists(temp_mp3_path):
                             os.unlink(temp_mp3_path)
+                            print(f"[Meeting {self.meeting_id}] 最終バッファMP3削除: {temp_mp3_path}")
                     except Exception as e:
-                        print(f"ファイル削除エラー: {e}")
+                        print(f"[Meeting {self.meeting_id}] ファイル削除警告: {e}")
                 
                 # 文字起こし結果があれば保存
                 if transcript_text and len(transcript_text.strip()) > 0:
@@ -813,15 +865,31 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         return list(meeting.transcripts.all())
 
     @database_sync_to_async
-    def save_transcript(self, text, timestamp):
+    def save_transcript(self, text, timestamp, speaker=''):
         """文字起こしをデータベースに保存"""
         meeting = Meeting.objects.get(id=self.meeting_id)
+        
+        # speaker が指定されている場合、参加者数をチェック（最大20人）
+        if speaker and speaker.strip():
+            # 既存の異なるspeaker数をカウント
+            existing_speakers = Transcript.objects.filter(
+                meeting=meeting
+            ).values_list('speaker', flat=True).distinct()
+            
+            unique_speakers = set(filter(None, existing_speakers))
+            
+            # 新しいspeakerで、既に20人いる場合はエラー
+            if speaker not in unique_speakers and len(unique_speakers) >= 20:
+                print(f"[Meeting {self.meeting_id}] 参加者数上限エラー: 既に20人の参加者がいます")
+                raise ValueError('会議の参加者数が上限（20人）に達しています')
+        
         transcript = Transcript.objects.create(
             meeting=meeting,
             text=text,
-            timestamp=timestamp
+            timestamp=timestamp,
+            speaker=speaker
         )
-        print(f"[Meeting {self.meeting_id}] DB保存完了: transcript_id={transcript.id}, timestamp={timestamp:.1f}秒")
+        print(f"[Meeting {self.meeting_id}] DB保存完了: transcript_id={transcript.id}, speaker={speaker}, timestamp={timestamp:.1f}秒")
         return transcript.id
 
     @database_sync_to_async

@@ -41,6 +41,9 @@ class Debate(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+        ]
     
     def __str__(self):
         return f"{self.title} - {self.created_at.strftime('%Y/%m/%d %H:%M')}"
@@ -57,6 +60,9 @@ class DebateStatement(models.Model):
     class Meta:
         ordering = ['order']
         unique_together = ('debate', 'order')
+        indexes = [
+            models.Index(fields=['debate', 'order']),
+        ]
     
     def __str__(self):
         return f"{self.debate.title} - {self.speaker}の発言{self.order}"

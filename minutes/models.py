@@ -46,6 +46,9 @@ class Transcript(models.Model):
 
     class Meta:
         ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['meeting', 'timestamp']),
+        ]
 
     def __str__(self):
         return f"{self.meeting.title} - {self.timestamp}s"
@@ -83,6 +86,9 @@ class TranscriptStamp(models.Model):
     class Meta:
         ordering = ['created_at']
         unique_together = ('transcript', 'stamp_type')  # 同じトランスクリプトに同じスタンプは1度だけ
+        indexes = [
+            models.Index(fields=['transcript']),
+        ]
 
     def __str__(self):
         return f"{self.get_stamp_type_display()} - {self.transcript.text[:30]}"
@@ -98,6 +104,9 @@ class TranscriptComment(models.Model):
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['transcript']),
+        ]
 
     def __str__(self):
         return f"Comment on {self.transcript.text[:30]} by {self.created_by}"
@@ -124,6 +133,9 @@ class TranscriptMark(models.Model):
     class Meta:
         ordering = ['created_at']
         unique_together = ('transcript', 'color')  # 同じトランスクリプトに同じ色は1度だけ
+        indexes = [
+            models.Index(fields=['transcript']),
+        ]
 
     def __str__(self):
         return f"{self.get_color_display()} Mark on {self.transcript.text[:30]}"
@@ -151,14 +163,20 @@ class AIMember(models.Model):
     
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['meeting', 'is_active']),
+        ]
     
     def save(self, *args, **kwargs):
         if not self.name or self.name == 'AI':
             # デフォルト名を生成: personality + 連番
-            existing_count = AIMember.objects.filter(
-                meeting=self.meeting,
-                personality=self.personality
-            ).count()
+            # より効率的に取得（COUNTの方がより最適化される）
+            from django.db.models import Count
+            existing_count = (
+                AIMember.objects
+                .filter(meeting=self.meeting, personality=self.personality)
+                .aggregate(count=Count('id'))['count']
+            )
             self.name = f"{self.personality}{existing_count + 1}"
         super().save(*args, **kwargs)
     
@@ -178,6 +196,9 @@ class AIMemberResponse(models.Model):
     
     class Meta:
         ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['ai_member', 'timestamp']),
+        ]
     
     def __str__(self):
         return f"{self.ai_member.name}: {self.response_text[:50]}..."

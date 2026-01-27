@@ -1227,7 +1227,7 @@
             <div class="logo">🤖 AI議事録</div>
             
             <div class="section">
-                <div class="section-title">👥 参加者</div>
+                <div class="section-title">👥 参加者 <span id="participantCount" style="font-size: 12px; color: #9ca3af;">(0/20)</span></div>
                 
                 <div id="participantsList" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- 参加者がここに動的に追加されます -->
@@ -1505,10 +1505,13 @@
         let activePanels = {};
         let isMeetingEnded = false;
         
+        // グローバルなAIメンバーデータ管理
+        let aiMembersData = {};  // { id: { id, name, personality, personality_display, response_count, created_at } }
+        
         // 参加者管理
         let participants = {
             facilitator: null,  // AIファシリテーター
-            aiMembers: {},       // AIメンバー: { id: {name, personality} }
+            aiMembers: {},       // AIメンバー: { id: {name, personality} } (aiMembersDataから自動生成)
             humanParticipants: {} // 人間参加者: { speakerName: true }
         };
         
@@ -1528,12 +1531,8 @@
                     // 参加者リストをリロード（aside）
                     renderParticipants();
                     
-                    // すべてのAIMembersパネルをリロード
-                    Object.values(activePanels).forEach(panel => {
-                        if (panel.reloadAIMembers) {
-                            panel.reloadAIMembers();
-                        }
-                    });
+                    // すべてのAIMembersパネルを同期更新
+                    syncAIMembersData();
                 } else {
                     alert('AIメンバーの削除に失敗しました');
                 }
@@ -1541,6 +1540,37 @@
             .catch(error => {
                 console.error('Failed to delete AI member:', error);
                 alert('エラーが発生しました: ' + error.message);
+            });
+        }
+        
+        // AIメンバー名変更処理（グローバル関数）
+        function renameAIMember(memberId, newName) {
+            fetch(`/ai-member/${memberId}/rename/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    name: newName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // グローバルデータと全パネルを同期更新
+                    syncAIMembersData();
+                } else {
+                    alert('エラー: ' + (data.message || '名前の変更に失敗しました'));
+                    // 失敗した場合も同期して元の状態に戻す
+                    syncAIMembersData();
+                }
+            })
+            .catch(error => {
+                console.error('Failed to rename AI member:', error);
+                alert('名前の変更中にエラーが発生しました: ' + error.message);
+                // エラーの場合も同期して元の状態に戻す
+                syncAIMembersData();
             });
         }
         
@@ -1920,9 +1950,24 @@
         function renderParticipants() {
             const participantsList = document.getElementById('participantsList');
             const aiMembersContainer = document.getElementById('aiMembersContainer');
+            const participantCount = document.getElementById('participantCount');
             
             participantsList.innerHTML = '';
             aiMembersContainer.innerHTML = '';
+            
+            // 人間参加者の数をカウント
+            const humanCount = Object.keys(participants.humanParticipants).length;
+            if (participantCount) {
+                participantCount.textContent = `(${humanCount}/20)`;
+                // 上限に近づいたら色を変更
+                if (humanCount >= 18) {
+                    participantCount.style.color = '#ef4444'; // 赤
+                } else if (humanCount >= 15) {
+                    participantCount.style.color = '#f59e0b'; // オレンジ
+                } else {
+                    participantCount.style.color = '#9ca3af'; // グレー
+                }
+            }
             
             // 人間参加者を表示（participantsList）
             Object.keys(participants.humanParticipants).forEach(speaker => {
@@ -2087,14 +2132,49 @@
         
         // AIメンバーをUIに追加
         function addAIMemberToUI(id, name, personality) {
+            // グローバルデータを更新
+            aiMembersData[id] = { id, name, personality };
+            // 左側パネルも同期
             participants.aiMembers[id] = { name, personality };
             renderParticipants();
         }
         
         // AIメンバーをUIから削除
         function removeAIMemberFromUI(id) {
+            delete aiMembersData[id];
             delete participants.aiMembers[id];
             renderParticipants();
+        }
+        
+        // サーバーからAIメンバー情報を取得して全て同期
+        function syncAIMembersData() {
+            fetch(`/meeting/${meetingId}/ai-members/`)
+                .then(response => response.json())
+                .then(data => {
+                    // グローバルデータを更新
+                    aiMembersData = {};
+                    data.ai_members.forEach(member => {
+                        aiMembersData[member.id] = member;
+                    });
+                    
+                    // 左側パネルのparticipants.aiMembersも更新
+                    participants.aiMembers = {};
+                    data.ai_members.forEach(member => {
+                        participants.aiMembers[member.id] = { name: member.name, personality: member.personality };
+                    });
+                    
+                    // 全てのAIメンバーパネルを再描画
+                    Object.keys(activePanels).forEach(panelId => {
+                        const panel = activePanels[panelId];
+                        if (panel.reloadAIMembers) {
+                            panel.reloadAIMembers();
+                        }
+                    });
+                    
+                    // 左側パネルを再描画
+                    renderParticipants();
+                })
+                .catch(error => console.error('Failed to sync AI members:', error));
         }
 
         function showAddFeatureModal() {
@@ -2868,6 +2948,9 @@
             
             body.innerHTML = `
                 <div style="margin-bottom: 15px;">
+                    <div style="margin-bottom: 10px; padding: 10px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 4px;">
+                        <div style="font-size: 13px; font-weight: 600; color: #1e40af;">AIメンバー総数: <span id="ai-member-count-${panelId}">0</span>/20</div>
+                    </div>
                     <div style="margin-bottom: 10px;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">AIメンバーの性格</label>
                         <select class="ai-personality" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
@@ -2879,7 +2962,7 @@
                     </div>
                     <div style="margin-bottom: 10px;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">追加する数</label>
-                        <input type="number" class="ai-count" value="1" min="1" max="10" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <input type="number" class="ai-count" value="1" min="1" max="20" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                     </div>
                     <button class="btn primary" style="width: 100%; margin-top: 10px;" id="add-ai-btn-${panelId}">AIメンバーを追加</button>
                 </div>
@@ -2908,46 +2991,31 @@
                     .then(response => response.json())
                     .then(data => {
                         aiMembers = data.ai_members;
-                        renderAIMembers();
                         
+                        // グローバルデータも同時に更新（両パネル間の同期）
+                        aiMembersData = {};
+                        data.ai_members.forEach(member => {
+                            aiMembersData[member.id] = member;
+                        });
+                        
+                        // AIメンバー数を表示
+                        const aiCountElement = body.querySelector(`#ai-member-count-${panelId}`);
+                        if (aiCountElement) {
+                            aiCountElement.textContent = aiMembers.length;
+                            // 20人に達したら色を赤に
+                            if (aiMembers.length >= 20) {
+                                aiCountElement.style.color = '#ef4444';
+                                aiCountElement.style.fontWeight = 'bold';
+                            } else {
+                                aiCountElement.style.color = '#1e40af';
+                            }
+                        }
+                        
+                        renderAIMembers();
                     })
                     .catch(error => {
                         console.error('Failed to load AI members:', error);
                     });
-            }
-            
-            function renameAIMember(memberId, newName) {
-                fetch(`/ai-member/${memberId}/rename/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        name: newName
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // UIを更新
-                        const member = aiMembers.find(m => m.id === memberId);
-                        if (member) {
-                            member.name = newName;
-                            participants.aiMembers[memberId].name = newName; // participantsデータも更新
-                            renderAIMembers(); // AIメンバーパネルを更新
-                            renderParticipants(); // 左側の参加者一覧も更新
-                        }
-                    } else {
-                        alert('エラー: ' + (data.message || '名前の変更に失敗しました'));
-                        loadAIMembers(); // 失敗したら再読み込み
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to rename AI member:', error);
-                    alert('名前の変更中にエラーが発生しました: ' + error.message);
-                    loadAIMembers(); // 失敗したら再読み込み
-                });
             }
             
             function renameSpeaker(oldSpeaker, newSpeaker) {
@@ -3067,6 +3135,12 @@
                 const personality = personalitySelect.value;
                 const count = parseInt(countInput.value) || 1;
                 
+                // 20人に達しているかチェック
+                if (aiMembers.length >= 20) {
+                    alert('AIメンバーは最大20人です。これ以上追加することはできません。');
+                    return;
+                }
+                
                 fetch(`/meeting/${meetingId}/add-ai-member/`, {
                     method: 'POST',
                     headers: {
@@ -3081,13 +3155,11 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // 各AIメンバーをUIに追加
-                        data.ai_members.forEach(member => {
-                            addAIMemberToUI(member.id, member.name, member.personality);
-                        });
                         loadAIMembers();
                         countInput.value = 1;
                         alert(`${data.ai_members.length}個のAIメンバーを追加しました`);
+                        // グローバルデータと全パネルを同期
+                        syncAIMembersData();
                     } else {
                         alert('エラー: ' + (data.message || 'AIメンバーの追加に失敗しました'));
                     }

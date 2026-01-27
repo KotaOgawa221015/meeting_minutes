@@ -6,7 +6,7 @@ from .models import Meeting, MinuteSummary, Transcript, TranscriptStamp, Transcr
 
 def index(request):
     """会議一覧"""
-    meetings = Meeting.objects.all()
+    meetings = Meeting.objects.only('id', 'title', 'created_at', 'status', 'duration_seconds').order_by('-created_at')
     return render(request, 'minutes/index.html', {'meetings': meetings})
 
 
@@ -44,10 +44,14 @@ def meeting_detail(request, meeting_id):
     except MinuteSummary.DoesNotExist:
         summary = None
     
+    # prefetch_related で N+1 クエリを解決
+    from django.db.models import Prefetch
+    transcripts = meeting.transcripts.prefetch_related('stamps').order_by('timestamp')
+    
     return render(request, 'minutes/detail.html', {
         'meeting': meeting,
         'summary': summary,
-        'transcripts': meeting.transcripts.all()
+        'transcripts': transcripts
     })
 
 
@@ -88,9 +92,26 @@ def save_manual_transcript(request, meeting_id):
         meeting = get_object_or_404(Meeting, id=meeting_id)
         data = json.loads(request.body)
         text = data.get('text', '').strip()
+        speaker = data.get('speaker', '手動入力').strip()
         
         if not text:
             return JsonResponse({'status': 'error', 'message': 'text is required'}, status=400)
+        
+        # speaker が指定されている場合、参加者数をチェック（最大20人）
+        if speaker and speaker.strip():
+            # 既存の異なるspeaker数をカウント
+            existing_speakers = Transcript.objects.filter(
+                meeting=meeting
+            ).values_list('speaker', flat=True).distinct()
+            
+            unique_speakers = set(filter(None, existing_speakers))
+            
+            # 新しいspeakerで、既に20人いる場合はエラー
+            if speaker not in unique_speakers and len(unique_speakers) >= 20:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '会議の参加者数が上限（20人）に達しています'
+                }, status=400)
         
         # タイムスタンプを計算（会議開始時からの秒数）
         if meeting.start_time:
@@ -103,7 +124,7 @@ def save_manual_transcript(request, meeting_id):
         transcript = Transcript.objects.create(
             meeting=meeting,
             timestamp=elapsed,
-            speaker='手動入力',
+            speaker=speaker,
             text=text
         )
         
@@ -119,24 +140,41 @@ def save_manual_transcript(request, meeting_id):
 
 def get_meeting_data(request, meeting_id):
     """会議のトランスクリプトと要約データを取得"""
+    from django.db.models import Prefetch
+    
     meeting = get_object_or_404(Meeting, id=meeting_id)
     
-    # トランスクリプトデータを取得（スタンプ、コメント、マーク含む）
-    transcripts = meeting.transcripts.all().order_by('timestamp')
-    transcript_list = []
+    # prefetch_related で N+1 クエリを解決
+    transcripts = meeting.transcripts.prefetch_related(
+        'stamps',
+        'comments__created_by',
+        'marks__created_by'
+    ).order_by('timestamp')
     
+    transcript_list = []
     for t in transcripts:
-        # スタンプを取得
-        stamps = TranscriptStamp.objects.filter(transcript=t).values_list('stamp_type', 'id')
-        stamps_list = [{'type': s[0], 'id': s[1]} for s in stamps]
-        
-        # コメントを取得
-        comments = TranscriptComment.objects.filter(transcript=t).values('id', 'comment_text', 'created_by__username', 'created_at', 'updated_at')
-        comments_list = list(comments)
-        
-        # マークを取得
-        marks = TranscriptMark.objects.filter(transcript=t).values('id', 'color', 'note', 'created_by__username', 'created_at')
-        marks_list = list(marks)
+        # キャッシュされたデータを使用（新しいクエリは発生しない）
+        stamps_list = [{'type': s.stamp_type, 'id': s.id} for s in t.stamps.all()]
+        comments_list = [
+            {
+                'id': c.id,
+                'comment_text': c.comment_text,
+                'created_by__username': c.created_by.username if c.created_by else None,
+                'created_at': c.created_at.isoformat(),
+                'updated_at': c.updated_at.isoformat()
+            }
+            for c in t.comments.all()
+        ]
+        marks_list = [
+            {
+                'id': m.id,
+                'color': m.color,
+                'note': m.note,
+                'created_by__username': m.created_by.username if m.created_by else None,
+                'created_at': m.created_at.isoformat()
+            }
+            for m in t.marks.all()
+        ]
         
         transcript_list.append({
             'id': t.id,
@@ -448,14 +486,20 @@ def add_ai_member(request, meeting_id):
         personality = data.get('personality', 'idea')
         count = int(data.get('count', 1))
         
+        # 追加数の上限チェック
+        if count < 1 or count > 20:
+            return JsonResponse({'status': 'error', 'message': '追加数は1〜20の範囲で指定してください'}, status=400)
+        
         # personality のバリデーション
         valid_personalities = [choice[0] for choice in AIMember.PERSONALITY_CHOICES]
         if personality not in valid_personalities:
             return JsonResponse({'status': 'error', 'message': 'Invalid personality'}, status=400)
         
-        # ファシリテーター機能としてのAIメンバー追加の制限チェック
-        # personality == 'facilitator' の場合のみ1人に制限
+        # 会議全体のAIメンバー数の上限チェック（最大20人）
+        existing_ai_members = meeting.ai_members.filter(is_active=True).count()
+        
         if personality == 'facilitator':
+            # ファシリテーター機能としてのAIメンバー追加の制限チェック
             existing_facilitators = meeting.ai_members.filter(
                 personality='facilitator',
                 is_active=True
@@ -469,6 +513,14 @@ def add_ai_member(request, meeting_id):
             
             # ファシリテーターAIメンバーは複数要求があっても1人のみ
             count = 1
+        
+        # 追加後のAIメンバー総数が20を超えないかチェック
+        if existing_ai_members + count > 20:
+            remaining = 20 - existing_ai_members
+            return JsonResponse({
+                'status': 'error',
+                'message': f'AIメンバーは最大20人です。現在{existing_ai_members}人いるため、あと{remaining}人まで追加できます。'
+            }, status=400)
         
         # AIメンバーを作成
         ai_members = []
@@ -588,6 +640,19 @@ def rename_speaker(request, meeting_id):
         
         if not old_speaker or not new_speaker:
             return JsonResponse({'status': 'error', 'message': 'Speaker names are required'}, status=400)
+        
+        # 新しい名前が既存の別の参加者と重複していないかチェック
+        if new_speaker != old_speaker:
+            existing_speakers = Transcript.objects.filter(
+                meeting=meeting,
+                speaker=new_speaker
+            ).exists()
+            
+            if existing_speakers:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'この名前は既に使用されています'
+                }, status=400)
         
         # 同じmeetingのTranscriptでspeakerを更新
         updated_count = Transcript.objects.filter(
