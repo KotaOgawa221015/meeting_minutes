@@ -1227,7 +1227,7 @@
             <div class="logo">🤖 AI議事録</div>
             
             <div class="section">
-                <div class="section-title">👥 参加者 <span id="participantCount" style="font-size: 12px; color: #9ca3af;">(0/20)</span></div>
+                <div class="section-title">👥 参加者 <span id="participantCount" style="font-size: 12px; color: #9ca3af;">(0/8)</span></div>
                 
                 <div id="participantsList" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- 参加者がここに動的に追加されます -->
@@ -2011,7 +2011,7 @@
             // 人間参加者の数をカウント
             const humanCount = Object.keys(participants.humanParticipants).length;
             if (participantCount) {
-                participantCount.textContent = `(${humanCount}/20)`;
+                participantCount.textContent = `(${humanCount}/8)`;
                 // 上限に近づいたら色を変更
                 if (humanCount >= 18) {
                     participantCount.style.color = '#ef4444'; // 赤
@@ -3002,7 +3002,7 @@
             body.innerHTML = `
                 <div style="margin-bottom: 15px;">
                     <div style="margin-bottom: 10px; padding: 10px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 4px;">
-                        <div style="font-size: 13px; font-weight: 600; color: #1e40af;">AIメンバー総数: <span id="ai-member-count-${panelId}">0</span>/20</div>
+                        <div style="font-size: 13px; font-weight: 600; color: #1e40af;">AIメンバー総数: <span id="ai-member-count-${panelId}">0</span>/8</div>
                     </div>
                     <div style="margin-bottom: 10px;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">AIメンバーの性格</label>
@@ -3015,7 +3015,7 @@
                     </div>
                     <div style="margin-bottom: 10px;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">追加する数</label>
-                        <input type="number" class="ai-count" value="1" min="1" max="20" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <input type="number" class="ai-count" value="1" min="1" max="8" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                     </div>
                     <button class="btn primary" style="width: 100%; margin-top: 10px;" id="add-ai-btn-${panelId}">AIメンバーを追加</button>
                 </div>
@@ -3055,8 +3055,8 @@
                         const aiCountElement = body.querySelector(`#ai-member-count-${panelId}`);
                         if (aiCountElement) {
                             aiCountElement.textContent = aiMembers.length;
-                            // 20人に達したら色を赤に
-                            if (aiMembers.length >= 20) {
+                            // 8人に達したら色を赤に
+                            if (aiMembers.length >= 8) {
                                 aiCountElement.style.color = '#ef4444';
                                 aiCountElement.style.fontWeight = 'bold';
                             } else {
@@ -3187,9 +3187,9 @@
                 const personality = personalitySelect.value;
                 const count = parseInt(countInput.value) || 1;
                 
-                // 20人に達しているかチェック
-                if (aiMembers.length >= 20) {
-                    alert('AIメンバーは最大20人です。これ以上追加することはできません。');
+                // 8人に達しているかチェック
+                if (aiMembers.length >= 8) {
+                    alert('AIメンバーは最大8人です。これ以上追加することはできません。');
                     return;
                 }
                 

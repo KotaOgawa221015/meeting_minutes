@@ -487,15 +487,15 @@ def add_ai_member(request, meeting_id):
         count = int(data.get('count', 1))
         
         # 追加数の上限チェック
-        if count < 1 or count > 20:
-            return JsonResponse({'status': 'error', 'message': '追加数は1〜20の範囲で指定してください'}, status=400)
+        if count < 1 or count > 8:
+            return JsonResponse({'status': 'error', 'message': '追加数は1〜8の範囲で指定してください'}, status=400)
         
         # personality のバリデーション
         valid_personalities = [choice[0] for choice in AIMember.PERSONALITY_CHOICES]
         if personality not in valid_personalities:
             return JsonResponse({'status': 'error', 'message': 'Invalid personality'}, status=400)
         
-        # 会議全体のAIメンバー数の上限チェック（最大20人）
+        # 会議全体のAIメンバー数の上限チェック（最大8人）
         existing_ai_members = meeting.ai_members.filter(is_active=True).count()
         
         if personality == 'facilitator':
@@ -514,12 +514,12 @@ def add_ai_member(request, meeting_id):
             # ファシリテーターAIメンバーは複数要求があっても1人のみ
             count = 1
         
-        # 追加後のAIメンバー総数が20を超えないかチェック
-        if existing_ai_members + count > 20:
-            remaining = 20 - existing_ai_members
+        # 追加後のAIメンバー総数が8を超えないかチェック
+        if existing_ai_members + count > 8:
+            remaining = 8 - existing_ai_members
             return JsonResponse({
                 'status': 'error',
-                'message': f'AIメンバーは最大20人です。現在{existing_ai_members}人いるため、あと{remaining}人まで追加できます。'
+                'message': f'AIメンバーは最大8人です。現在{existing_ai_members}人いるため、あと{remaining}人まで追加できます。'
             }, status=400)
         
         # AIメンバーを作成
