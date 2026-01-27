@@ -692,3 +692,175 @@ def delete_all_ai_members(request, meeting_id):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+# ============================================
+# VOICEVOX TTS API
+# ============================================
+import requests
+
+VOICEVOX_BASE_URL = 'http://127.0.0.1:50021'
+
+
+@require_http_methods(["GET"])
+def tts_ping(request):
+    """VOICEVOXエンジンが起動しているか確認"""
+    try:
+        # まず /version を試す
+        response = requests.get(f'{VOICEVOX_BASE_URL}/version', timeout=2)
+        if response.status_code == 200:
+            return JsonResponse({
+                'status': 'success',
+                'version': response.text.strip('"'),
+                'available': True
+            })
+        
+        # /version が失敗した場合は /core_versions を試す
+        response = requests.get(f'{VOICEVOX_BASE_URL}/core_versions', timeout=2)
+        if response.status_code == 200:
+            return JsonResponse({
+                'status': 'success',
+                'version': 'unknown',
+                'available': True
+            })
+        
+        return JsonResponse({
+            'status': 'error',
+            'available': False,
+            'message': f'VOICEVOXが応答しましたがステータスが異常です: {response.status_code}'
+        }, status=503)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({
+            'status': 'error',
+            'available': False,
+            'message': 'VOICEVOXエンジンに接続できません。VOICEVOXを起動してください。'
+        }, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({
+            'status': 'error',
+            'available': False,
+            'message': 'VOICEVOXエンジンからの応答がタイムアウトしました。'
+        }, status=503)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'available': False,
+            'message': f'エラー: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def tts_speak(request):
+    """テキストをVOICEVOXで音声合成してWAVデータを返す"""
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '').strip()
+        speaker_id = data.get('speaker_id', 1)  # デフォルト: ずんだもん(1)
+        
+        if not text:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'テキストが空です'
+            }, status=400)
+        
+        # 1. 音声合成用のクエリを作成
+        query_response = requests.post(
+            f'{VOICEVOX_BASE_URL}/audio_query',
+            params={'text': text, 'speaker': speaker_id},
+            timeout=10
+        )
+        
+        if query_response.status_code != 200:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'音声クエリの作成に失敗しました: {query_response.status_code}'
+            }, status=503)
+        
+        query_data = query_response.json()
+        
+        # 2. 音声を合成
+        synthesis_response = requests.post(
+            f'{VOICEVOX_BASE_URL}/synthesis',
+            params={'speaker': speaker_id},
+            json=query_data,
+            timeout=30
+        )
+        
+        if synthesis_response.status_code != 200:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'音声合成に失敗しました: {synthesis_response.status_code}'
+            }, status=503)
+        
+        # 3. WAVデータをBase64エンコードして返す
+        import base64
+        audio_base64 = base64.b64encode(synthesis_response.content).decode('utf-8')
+        
+        return JsonResponse({
+            'status': 'success',
+            'audio': audio_base64,
+            'content_type': 'audio/wav'
+        })
+        
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'VOICEVOXエンジンに接続できません。VOICEVOXを起動してください。'
+        }, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({
+            'status': 'error',
+            'message': '音声合成がタイムアウトしました。テキストが長すぎる可能性があります。'
+        }, status=503)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'エラー: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def tts_diagnose(request):
+    """VOICEVOXの診断情報を取得（利用可能なスピーカー一覧など）"""
+    try:
+        # スピーカー一覧を取得
+        speakers_response = requests.get(f'{VOICEVOX_BASE_URL}/speakers', timeout=5)
+        
+        if speakers_response.status_code != 200:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'スピーカー情報の取得に失敗しました: {speakers_response.status_code}'
+            }, status=503)
+        
+        speakers = speakers_response.json()
+        
+        # シンプルなスピーカーリストを作成
+        speaker_list = []
+        for speaker in speakers:
+            for style in speaker.get('styles', []):
+                speaker_list.append({
+                    'id': style['id'],
+                    'name': speaker['name'],
+                    'style': style['name']
+                })
+        
+        return JsonResponse({
+            'status': 'success',
+            'speakers': speaker_list
+        })
+        
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'VOICEVOXエンジンに接続できません。'
+        }, status=503)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'エラー: {str(e)}'
+        }, status=500)

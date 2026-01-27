@@ -37,4 +37,9 @@ urlpatterns = [
     path('ai-member/<int:ai_member_id>/rename/', views.rename_ai_member, name='rename_ai_member'),
     path('meeting/<int:meeting_id>/delete-all-ai-members/', views.delete_all_ai_members, name='delete_all_ai_members'),
     path('meeting/<int:meeting_id>/rename-speaker/', views.rename_speaker, name='rename_speaker'),
+
+    # TTS (VOICEVOX) Proxy API
+    path('tts/ping/', views.tts_ping, name='tts_ping'),
+    path('tts/speak/', views.tts_speak, name='tts_speak'),
+    path('tts/diagnose/', views.tts_diagnose, name='tts_diagnose'),
 ]

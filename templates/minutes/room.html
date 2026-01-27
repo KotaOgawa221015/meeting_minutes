@@ -1269,6 +1269,18 @@
                         ONにするとAIの発言に対して他のAIが反応します。
                     </div>
                 </div>
+
+                <!-- VOICEVOX読み上げ設定 -->
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="voicevoxToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">🔊 AI読み上げ</label>
+                        <input type="checkbox" id="voicevoxToggle" style="transform: scale(1.2); cursor: pointer;">
+                    </div>
+                    <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
+                        ONにするとAIの発言をVOICEVOXで読み上げます。
+                    </div>
+                    <div id="voicevoxStatus" style="font-size: 11px; margin-top: 8px; padding: 5px 8px; border-radius: 5px; display: none;"></div>
+                </div>
             </div>
 
 
@@ -1379,6 +1391,13 @@
         const rightPanels = document.getElementById('rightPanels');
         const endMeetingBtn = document.getElementById('endMeetingBtn');
         
+        // VOICEVOX関連の変数
+        const voicevoxToggle = document.getElementById('voicevoxToggle');
+        const voicevoxStatus = document.getElementById('voicevoxStatus');
+        let voicevoxEnabled = false;
+        let voicevoxAudioQueue = [];  // 読み上げキュー
+        let voicevoxIsPlaying = false;  // 現在再生中かどうか
+        let voicevoxSpeakerId = 1;  // デフォルト: ずんだもん(ノーマル)
         
         console.log('DOM elements initialized:');
         console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
@@ -3995,6 +4014,11 @@
             
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            
+            // VOICEVOX読み上げ
+            if (voicevoxEnabled) {
+                voicevoxSpeak(message);
+            }
         }
 
         function addAIResponse(aiName, aiPersonality, responseText, timestamp) {
@@ -4020,6 +4044,11 @@
             
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
+            
+            // VOICEVOX読み上げ
+            if (voicevoxEnabled) {
+                voicevoxSpeak(responseText);
+            }
         }
         
         function addManualTranscript() {
@@ -4613,6 +4642,181 @@
                 if (indicator) indicator.classList.remove('active');
             });
         }, true); // キャプチャフェーズで実行
+
+        // ============================================
+        // VOICEVOX読み上げ機能
+        // ============================================
+
+        /**
+         * VOICEVOXエンジンが起動しているか確認
+         */
+        async function voicevoxPing() {
+            try {
+                const response = await fetch('/tts/ping/');
+                const data = await response.json();
+                return data.available === true;
+            } catch (error) {
+                console.error('VOICEVOX ping failed:', error);
+                return false;
+            }
+        }
+
+        /**
+         * VOICEVOXステータス表示を更新
+         */
+        function updateVoicevoxStatus(message, isError = false) {
+            if (voicevoxStatus) {
+                voicevoxStatus.style.display = 'block';
+                voicevoxStatus.textContent = message;
+                voicevoxStatus.style.background = isError ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+                voicevoxStatus.style.color = 'white';
+                
+                // 3秒後に非エラーメッセージは消す
+                if (!isError) {
+                    setTimeout(() => {
+                        voicevoxStatus.style.display = 'none';
+                    }, 3000);
+                }
+            }
+        }
+
+        /**
+         * テキストをVOICEVOXで読み上げる
+         */
+        async function voicevoxSpeak(text) {
+            if (!voicevoxEnabled || !text) return;
+            
+            // 読み上げキューに追加
+            voicevoxAudioQueue.push(text);
+            
+            // 既に再生中なら処理しない（キューから順次処理される）
+            if (voicevoxIsPlaying) return;
+            
+            // キューを処理
+            await processVoicevoxQueue();
+        }
+
+        /**
+         * 読み上げキューを順次処理
+         */
+        async function processVoicevoxQueue() {
+            if (voicevoxIsPlaying || voicevoxAudioQueue.length === 0) return;
+            
+            voicevoxIsPlaying = true;
+            
+            while (voicevoxAudioQueue.length > 0 && voicevoxEnabled) {
+                const text = voicevoxAudioQueue.shift();
+                
+                try {
+                    const response = await fetch('/tts/speak/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            speaker_id: voicevoxSpeakerId
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success' && data.audio) {
+                        // Base64音声をデコードして再生
+                        await playAudioBase64(data.audio);
+                    } else if (response.status === 503) {
+                        // VOICEVOXが利用不可
+                        console.error('VOICEVOX unavailable:', data.message);
+                        updateVoicevoxStatus('❌ ' + data.message, true);
+                        
+                        // トグルをオフにする
+                        voicevoxEnabled = false;
+                        if (voicevoxToggle) voicevoxToggle.checked = false;
+                        voicevoxAudioQueue = [];  // キューをクリア
+                        break;
+                    } else {
+                        console.error('TTS error:', data.message);
+                    }
+                } catch (error) {
+                    console.error('VOICEVOX speak error:', error);
+                    updateVoicevoxStatus('❌ 読み上げエラー: ' + error.message, true);
+                    
+                    // エラー時はトグルをオフにする
+                    voicevoxEnabled = false;
+                    if (voicevoxToggle) voicevoxToggle.checked = false;
+                    voicevoxAudioQueue = [];
+                    break;
+                }
+            }
+            
+            voicevoxIsPlaying = false;
+        }
+
+        /**
+         * Base64エンコードされた音声を再生
+         */
+        function playAudioBase64(base64Audio) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const audioData = atob(base64Audio);
+                    const arrayBuffer = new ArrayBuffer(audioData.length);
+                    const view = new Uint8Array(arrayBuffer);
+                    for (let i = 0; i < audioData.length; i++) {
+                        view[i] = audioData.charCodeAt(i);
+                    }
+                    
+                    const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(blob);
+                    const audio = new Audio(audioUrl);
+                    
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    };
+                    
+                    audio.onerror = (error) => {
+                        URL.revokeObjectURL(audioUrl);
+                        reject(error);
+                    };
+                    
+                    audio.play().catch(reject);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        /**
+         * VOICEVOXトグルのイベントハンドラ
+         */
+        if (voicevoxToggle) {
+            voicevoxToggle.addEventListener('change', async function() {
+                if (this.checked) {
+                    // ONにする前にVOICEVOXが起動しているか確認
+                    updateVoicevoxStatus('🔄 VOICEVOXに接続中...', false);
+                    
+                    const isAvailable = await voicevoxPing();
+                    
+                    if (isAvailable) {
+                        voicevoxEnabled = true;
+                        updateVoicevoxStatus('✅ VOICEVOX接続完了', false);
+                        console.log('VOICEVOX読み上げ: ON');
+                    } else {
+                        // VOICEVOXが起動していない場合、トグルを戻す
+                        this.checked = false;
+                        voicevoxEnabled = false;
+                        updateVoicevoxStatus('❌ VOICEVOXが起動していません。VOICEVOXを起動してください。', true);
+                        console.log('VOICEVOX読み上げ: 接続失敗');
+                    }
+                } else {
+                    voicevoxEnabled = false;
+                    voicevoxAudioQueue = [];  // キューをクリア
+                    voicevoxStatus.style.display = 'none';
+                    console.log('VOICEVOX読み上げ: OFF');
+                }
+            });
+        }
 </script>
 </body>
 </html>
