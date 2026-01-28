@@ -53,6 +53,14 @@
             transition: all 0.3s;
             border: 2px solid transparent;
         }
+        .participant-card.human {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        .participant-card.ai {
+            background: rgba(99, 102, 241, 0.12);
+            border-color: rgba(99, 102, 241, 0.35);
+        }
         .participant-card:hover {
             background: rgba(255,255,255,0.15);
         }
@@ -77,6 +85,12 @@
             background: rgba(255,255,255,0.2);
             border-radius: 8px;
             flex-shrink: 0;
+        }
+        .participant-card.human .participant-icon {
+            background: rgba(16, 185, 129, 0.25);
+        }
+        .participant-card.ai .participant-icon {
+            background: rgba(99, 102, 241, 0.25);
         }
         .participant-info {
             flex: 1;
@@ -589,8 +603,8 @@
         /* Transcript styles */
         .transcript-item {
             display: flex;
-            align-items: flex-start;
-            gap: 12px;
+            flex-direction: column;
+            gap: 4px;
             padding: 12px;
             margin-bottom: 8px;
             background: #f8fafc;
@@ -605,6 +619,41 @@
         .transcript-item.has-mark {
             background: var(--mark-color, #f8fafc) !important;
         }
+        /* 参加者別色分け */
+        .transcript-speaker {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+        .transcript-speaker-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .transcript-item.speaker-0 { border-left-color: #667eea; }
+        .transcript-item.speaker-1 { border-left-color: #ec4899; }
+        .transcript-item.speaker-2 { border-left-color: #f59e0b; }
+        .transcript-item.speaker-3 { border-left-color: #10b981; }
+        .transcript-item.speaker-4 { border-left-color: #06b6d4; }
+        .transcript-item.speaker-5 { border-left-color: #8b5cf6; }
+        
+        .speaker-avatar-0 { background: #667eea; }
+        .speaker-avatar-1 { background: #ec4899; }
+        .speaker-avatar-2 { background: #f59e0b; }
+        .speaker-avatar-3 { background: #10b981; }
+        .speaker-avatar-4 { background: #06b6d4; }
+        .speaker-avatar-5 { background: #8b5cf6; }
         .transcript-content {
             flex: 1;
             font-size: 14px;
@@ -1217,11 +1266,105 @@
                 min-width: 300px;
             }
         }
+        
+        /* ユーザー名入力モーダル */
+        .username-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .username-modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .username-modal h2 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 24px;
+        }
+        
+        .username-modal p {
+            margin: 0 0 20px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .username-modal input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .username-modal input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .username-modal button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .username-modal button:hover {
+            background: #5568d3;
+        }
+        
+        .username-modal button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
     {% csrf_token %}
     <div id="current-user" data-username="{{ user.username }}" data-full-name="{{ user.get_full_name }}" style="display:none;"></div>
+    
+    <!-- ユーザー名入力モーダル -->
+    <!-- 参加者追加モーダル -->
+    <div id="addParticipantModal" class="username-modal" style="display:none;">
+        <div class="username-modal-content">
+            <h2>👥 参加者を追加</h2>
+            <p>マイクと参加者名を設定してください</p>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px;">🎤 マイク</label>
+                <select id="microphoneSelectDropdown" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                    <option value="">マイクを選択...</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px;">👤 参加者名</label>
+                <input type="text" id="participantNameInput" placeholder="例: 田中花子" maxlength="20" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;" />
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="addParticipantSubmitBtn" style="flex: 1; padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">追加</button>
+                <button id="addParticipantCancelBtn" style="flex: 1; padding: 10px 15px; background: #9ca3af; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    
     <div class="app">
         <aside>
             <div class="logo">🤖 AI議事録</div>
@@ -1232,6 +1375,10 @@
                 <div id="participantsList" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- 参加者がここに動的に追加されます -->
                 </div>
+                
+                <button id="addParticipantBtn" style="width: 100%; margin-top: 12px; padding: 10px 15px; background: rgba(16,185,129,0.2); color: white; border: 2px dashed rgba(16,185,129,0.5); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;">
+                    ⊕ 参加者を追加
+                </button>
                 
                 <div id="aiMembersContainer" style="margin-top: 15px; padding-top: 15px;">
                     <!-- AIファシリテーター / AIメンバーがここに動的に追加されます -->
@@ -1352,11 +1499,19 @@
         }
         
         let socket = null;
-        let mediaRecorder = null;
+        let mediaRecorders = {}; // {participantId: MediaRecorder}
+        let audioStreams = {}; // {participantId: MediaStream}
         let audioContext = null;
         let analyser = null;
         let isRecording = false;
         let transcriptCount = 0;
+        let currentUserName = null; // ユーザーが設定した表示名
+        let currentUserId = null;   // ユーザーID
+        
+        // マイク管理（複数マイク対応）
+        let availableMicrophones = []; // 利用可能なマイク一覧
+        let participantMicrophones = {}; // {participantId: {name, microphoneId, microphoneLabel, groupId}}
+        let currentRecordingParticipantIds = []; // 現在録音中の参加者IDリスト
 
         const startBtn = document.getElementById('startBtn');
         const transcriptArea = document.getElementById('transcriptArea');
@@ -1509,7 +1664,7 @@
         let participants = {
             facilitator: null,  // AIファシリテーター
             aiMembers: {},       // AIメンバー: { id: {name, personality} }
-            humanParticipants: {} // 人間参加者: { speakerName: true }
+            humanParticipantsById: {} // 人間参加者: { userId: name }
         };
         
         // AIメンバー削除処理（グローバル関数）
@@ -1564,10 +1719,194 @@
             }
         }
 
+        // マイク選択モーダルを表示
+        async function showMicrophoneModal() {
+            return new Promise(async (resolve) => {
+                const modal = document.getElementById('microphoneModal');
+                const micList = document.getElementById('microphoneList');
+                const skipBtn = document.getElementById('microphoneSkipBtn');
+                
+                // 利用可能なマイクを列挙
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    availableMicrophones = devices.filter(d => d.kind === 'audioinput');
+                    
+                    console.log('Available microphones:', availableMicrophones);
+                    
+                    if (availableMicrophones.length === 0) {
+                        micList.innerHTML = '<p style="padding: 15px; text-align: center; color: #999;">マイクが見つかりません</p>';
+                        skipBtn.style.display = 'block';
+                    } else {
+                        // マイク選択ボタンを生成
+                        micList.innerHTML = '';
+                        availableMicrophones.forEach((mic, index) => {
+                            const btn = document.createElement('button');
+                            btn.style.cssText = `
+                                width: 100%;
+                                padding: 12px 15px;
+                                margin-bottom: 8px;
+                                background: #f3f4f6;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                text-align: left;
+                                font-size: 14px;
+                                transition: all 0.3s;
+                            `;
+                            
+                            btn.innerHTML = `
+                                <div style="font-weight: 600; color: #333;">🎤 ${mic.label || `マイク ${index + 1}`}</div>
+                                <div style="font-size: 12px; color: #999; margin-top: 2px;">ID: ${mic.deviceId.substring(0, 20)}...</div>
+                            `;
+                            
+                            btn.addEventListener('mouseover', () => {
+                                btn.style.background = '#e5e7eb';
+                                btn.style.borderColor = '#667eea';
+                            });
+                            
+                            btn.addEventListener('mouseout', () => {
+                                btn.style.background = '#f3f4f6';
+                                btn.style.borderColor = '#e5e7eb';
+                            });
+                            
+                            btn.addEventListener('click', () => {
+                                // マイク情報を保存
+                                selectedMicrophone = {
+                                    deviceId: mic.deviceId,
+                                    label: mic.label || `マイク ${index + 1}`,
+                                    groupId: mic.groupId,
+                                    index: index
+                                };
+                                
+                                // localStorageに保存
+                                localStorage.setItem('selectedMicrophone', JSON.stringify(selectedMicrophone));
+                                
+                                console.log('マイク選択:', selectedMicrophone);
+                                modal.style.display = 'none';
+                                resolve();
+                            });
+                            
+                            micList.appendChild(btn);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to enumerate devices:', error);
+                    micList.innerHTML = '<p style="padding: 15px; text-align: center; color: #999;">デバイス情報の取得に失敗しました</p>';
+                }
+                
+                // スキップボタン
+                skipBtn.onclick = () => {
+                    selectedMicrophone = null;
+                    modal.style.display = 'none';
+                    resolve();
+                };
+                
+                // モーダル表示
+                modal.style.display = 'flex';
+            });
+        }
+
+        // マイク一覧を取得してドロップダウンに設定
+        async function loadMicrophonesToDropdown() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                availableMicrophones = devices.filter(d => d.kind === 'audioinput');
+                
+                const dropdown = document.getElementById('microphoneSelectDropdown');
+                dropdown.innerHTML = '<option value="">マイクを選択...</option>';
+                
+                availableMicrophones.forEach((mic, index) => {
+                    const option = document.createElement('option');
+                    option.value = mic.deviceId;
+                    option.textContent = mic.label || `マイク ${index + 1}`;
+                    dropdown.appendChild(option);
+                });
+                
+                console.log('マイクリストをドロップダウンに設定:', availableMicrophones);
+            } catch (error) {
+                console.error('Failed to load microphones:', error);
+            }
+        }
+
+        // 参加者追加モーダルを表示
+        function showAddParticipantModal() {
+            const modal = document.getElementById('addParticipantModal');
+            document.getElementById('participantNameInput').value = '';
+            document.getElementById('microphoneSelectDropdown').value = '';
+            loadMicrophonesToDropdown();
+            modal.style.display = 'flex';
+            document.getElementById('participantNameInput').focus();
+        }
+
+        // 参加者追加モーダルを閉じる
+        function closeAddParticipantModal() {
+            const modal = document.getElementById('addParticipantModal');
+            modal.style.display = 'none';
+        }
+
+        // 参加者を追加
+        function addParticipant() {
+            const nameInput = document.getElementById('participantNameInput');
+            const micDropdown = document.getElementById('microphoneSelectDropdown');
+            
+            const name = nameInput.value.trim();
+            const micId = micDropdown.value;
+            
+            if (!name) {
+                alert('参加者名を入力してください。');
+                return;
+            }
+            
+            if (!micId) {
+                alert('マイクを選択してください。');
+                return;
+            }
+            
+            // 参加者IDを生成
+            const participantId = 'participant_' + Date.now();
+            
+            // マイク情報を取得
+            const selectedMic = availableMicrophones.find(m => m.deviceId === micId);
+            
+            // 参加者情報を保存
+            participantMicrophones[participantId] = {
+                name: name,
+                microphoneId: micId,
+                microphoneLabel: selectedMic ? (selectedMic.label || `マイク`) : 'マイク',
+                groupId: selectedMic ? selectedMic.groupId : null
+            };
+            
+            // localStorageに保存
+            localStorage.setItem(`participantMicrophones_${meetingId}`, JSON.stringify(participantMicrophones));
+            
+            console.log('参加者追加:', participantId, participantMicrophones[participantId]);
+            
+            // UIを更新
+            renderParticipants();
+            closeAddParticipantModal();
+        }
+
+        // 参加者を削除
+        function removeParticipant(participantId) {
+            if (confirm('この参加者を削除しますか？')) {
+                delete participantMicrophones[participantId];
+                localStorage.setItem(`participantMicrophones_${meetingId}`, JSON.stringify(participantMicrophones));
+                renderParticipants();
+                console.log('参加者削除:', participantId);
+            }
+        }
+
         // ページロード時に復元
         (async () => {
             console.log('Page initialization started');
             console.log('meetingId:', meetingId);
+            
+            // localStorageから参加者マイク情報を復元
+            const savedParticipantMics = localStorage.getItem(`participantMicrophones_${meetingId}`);
+            if (savedParticipantMics) {
+                participantMicrophones = JSON.parse(savedParticipantMics);
+                console.log('保存済み参加者マイク情報を復元:', participantMicrophones);
+            }
             
             await initializeMeetingStatus();
             console.log('initializeMeetingStatus completed');
@@ -1578,6 +1917,27 @@
             
             await loadMeetingData();
             console.log('loadMeetingData completed');
+            
+            // 「参加者を追加」ボタンのイベントリスナー
+            document.getElementById('addParticipantBtn').addEventListener('click', () => {
+                showAddParticipantModal();
+            });
+            
+            // モーダルボタンのイベントリスナー
+            document.getElementById('addParticipantSubmitBtn').addEventListener('click', () => {
+                addParticipant();
+            });
+            
+            document.getElementById('addParticipantCancelBtn').addEventListener('click', () => {
+                closeAddParticipantModal();
+            });
+            
+            // Enterキーで送信
+            document.getElementById('participantNameInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addParticipant();
+                }
+            });
             
             connectWebSocket();
             console.log('connectWebSocket called');
@@ -1650,7 +2010,8 @@
                         
                         const speaker = document.createElement('div');
                         speaker.className = 'speaker';
-                        speaker.textContent = '👤 参加者';
+                        const speakerName = transcript.speaker || '参加者';
+                        speaker.textContent = `👤 ${speakerName}`;
                         
                         const content = document.createElement('div');
                         content.className = 'transcript-content';
@@ -1922,42 +2283,30 @@
             const aiMembersContainer = document.getElementById('aiMembersContainer');
             
             participantsList.innerHTML = '';
-            aiMembersContainer.innerHTML = '';
+            aiMembersContainer.innerHTML = '<div class="section-title" style="margin: 8px 0 10px 0; opacity: 0.9;">🤖 AI</div>';
             
-            // 人間参加者を表示（participantsList）
-            Object.keys(participants.humanParticipants).forEach(speaker => {
+            // マイク割り当て参加者を表示
+            Object.entries(participantMicrophones).forEach(([participantId, participantInfo]) => {
                 const participantCard = document.createElement('div');
-                participantCard.className = 'participant-card';
+                participantCard.className = 'participant-card human';
                 participantCard.innerHTML = `
                     <div class="participant-header">
-                        <div class="participant-icon">👤</div>
+                        <div class="participant-icon">🎤</div>
                         <div class="participant-info">
-                            <input type="text" class="participant-name-input" value="${speaker}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
-                            <div class="participant-role">参加者</div>
+                            <div class="participant-name" style="font-size: 15px; font-weight: 600; color: white;">${participantInfo.name}</div>
+                            <div class="participant-role" style="font-size: 12px; color: rgba(255,255,255,0.7);">${participantInfo.microphoneLabel}</div>
                         </div>
-                        <button class="participant-remove-btn" data-type="facilitator" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                        <button class="participant-remove-btn" data-participant-id="${participantId}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
                     </div>
                 `;
                 participantsList.appendChild(participantCard);
                 
-                // 名前変更イベント
-                const nameInput = participantCard.querySelector('.participant-name-input');
-                nameInput.addEventListener('blur', () => {
-                    const newName = nameInput.value.trim();
-                    if (newName && newName !== speaker) {
-                        renameSpeaker(speaker, newName);
-                    } else {
-                        nameInput.value = speaker;
-                    }
-                });
-                
-                nameInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        nameInput.blur();
-                    } else if (e.key === 'Escape') {
-                        nameInput.value = speaker;
-                        nameInput.blur();
-                    }
+                // 削除ボタンのイベントリスナー
+                const removeBtn = participantCard.querySelector('.participant-remove-btn');
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeParticipant(participantId);
                 });
             });
             
@@ -2006,22 +2355,24 @@
                 };
                 
                 const memberCard = document.createElement('div');
-                memberCard.className = 'participant-card';
+                memberCard.className = 'participant-card ai';
                 memberCard.id = `ai-member-${id}`;
                 memberCard.innerHTML = `
                     <div class="participant-header">
                         <div class="participant-icon">${personalityIcons[member.personality] || '🤖'}</div>
                         <div class="participant-info">
-                            <input type="text" class="participant-name-input" value="${member.name}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
+                            <input type="text" class="participant-name-input" value="${member.name}" data-ai-member-id="${id}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
                             <div class="participant-role">${personalityLabels[member.personality] || member.personality}</div>
                         </div>
-                        <button class="participant-remove-btn" data-type="ai_member" data-id="${id}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
+                        <span style="font-size: 11px; background: rgba(99,102,241,0.35); color: #eef2ff; padding: 4px 6px; border-radius: 6px;">AI</span>
+                        <button class="participant-remove-btn" data-type="ai_member" data-id="${id}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; margin-left: 4px;">×</button>
                     </div>
                 `;
                 aiMembersContainer.appendChild(memberCard);
                 
                 // 名前変更イベント
                 const nameInput = memberCard.querySelector('.participant-name-input');
+                nameInput.style.cursor = 'text';
                 nameInput.addEventListener('blur', () => {
                     const newName = nameInput.value.trim();
                     if (newName && newName !== member.name) {
@@ -2053,9 +2404,17 @@
         }
         
         // AIファシリテーターをUIに追加
+        // AIファシリテーターをUIに追加
         function addFacilitatorToUI() {
             participants.facilitator = true;
             renderParticipants();
+            
+            // ファシリテーター パネルがなければ自動作成
+            const existingPanel = document.querySelector('[id^="panel-facilitator-"]');
+            if (!existingPanel) {
+                console.log('ファシリテーター パネルを自動作成します');
+                addFeature(availableFeatures.find(f => f.id === 'facilitator'));
+            }
         }
         
         // AIファシリテーターをUIから削除
@@ -2094,6 +2453,111 @@
         // AIメンバーをUIから削除
         function removeAIMemberFromUI(id) {
             delete participants.aiMembers[id];
+            renderParticipants();
+        }
+        
+        // 参加者入室時の処理
+        function handleParticipantJoined(userId, userName) {
+            if (!userName || userName === 'null') return;
+            if (!participants.humanParticipantsById[userId]) {
+                participants.humanParticipantsById[userId] = userName;
+                renderParticipants();
+                console.log('参加者追加:', userName);
+            }
+        }
+        
+        // 参加者退室時の処理
+        function handleParticipantLeft(userId, userName) {
+            if (participants.humanParticipantsById[userId]) {
+                delete participants.humanParticipantsById[userId];
+                renderParticipants();
+                console.log('参加者削除:', userName);
+            }
+        }
+
+        // 参加者名変更時の処理
+        function handleParticipantRenamed(userId, userName) {
+            if (!userName || userName === 'null') return;
+            participants.humanParticipantsById[userId] = userName;
+            // 自分自身なら現在の表示名も更新
+            if (userId === currentUserId) {
+                currentUserName = userName;
+            }
+            renderParticipants();
+        }
+
+        // AI メンバー名変更時の処理
+        function handleAIMemberRenamed(memberId, memberName) {
+            if (!memberName || memberName === 'null') return;
+            if (participants.aiMembers[memberId]) {
+                participants.aiMembers[memberId].name = memberName;
+            }
+            renderParticipants();
+        }
+
+        // AI メンバー名変更（グローバル関数）
+        function renameAIMember(memberId, newName) {
+            const trimmedName = (newName || '').trim();
+            if (!trimmedName) return;
+            
+            // ローカルで即座に更新（楽観的更新）
+            if (participants.aiMembers[memberId]) {
+                participants.aiMembers[memberId].name = trimmedName;
+                renderParticipants(); // aside 側を即座に更新
+            }
+            
+            // サーバーに送信
+            fetch(`/ai-member/${memberId}/rename/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    name: trimmedName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('AI メンバー名変更成功:', trimmedName);
+                    // サーバーが WebSocket で他のクライアントに通知する
+                } else {
+                    alert('エラー: ' + (data.message || '名前の変更に失敗しました'));
+                    // 失敗時はリロード
+                    if (typeof loadAIMembers === 'function') {
+                        loadAIMembers();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Failed to rename AI member:', error);
+                alert('名前の変更中にエラーが発生しました: ' + error.message);
+            });
+        }
+
+        function renameSelf(newName) {
+            const trimmedName = (newName || '').trim();
+            if (!trimmedName) return;
+            if (!currentUserId) {
+                console.warn('ユーザーIDが未設定のため名前変更をスキップ');
+                return;
+            }
+
+            currentUserName = trimmedName;
+            participants.humanParticipantsById[currentUserId] = trimmedName;
+            localStorage.setItem('meeting_username', trimmedName);
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'rename_participant',
+                    user_id: currentUserId,
+                    user_name: trimmedName
+                }));
+            } else {
+                console.warn('WebSocket未接続のため名前変更をサーバーへ送信できません');
+            }
+
             renderParticipants();
         }
 
@@ -2916,77 +3380,6 @@
                     });
             }
             
-            function renameAIMember(memberId, newName) {
-                fetch(`/ai-member/${memberId}/rename/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        name: newName
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // UIを更新
-                        const member = aiMembers.find(m => m.id === memberId);
-                        if (member) {
-                            member.name = newName;
-                            participants.aiMembers[memberId].name = newName; // participantsデータも更新
-                            renderAIMembers(); // AIメンバーパネルを更新
-                            renderParticipants(); // 左側の参加者一覧も更新
-                        }
-                    } else {
-                        alert('エラー: ' + (data.message || '名前の変更に失敗しました'));
-                        loadAIMembers(); // 失敗したら再読み込み
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to rename AI member:', error);
-                    alert('名前の変更中にエラーが発生しました: ' + error.message);
-                    loadAIMembers(); // 失敗したら再読み込み
-                });
-            }
-            
-            function renameSpeaker(oldSpeaker, newSpeaker) {
-                fetch(`/meeting/${meetingId}/rename-speaker/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        old_speaker: oldSpeaker,
-                        new_speaker: newSpeaker
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // UIを更新
-                        delete participants.humanParticipants[oldSpeaker];
-                        participants.humanParticipants[newSpeaker] = true;
-                        renderParticipants();
-                        // トランスクリプトのspeakerも更新
-                        document.querySelectorAll('.speaker').forEach(speakerEl => {
-                            if (speakerEl.textContent === `👤 ${oldSpeaker}`) {
-                                speakerEl.textContent = `👤 ${newSpeaker}`;
-                            }
-                        });
-                    } else {
-                        alert('エラー: ' + (data.message || '名前の変更に失敗しました'));
-                        renderParticipants(); // 失敗したら再描画
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to rename speaker:', error);
-                    alert('名前の変更中にエラーが発生しました: ' + error.message);
-                    renderParticipants(); // 失敗したら再描画
-                });
-            }
-            
             function renderAIMembers() {
                 aiMembersList.innerHTML = '';
                 
@@ -3158,7 +3551,9 @@
                 
                 if (data.type === 'transcript') {
                     // WebSocket経由で受け取ったトランスクリプトを表示
-                    addTranscriptToUI(data.text, data.transcript_id);
+                    const speakerName = data.speaker || '参加者';
+                    const speakerId = data.speaker_id || null;
+                    addTranscriptToUI(data.text, data.transcript_id, speakerName, speakerId);
                     transcriptCount++;
                     statTranscripts.textContent = transcriptCount;
                 } else if (data.type === 'facilitator_message') {
@@ -3176,6 +3571,48 @@
                     displayPartialSummary(data.summary, data.segment_count, data.timestamp);
                 } else if (data.type === 'summary_complete') {
                     displaySummary(data.summary);
+                } else if (data.type === 'participant_joined') {
+                    console.log('参加者入室:', data.user_name);
+                    handleParticipantJoined(data.user_id, data.user_name);
+                } else if (data.type === 'participant_left') {
+                    console.log('参加者退室:', data.user_name);
+                    handleParticipantLeft(data.user_id, data.user_name);
+                } else if (data.type === 'participant_renamed') {
+                    console.log('参加者名変更:', data.user_name);
+                    handleParticipantRenamed(data.user_id, data.user_name);
+                } else if (data.type === 'ai_member_added') {
+                    console.log('AI メンバー追加:', data.ai_members);
+                    data.ai_members.forEach(member => {
+                        addAIMemberToUI(member.id, member.name, member.personality);
+                    });
+                } else if (data.type === 'ai_member_removed') {
+                    console.log('AI メンバー削除:', data.member_id);
+                    removeAIMemberFromUI(data.member_id);
+                } else if (data.type === 'ai_member_renamed') {
+                    console.log('AI メンバー名変更:', data.member_id, data.member_name);
+                    handleAIMemberRenamed(data.member_id, data.member_name);
+                    // パネル側の AI メンバーリストもリロード
+                    Object.values(activePanels).forEach(panel => {
+                        if (panel.reloadAIMembers && typeof panel.reloadAIMembers === 'function') {
+                            panel.reloadAIMembers();
+                        }
+                    });
+                } else if (data.type === 'meeting_ended') {
+                    console.log('会議終了がブロードキャストされました');
+                    isMeetingEnded = true;
+                    
+                    // 録音停止
+                    if (isRecording) {
+                        stopRecording();
+                    }
+                    
+                    // ボタン等の無効化
+                    disableRecordingButtons();
+                    
+                    // 状態更新
+                    statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+                    
+                    alert('他のブラウザで会議が終了されました。');
                 } else if (data.type === 'error') {
                     alert('エラー: ' + data.message);
                 }
@@ -3183,6 +3620,7 @@
 
             socket.onerror = (error) => {
                 console.error('WebSocketエラー:', error);
+                console.error('WebSocketエラー詳細 - readyState:', socket.readyState);
                 statusText.textContent = 'エラー: 接続に失敗しました';
             };
 
@@ -3193,40 +3631,88 @@
 
         async function startRecording() {
             if (isRecording) return;
+            
+            // 参加者が登録されているか確認
+            const participantIds = Object.keys(participantMicrophones);
+            if (participantIds.length === 0) {
+                alert('参加者が登録されていません。\n「参加者を追加」からマイクと参加者名を登録してください。');
+                return;
+            }
+            
+            // 複数の参加者から選択するモーダルを表示
+            const selectedIds = await selectParticipantsForRecording();
+            if (!selectedIds || selectedIds.length === 0) return; // キャンセルまたは未選択
+            
+            currentRecordingParticipantIds = selectedIds;
+            
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
+                // 選択された各参加者のマイクから同時にストリームを取得
+                const streamPromises = selectedIds.map(async (participantId) => {
+                    const participantInfo = participantMicrophones[participantId];
+                    const audioConfig = {
                         echoCancellation: true,
                         noiseSuppression: true,
                         sampleRate: 44100
-                    } 
-                });
-
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'audio/webm'
-                });
-
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0 && socket && socket.readyState === WebSocket.OPEN) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const base64Audio = reader.result.split(',')[1];
-                            socket.send(JSON.stringify({
-                                type: 'audio_chunk',
-                                audio: base64Audio
-                            }));
-                        };
-                        reader.readAsDataURL(event.data);
+                    };
+                    
+                    if (participantInfo.microphoneId) {
+                        audioConfig.deviceId = { exact: participantInfo.microphoneId };
                     }
-                };
-
-                mediaRecorder.start(500);
+                    
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConfig });
+                        console.log(`Recording with participant: ${participantInfo.name}`);
+                        return { participantId, stream, participantInfo };
+                    } catch (error) {
+                        console.error(`Failed to access microphone for ${participantInfo.name}:`, error);
+                        return null;
+                    }
+                });
+                
+                const results = await Promise.all(streamPromises);
+                const validResults = results.filter(r => r !== null);
+                
+                if (validResults.length === 0) {
+                    alert('マイクへのアクセスが全て拒否されました。');
+                    return;
+                }
+                
+                // 各参加者のMediaRecorderを作成して開始
+                validResults.forEach(({ participantId, stream, participantInfo }) => {
+                    const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    
+                    recorder.ondataavailable = (event) => {
+                        if (event.data.size > 0 && socket && socket.readyState === WebSocket.OPEN) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                const base64Audio = reader.result.split(',')[1];
+                                
+                                // 各参加者のオーディオデータを送信
+                                socket.send(JSON.stringify({
+                                    type: 'audio_chunk',
+                                    audio: base64Audio,
+                                    speaker_id: participantId,
+                                    speaker_name: participantInfo.name,
+                                    microphone_id: participantInfo.microphoneId,
+                                    microphone_label: participantInfo.microphoneLabel
+                                }));
+                            };
+                            reader.readAsDataURL(event.data);
+                        }
+                    };
+                    
+                    recorder.start(500);
+                    mediaRecorders[participantId] = recorder;
+                    audioStreams[participantId] = stream;
+                });
+                
                 isRecording = true;
-
                 startBtn.textContent = '録音停止';
                 startBtn.className = 'btn danger';
-                statusText.textContent = '録音中...';
-                // transcriptArea.innerHTML = '';  // 前回のデータを保持するためコメントアウト
+                
+                // ステータス表示：録音中の参加者一覧
+                const recordingNames = validResults.map(r => r.participantInfo.name).join(', ');
+                statusText.textContent = `🎙️ 録音中... (${recordingNames})`;
                 
                 // 時間計測開始（初回のみリセット）
                 if (!hasStartedRecording) {
@@ -3243,35 +3729,111 @@
 
             } catch (error) {
                 console.error('マイクアクセスエラー:', error);
-                alert('マイクへのアクセスが拒否されました。ブラウザの設定を確認してください。');
+                alert('マイクへのアクセス時にエラーが発生しました。\n詳細: ' + error.message);
             }
+        }
+
+        // 複数の参加者を選択するモーダル（チェックボックス対応）
+        async function selectParticipantsForRecording() {
+            return new Promise((resolve) => {
+                const participantIds = Object.keys(participantMicrophones);
+                
+                // チェックボックス形式のHTML
+                const checkboxHTML = participantIds.map(id => {
+                    const info = participantMicrophones[id];
+                    return `
+                        <label style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer;">
+                            <input type="checkbox" id="checkbox_${id}" value="${id}" style="width: 18px; height: 18px; cursor: pointer; margin-right: 12px;" checked>
+                            <span style="flex: 1;">${info.name} <small style="color: #666;">(${info.microphoneLabel})</small></span>
+                        </label>
+                    `;
+                }).join('');
+                
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                `;
+                
+                modal.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+                        <h3 style="margin: 0 0 20px 0; color: #333;">🎙️ 録音する参加者を選択</h3>
+                        <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+                            ${checkboxHTML}
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="participantSelectSubmit" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">✓ 選択して開始</button>
+                            <button id="participantSelectCancel" style="flex: 1; padding: 12px; background: #9ca3af; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">キャンセル</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                const submitBtn = document.getElementById('participantSelectSubmit');
+                submitBtn.addEventListener('click', () => {
+                    const checkedBoxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+                    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+                    modal.remove();
+                    resolve(selectedIds);
+                });
+                
+                const cancelBtn = document.getElementById('participantSelectCancel');
+                cancelBtn.addEventListener('click', () => {
+                    modal.remove();
+                    resolve([]);
+                });
+            });
         }
 
         function stopRecording() {
             if (!isRecording) return;
-            if (mediaRecorder) {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                isRecording = false;
-
-                startBtn.textContent = '録音開始';
-                startBtn.className = 'btn primary';
-                statusText.textContent = '録音停止 - 議事録を生成中...';
-                
-                // 経過時間計測は継続する（clearIntervalを削除）
-                // if (durationInterval) {
-                //     clearInterval(durationInterval);
-                //     durationInterval = null;
-                // }
-
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({
-                        type: 'stop_recording'
-                    }));
+            
+            // 全ての参加者のMediaRecorderを停止
+            Object.values(mediaRecorders).forEach(recorder => {
+                if (recorder) {
+                    recorder.stop();
                 }
+            });
+            
+            // 全ての参加者のオーディオストリームを停止
+            Object.values(audioStreams).forEach(stream => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+            });
+            
+            // 記録状態をクリア
+            mediaRecorders = {};
+            audioStreams = {};
+            isRecording = false;
+            currentRecordingParticipantIds = [];
 
-                summarySection.classList.add('active');
+            startBtn.textContent = '録音開始';
+            startBtn.className = 'btn primary';
+            statusText.textContent = '録音停止 - 議事録を生成中...';
+            
+            // 経過時間計測は継続する（clearIntervalを削除）
+            // if (durationInterval) {
+            //     clearInterval(durationInterval);
+            //     durationInterval = null;
+            // }
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'stop_recording'
+                }));
             }
+
+            summarySection.classList.add('active');
         }
 
         // スタンプ・コメント・マーク機能用パネルの作成
@@ -3904,9 +4466,25 @@
             
             // WebSocket経由でサーバーに送信（AI反応もトリガーされる）
             if (socket && socket.readyState === WebSocket.OPEN) {
+                // 現在記録中の参加者を取得
+                const recordingParticipantIds = currentRecordingParticipantIds.length > 0 
+                    ? currentRecordingParticipantIds 
+                    : Object.keys(participantMicrophones);
+                
+                // 最初の参加者で送信（または、最初の記録中参加者）
+                let speakerId = null;
+                let speakerName = null;
+                if (recordingParticipantIds.length > 0) {
+                    speakerId = recordingParticipantIds[0];
+                    const participant = participantMicrophones[speakerId];
+                    speakerName = participant ? participant.name : '参加者';
+                }
+                
                 socket.send(JSON.stringify({
                     type: 'manual_transcript',
-                    text: text
+                    text: text,
+                    speaker_id: speakerId,
+                    speaker_name: speakerName
                 }));
                 manualInput.value = '';
                 console.log('Sent manual transcript via WebSocket:', text);
@@ -3950,15 +4528,35 @@
         }
         
         // トランスクリプトをUIに追加
-        function addTranscriptToUI(text, transcriptId) {
+        function addTranscriptToUI(text, transcriptId, speakerName = '参加者', speakerId = null) {
             const item = document.createElement('div');
-            item.className = 'bubble human';
+            item.className = 'transcript-item';
             item.dataset.id = transcriptId;
             item.dataset.transcriptId = transcriptId;
+            item.dataset.speakerId = speakerId;
             
-            const speaker = document.createElement('div');
-            speaker.className = 'speaker';
-            speaker.textContent = '👤 参加者';
+            // 参加者ごとの色を決定（参加者IDのハッシュを使用）
+            let speakerIndex = 0;
+            if (speakerId) {
+                // speakerIdの文字列をハッシュ化して色インデックスを決定
+                const hash = speakerId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                speakerIndex = hash % 6;
+            }
+            item.classList.add(`speaker-${speakerIndex}`);
+            
+            // 参加者情報を表示
+            const speakerDiv = document.createElement('div');
+            speakerDiv.className = 'transcript-speaker';
+            
+            const avatar = document.createElement('div');
+            avatar.className = `transcript-speaker-avatar speaker-avatar-${speakerIndex}`;
+            avatar.textContent = speakerName.charAt(0).toUpperCase();
+            
+            const speakerNameSpan = document.createElement('span');
+            speakerNameSpan.textContent = `🎙️ ${speakerName}`;
+            
+            speakerDiv.appendChild(avatar);
+            speakerDiv.appendChild(speakerNameSpan);
             
             const content = document.createElement('div');
             content.className = 'transcript-content';
@@ -4018,7 +4616,7 @@
                 indicator.classList.toggle('active');
             });
             
-            item.appendChild(speaker);
+            item.appendChild(speakerDiv);
             item.appendChild(content);
             item.appendChild(timestamp);
             item.appendChild(actions);
@@ -4374,6 +4972,15 @@
                         
                         // 状態更新
                         statusText.textContent = '会議終了 - 履歴のみ閲覧可能';
+                        
+                        // WebSocket経由で他のブラウザに会議終了を通知
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            socket.send(JSON.stringify({
+                                type: 'meeting_ended',
+                                meeting_id: meetingId
+                            }));
+                            console.log('会議終了をブロードキャストしました');
+                        }
                     }
                 })
                 .catch(error => {

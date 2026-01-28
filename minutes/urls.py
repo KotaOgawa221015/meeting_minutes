@@ -35,5 +35,5 @@ urlpatterns = [
     path('meeting/<int:meeting_id>/ai-members/', views.get_ai_members, name='get_ai_members'),
     path('ai-member/<int:ai_member_id>/delete/', views.delete_ai_member, name='delete_ai_member'),
     path('ai-member/<int:ai_member_id>/rename/', views.rename_ai_member, name='rename_ai_member'),
-    path('meeting/<int:meeting_id>/rename-speaker/', views.rename_speaker, name='rename_speaker'),
+
 ]

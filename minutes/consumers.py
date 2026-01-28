@@ -16,6 +16,9 @@ from datetime import datetime
 
 
 class MeetingConsumer(AsyncWebsocketConsumer):
+    # 会議ごとの参加者リストを管理（クラス変数）
+    meeting_participants = {}  # {meeting_id: {user_id: user_name}}
+    
     async def connect(self):
         self.meeting_id = self.scope['url_route']['kwargs']['meeting_id']
         self.room_group_name = f'meeting_{self.meeting_id}'
@@ -27,18 +30,19 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         
         await self.accept()
 
-        # 音声バッファ
-        self.audio_buffer = []
-        self.chunk_count = 0
+        # 話者情報
+        self.speaker_id = None
+        self.speaker_name = None
+
+        # 音声バッファ（参加者ごとに独立して管理）
+        self.audio_buffers = {}  # {speaker_id: [audio_chunks]}
+        self.chunk_counts = {}   # {speaker_id: chunk_count}
+        self.webm_headers = {}   # {speaker_id: webm_header}
+        self.first_processes = {}  # {speaker_id: is_first_process}
         self.start_time = time.time()
 
         # --- 追加: AI議論モードの状態フラグ ---
         self.ai_discussion_mode = False 
-        # ------------------------------------
-        
-        # --- 追加: WebMヘッダー保持用の変数 ---
-        self.webm_header = None
-        self.is_first_process = True
         # ------------------------------------
         
         # ファシリテーター機能（オプショナル）
@@ -88,6 +92,25 @@ class MeetingConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         print(f"[Meeting {self.meeting_id}] WebSocket切断処理開始")
         
+        # 参加者退室を通知
+        if self.speaker_id and self.speaker_name:
+            # 参加者リストから削除
+            if self.meeting_id in MeetingConsumer.meeting_participants:
+                if self.speaker_id in MeetingConsumer.meeting_participants[self.meeting_id]:
+                    del MeetingConsumer.meeting_participants[self.meeting_id][self.speaker_id]
+                    # 参加者がいなくなったら会議リストも削除
+                    if not MeetingConsumer.meeting_participants[self.meeting_id]:
+                        del MeetingConsumer.meeting_participants[self.meeting_id]
+            
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'participant_left',
+                    'user_id': self.speaker_id,
+                    'user_name': self.speaker_name
+                }
+            )
+        
         # ファシリテータータスクをキャンセル
         if self.facilitator_task:
             print(f"[Meeting {self.meeting_id}] ファシリテータータスクをキャンセル中...")
@@ -125,9 +148,69 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         message_type = data.get('type')
 
-        if message_type == 'audio_chunk':
+        if message_type == 'participant_info':
+            # 参加者情報を設定（空なら無視）
+            incoming_name = (data.get('user_name') or '').strip()
+            if not incoming_name:
+                print(f"[Meeting {self.meeting_id}] 参加者名が空のため無視")
+                return
+
+            self.speaker_id = (data.get('user_id') or f'user_{int(time.time()*1000)}')
+            self.speaker_name = incoming_name
+            print(f"[Meeting {self.meeting_id}] 参加者情報設定: {self.speaker_name} (ID: {self.speaker_id})")
+            
+            # 参加者リストに追加
+            if self.meeting_id not in MeetingConsumer.meeting_participants:
+                MeetingConsumer.meeting_participants[self.meeting_id] = {}
+            MeetingConsumer.meeting_participants[self.meeting_id][self.speaker_id] = self.speaker_name
+            
+            # 既存参加者リストを新規参加者に送信（空名を除外）
+            clean_participants = {uid: uname for uid, uname in MeetingConsumer.meeting_participants[self.meeting_id].items() if uname}
+            await self.send(text_data=json.dumps({
+                'type': 'existing_participants',
+                'participants': clean_participants
+            }))
+            
+            # 参加者入室を全端末に通知
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'participant_joined',
+                    'user_id': self.speaker_id,
+                    'user_name': self.speaker_name
+                }
+            )
+
+        elif message_type == 'rename_participant':
+            # 自分以外の名前変更は拒否
+            target_id = data.get('user_id')
+            new_name = (data.get('user_name') or '').strip()
+            if not new_name:
+                return
+            if not self.speaker_id or target_id != self.speaker_id:
+                print(f"[Meeting {self.meeting_id}] rename rejected: target_id={target_id}, self_id={self.speaker_id}")
+                return
+
+            # サーバー側の参加者リストを更新
+            if self.meeting_id in MeetingConsumer.meeting_participants:
+                MeetingConsumer.meeting_participants[self.meeting_id][self.speaker_id] = new_name
+            self.speaker_name = new_name
+
+            # 全端末へ通知
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'participant_renamed',
+                    'user_id': self.speaker_id,
+                    'user_name': new_name
+                }
+            )
+
+        elif message_type == 'audio_chunk':
             audio_data = data.get('audio')
-            await self.process_audio_chunk(audio_data)
+            speaker_id = data.get('speaker_id', self.speaker_id)
+            speaker_name = data.get('speaker_name', self.speaker_name)
+            await self.process_audio_chunk(audio_data, speaker_id, speaker_name)
 
         elif message_type == 'toggle_ai_mode':
             self.ai_discussion_mode = data.get('enabled', False)
@@ -136,8 +219,10 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         
         elif message_type == 'manual_transcript':
             text = data.get('text', '').strip()
+            speaker_id = data.get('speaker_id')
+            speaker_name = data.get('speaker_name')
             if text:
-                await self.handle_manual_transcript(text)
+                await self.handle_manual_transcript(text, speaker_id, speaker_name)
         
         elif message_type == 'stop_recording':
             await self.finalize_transcription()
@@ -148,28 +233,74 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         
         elif message_type == 'disable_facilitator':
             await self.disable_facilitator()
+        
+        elif message_type == 'ai_member_added':
+            # AI メンバー追加イベント（サーバー側での追加完了後に受信）
+            ai_members = data.get('ai_members', [])
+            if ai_members:
+                # 全クライアントに新規 AI メンバーを通知
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'ai_member_added',
+                        'ai_members': ai_members
+                    }
+                )
+        
+        elif message_type == 'meeting_ended':
+            # 会議終了イベントを全クライアントにブロードキャスト
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'meeting_ended',
+                    'meeting_id': self.meeting_id
+                }
+            )
+            print(f"[Meeting {self.meeting_id}] 会議終了をブロードキャストしました")
+        
+        elif message_type == 'ai_member_removed':
+            # AI メンバー削除イベント
+            member_id = data.get('member_id')
+            if member_id:
+                # 全クライアントに削除を通知
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'ai_member_removed',
+                        'member_id': member_id
+                    }
+                )
 
-    async def handle_manual_transcript(self, text):
+    async def handle_manual_transcript(self, text, speaker_id=None, speaker_name=None):
         """手動入力されたトランスクリプトを処理（AIメンバーの反応をトリガー）"""
         try:
             elapsed_time = time.time() - self.start_time
             
+            # 参加者情報を指定されたもの、または既存のものを使用
+            final_speaker_name = speaker_name or self.speaker_name or '参加者'
+            final_speaker_id = speaker_id or self.speaker_id
+            
             # テキストをDBに保存
-            transcript_id = await self.save_transcript(text, elapsed_time)
+            transcript_id = await self.save_transcript(text, elapsed_time, final_speaker_name, final_speaker_id)
             
             # 最後の発言時刻を更新（無言タイムアウト監視用）
             self.last_transcript_time = time.time()
             
-            print(f"[Meeting {self.meeting_id}] 手動入力トランスクリプト保存: ID={transcript_id}, {text[:50]}...")
+            print(f"[Meeting {self.meeting_id}] 手動入力トランスクリプト保存: ID={transcript_id}, speaker={final_speaker_name}, {text[:50]}...")
             
             # クライアントに確認を送信
-            await self.send(text_data=json.dumps({
-                'type': 'transcript',
-                'transcript_id': transcript_id,
-                'text': text,
-                'timestamp': elapsed_time,
-                'source': 'manual'
-            }))
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'transcript',
+                    'transcript_id': transcript_id,
+                    'text': text,
+                    'timestamp': elapsed_time,
+                    'speaker': final_speaker_name,
+                    'speaker_id': final_speaker_id,
+                    'source': 'manual'
+                }
+            )
             
             # AIメンバーの反応をトリガー
             await self.trigger_ai_member_response(transcript_id, elapsed_time)
@@ -183,29 +314,47 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 'message': f'テキスト保存エラー: {str(e)}'
             }))
 
-    async def process_audio_chunk(self, audio_base64):
-        """音声チャンクを処理してWhisper APIに送信"""
+    async def process_audio_chunk(self, audio_base64, speaker_id=None, speaker_name=None):
+        """音声チャンクを処理してWhisper APIに送信（参加者ごとに独立）"""
         try:
             audio_bytes = base64.b64decode(audio_base64)
             
-            # --- 追加: 最初のチャンクからヘッダー情報を保存 ---
-            # これがないと2回目以降の変換で「Invalid data」エラーになる
-            if self.webm_header is None and len(audio_bytes) > 0:
-                self.webm_header = audio_bytes
-                print(f"[Meeting {self.meeting_id}] WebMヘッダー情報を保存しました")
+            # 話者情報を保持
+            if speaker_id:
+                self.speaker_id = speaker_id
+            if speaker_name:
+                self.speaker_name = speaker_name
+            
+            # speaker_idが指定されていない場合は、現在のspeaker_idを使用
+            current_speaker_id = speaker_id or self.speaker_id or f'unknown_{int(time.time()*1000)}'
+            current_speaker_name = speaker_name or self.speaker_name or '参加者'
+            
+            # 参加者ごとのバッファを初期化
+            if current_speaker_id not in self.audio_buffers:
+                self.audio_buffers[current_speaker_id] = []
+                self.chunk_counts[current_speaker_id] = 0
+                self.webm_headers[current_speaker_id] = None
+                self.first_processes[current_speaker_id] = True
+                print(f"[Meeting {self.meeting_id}] 新規話者バッファ作成: {current_speaker_name} (ID: {current_speaker_id})")
+            
+            # --- 最初のチャンクからヘッダー情報を保存 ---
+            if self.webm_headers[current_speaker_id] is None and len(audio_bytes) > 0:
+                self.webm_headers[current_speaker_id] = audio_bytes
+                print(f"[Meeting {self.meeting_id}] WebMヘッダー情報を保存: {current_speaker_name}")
             # ------------------------------------------------
             
-            self.audio_buffer.append(audio_bytes)
-            self.chunk_count += 1
+            self.audio_buffers[current_speaker_id].append(audio_bytes)
+            self.chunk_counts[current_speaker_id] += 1
             
-            print(f"[Meeting {self.meeting_id}] 音声チャンク受信: {self.chunk_count}個目 ({len(audio_bytes)} bytes)")
+            print(f"[Meeting {self.meeting_id}] 音声チャンク受信: {current_speaker_name} - {self.chunk_counts[current_speaker_id]}個目 ({len(audio_bytes)} bytes)")
             
-            # 5秒分のチャンク（約10個）が溜まったら処理
-            if len(self.audio_buffer) >= 10:
-                print(f"[Meeting {self.meeting_id}] 文字起こし開始 ({len(self.audio_buffer)}チャンク)")
+            # 各参加者ごとに5秒分のチャンク（約10個）が溜まったら処理
+            if len(self.audio_buffers[current_speaker_id]) >= 10:
+                print(f"[Meeting {self.meeting_id}] 文字起こし開始: {current_speaker_name} ({len(self.audio_buffers[current_speaker_id])}チャンク)")
                 
-                combined_audio = b''.join(self.audio_buffer)
-                self.audio_buffer = []  # バッファクリア
+                combined_audio = b''.join(self.audio_buffers[current_speaker_id])
+                self.audio_buffers[current_speaker_id] = []  # バッファクリア
+                self.chunk_counts[current_speaker_id] = 0
                 
                 if len(combined_audio) < 1000:
                     return
@@ -214,12 +363,12 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 # 2回目以降の処理なら、保存しておいたヘッダーを先頭に結合する
                 final_audio_data = combined_audio
                 
-                if not self.is_first_process:
-                    if self.webm_header:
-                        print(f"[Meeting {self.meeting_id}] ヘッダーを付与して保存します")
-                        final_audio_data = self.webm_header + combined_audio
+                if not self.first_processes[current_speaker_id]:
+                    if self.webm_headers[current_speaker_id]:
+                        print(f"[Meeting {self.meeting_id}] ヘッダーを付与: {current_speaker_name}")
+                        final_audio_data = self.webm_headers[current_speaker_id] + combined_audio
                 else:
-                    self.is_first_process = False
+                    self.first_processes[current_speaker_id] = False
                 # ----------------------------------
 
                 # 一時ファイルに保存（WebM）
@@ -229,16 +378,15 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                 
                 try:
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
-                        temp_file.write(final_audio_data) # combined_audio ではなく final_audio_data を使う
+                        temp_file.write(final_audio_data)
                         temp_webm_path = temp_file.name
                     
-                    print(f"[Meeting {self.meeting_id}] 一時WebMファイル作成: {temp_webm_path}")
+                    print(f"[Meeting {self.meeting_id}] 一時WebMファイル作成: {temp_webm_path} ({current_speaker_name})")
                     
                     # WebMをMP3に変換
                     temp_mp3_path = temp_webm_path.replace('.webm', '.mp3')
                     success = await self.convert_to_mp3(temp_webm_path, temp_mp3_path)
                     
-                    # --- 以下、前回の修正版 finalize_transcription と同様のロジック ---
                     transcript_text = None
                     if success:
                         transcript_text = await self.transcribe_audio(temp_mp3_path)
@@ -254,21 +402,29 @@ class MeetingConsumer(AsyncWebsocketConsumer):
                     
                     if transcript_text and len(transcript_text.strip()) > 0:
                         elapsed_time = time.time() - self.start_time
-                        print(f"[Meeting {self.meeting_id}] 文字起こし成功: {transcript_text[:50]}...")
-                        transcript_id = await self.save_transcript(transcript_text, elapsed_time)
+                        print(f"[Meeting {self.meeting_id}] 文字起こし成功 ({current_speaker_name}): {transcript_text[:50]}...")
+                        # 受け取った話者情報を使用してDB保存
+                        final_speaker_name = speaker_name or self.speaker_name or '参加者'
+                        transcript_id = await self.save_transcript(transcript_text, elapsed_time, final_speaker_name, current_speaker_id)
                         
                         # AIメンバー返答処理をトリガー
                         await self.trigger_ai_member_response(transcript_id, elapsed_time)
                         
-                        await self.send(text_data=json.dumps({
-                            'type': 'transcript',
-                            'transcript_id': transcript_id,
-                            'text': transcript_text,
-                            'timestamp': elapsed_time
-                        }))
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'transcript',
+                                'transcript_id': transcript_id,
+                                'text': transcript_text,
+                                'timestamp': elapsed_time,
+                                'speaker': final_speaker_name,
+                                'speaker_id': current_speaker_id,
+                                'source': 'audio'
+                            }
+                        )
                 
                 except Exception as e:
-                    print(f"処理中の予期せぬエラー: {e}")
+                    print(f"処理中の予期せぬエラー ({current_speaker_name}): {e}")
                     import traceback
                     traceback.print_exc()
 
@@ -522,11 +678,14 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             
             print(f"[Meeting {self.meeting_id}] ファシリテーター機能: 有効化（期間: {duration_seconds}秒）")
             
-            # クライアントに確認メッセージを送信
-            await self.send(text_data=json.dumps({
-                'type': 'facilitator_enabled',
-                'duration_seconds': duration_seconds
-            }))
+            # 全クライアントにグループ通知
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'facilitator_enabled',
+                    'duration_seconds': duration_seconds
+                }
+            )
         
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] ファシリテーター有効化エラー: {e}")
@@ -548,10 +707,13 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             
             print(f"[Meeting {self.meeting_id}] ファシリテーター機能: 無効化")
             
-            # クライアントに確認メッセージを送信
-            await self.send(text_data=json.dumps({
-                'type': 'facilitator_disabled'
-            }))
+            # 全クライアントにグループ通知
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'facilitator_disabled'
+                }
+            )
         
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] ファシリテーター無効化エラー: {e}")
@@ -559,14 +721,19 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             traceback.print_exc()
 
     async def finalize_transcription(self):
-        """録音終了時の最終処理"""
+        """録音終了時の最終処理（参加者ごとに）"""
         print(f"[Meeting {self.meeting_id}] 録音終了処理開始")
         
-        # 残りのバッファを処理
-        if self.audio_buffer and len(self.audio_buffer) > 0:
-            print(f"[Meeting {self.meeting_id}] 残りバッファ処理: {len(self.audio_buffer)}チャンク")
+        # 残りのバッファを参加者ごとに処理
+        for current_speaker_id, audio_buffer in self.audio_buffers.items():
+            if not audio_buffer or len(audio_buffer) == 0:
+                continue
             
-            combined_audio = b''.join(self.audio_buffer)
+            # 話者名を取得
+            speaker_name = self.speaker_name or '参加者'
+            print(f"[Meeting {self.meeting_id}] 残りバッファ処理 ({speaker_name}): {len(audio_buffer)}チャンク")
+            
+            combined_audio = b''.join(audio_buffer)
             
             # 変数を初期化（UnboundLocalError防止）
             transcript_text = None
@@ -589,7 +756,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                         transcript_text = await self.transcribe_audio(temp_mp3_path)
                 
                 except Exception as e:
-                    print(f"[Meeting {self.meeting_id}] 最終処理中のエラー: {e}")
+                    print(f"[Meeting {self.meeting_id}] 最終処理中のエラー ({speaker_name}): {e}")
                 
                 finally:
                     # クリーンアップ処理
@@ -604,7 +771,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 # 文字起こし結果があれば保存
                 if transcript_text and len(transcript_text.strip()) > 0:
                     elapsed_time = time.time() - self.start_time
-                    await self.save_transcript(transcript_text, elapsed_time)
+                    await self.save_transcript(transcript_text, elapsed_time, speaker_name, current_speaker_id)
         
         # 議事録要約を生成
         await self.generate_summary()
@@ -676,10 +843,13 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             
             print(f"[Meeting {self.meeting_id}] 議事録生成完了")
             
-            await self.send(text_data=json.dumps({
-                'type': 'summary_complete',
-                'summary': summary_json
-            }))
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'summary_complete',
+                    'summary': summary_json
+                }
+            )
         
         except json.JSONDecodeError as e:
             print(f"[Meeting {self.meeting_id}] JSON parse error: {e}")
@@ -692,10 +862,13 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 "decisions": []
             }
             await self.save_summary(full_text, fallback_summary)
-            await self.send(text_data=json.dumps({
-                'type': 'summary_complete',
-                'summary': fallback_summary
-            }))
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'summary_complete',
+                    'summary': fallback_summary
+                }
+            )
         
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] Summary generation error: {e}")
@@ -792,7 +965,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                     'timestamp': time.time() - self.start_time
                 }
                 print(f"[Meeting {self.meeting_id}] 定期要約送信: {send_data}")
-                await self.send(text_data=json.dumps(send_data))
+                await self.channel_layer.group_send(self.room_group_name, send_data)
                 print(f"[Meeting {self.meeting_id}] ✅ 定期要約送信完了")
                 
             except json.JSONDecodeError as e:
@@ -813,15 +986,22 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         return list(meeting.transcripts.all())
 
     @database_sync_to_async
-    def save_transcript(self, text, timestamp):
-        """文字起こしをデータベースに保存"""
+    def save_transcript(self, text, timestamp, speaker_name=None, speaker_id=None):
+        """文字起こしをデータベースに保存（複数参加者対応）"""
         meeting = Meeting.objects.get(id=self.meeting_id)
+        # speaker_idをメモフィールドに保存（将来的に参加者テーブルと連携可能）
+        speaker_display = speaker_name or self.speaker_name or '参加者'
         transcript = Transcript.objects.create(
             meeting=meeting,
             text=text,
-            timestamp=timestamp
+            timestamp=timestamp,
+            speaker=speaker_display
         )
-        print(f"[Meeting {self.meeting_id}] DB保存完了: transcript_id={transcript.id}, timestamp={timestamp:.1f}秒")
+        # speaker_idをログに出力（DBに参加者ID列がある場合は保存可能）
+        if speaker_id:
+            print(f"[Meeting {self.meeting_id}] DB保存完了: transcript_id={transcript.id}, speaker={speaker_display} (ID: {speaker_id}), timestamp={timestamp:.1f}秒")
+        else:
+            print(f"[Meeting {self.meeting_id}] DB保存完了: transcript_id={transcript.id}, speaker={speaker_display}, timestamp={timestamp:.1f}秒")
         return transcript.id
 
     @database_sync_to_async
@@ -1308,3 +1488,95 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
         except asyncio.CancelledError:
             print(f"[Meeting {self.meeting_id}] 無言タイムアウトループ停止")
             raise
+
+    # グループメッセージハンドラー
+    async def participant_joined(self, event):
+        """参加者入室をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'participant_joined',
+            'user_id': event['user_id'],
+            'user_name': event['user_name']
+        }))
+    
+    async def participant_left(self, event):
+        """参加者退室をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'participant_left',
+            'user_id': event['user_id'],
+            'user_name': event['user_name']
+        }))
+
+    async def participant_renamed(self, event):
+        """参加者名変更をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'participant_renamed',
+            'user_id': event['user_id'],
+            'user_name': event['user_name']
+        }))
+    async def ai_member_added(self, event):
+        """AI メンバー追加をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'ai_member_added',
+            'ai_members': event['ai_members']
+        }))
+
+    async def ai_member_removed(self, event):
+        """AI メンバー削除をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'ai_member_removed',
+            'member_id': event['member_id']
+        }))
+
+    async def ai_member_renamed(self, event):
+        """AI メンバー名変更をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'ai_member_renamed',
+            'member_id': event['member_id'],
+            'member_name': event['member_name']
+        }))
+    async def facilitator_enabled(self, event):
+        """ファシリテーター有効化をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'facilitator_enabled',
+            'duration_seconds': event['duration_seconds']
+        }))
+
+    async def facilitator_disabled(self, event):
+        """ファシリテーター無効化をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'facilitator_disabled'
+        }))
+
+    async def meeting_ended(self, event):
+        """会議終了をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'meeting_ended',
+            'meeting_id': event['meeting_id']
+        }))
+
+    async def transcript(self, event):
+        """トランスクリプトをクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'transcript',
+            'transcript_id': event['transcript_id'],
+            'text': event['text'],
+            'timestamp': event['timestamp'],
+            'speaker': event['speaker'],
+            'source': event.get('source', 'audio')
+        }))
+
+    async def partial_summary(self, event):
+        """部分要約をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'partial_summary',
+            'summary': event['summary'],
+            'segment_count': event.get('segment_count'),
+            'timestamp': event.get('timestamp')
+        }))
+
+    async def summary_complete(self, event):
+        """最終要約をクライアントに通知"""
+        await self.send(text_data=json.dumps({
+            'type': 'summary_complete',
+            'summary': event['summary']
+        }))

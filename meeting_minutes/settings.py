@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 SECRET_KEY = 'your-secret-key-here'
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.131.3']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -81,6 +81,14 @@ DATABASES = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://192.168.131.3:8080",
+]
+
+# WebSocket/CSRF設定
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://192.168.131.3:8080",
 ]
 
 # 静的ファイル

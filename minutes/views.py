@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
 from .models import Meeting, MinuteSummary, Transcript, TranscriptStamp, TranscriptComment, TranscriptMark, AIMember, AIMemberResponse
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 def index(request):
     """会議一覧"""
@@ -488,6 +490,17 @@ def add_ai_member(request, meeting_id):
                 'created_at': ai_member.created_at.isoformat()
             })
         
+        # WebSocket で他のクライアントに通知
+        channel_layer = get_channel_layer()
+        room_group_name = f'meeting_{meeting_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'ai_member_added',
+                'ai_members': ai_members
+            }
+        )
+        
         return JsonResponse({
             'status': 'success',
             'ai_members': ai_members,
@@ -536,6 +549,17 @@ def delete_ai_member(request, ai_member_id):
         meeting_id = ai_member.meeting.id
         ai_member.delete()
         
+        # WebSocket で他のクライアントに通知
+        channel_layer = get_channel_layer()
+        room_group_name = f'meeting_{meeting_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'ai_member_removed',
+                'member_id': ai_member_id
+            }
+        )
+        
         return JsonResponse({
             'status': 'success',
             'message': 'AI member deleted',
@@ -559,6 +583,19 @@ def rename_ai_member(request, ai_member_id):
         ai_member.name = new_name
         ai_member.save()
         
+        # WebSocket で他のクライアントに通知
+        meeting_id = ai_member.meeting.id
+        channel_layer = get_channel_layer()
+        room_group_name = f'meeting_{meeting_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'ai_member_renamed',
+                'member_id': ai_member.id,
+                'member_name': new_name
+            }
+        )
+        
         return JsonResponse({
             'status': 'success',
             'ai_member': {
@@ -570,34 +607,6 @@ def rename_ai_member(request, ai_member_id):
                 'response_count': ai_member.responses.count(),
                 'created_at': ai_member.created_at.isoformat()
             }
-        })
-    except json.JSONDecodeError:
-        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-
-@require_http_methods(["POST"])
-def rename_speaker(request, meeting_id):
-    """参加者の名前を変更"""
-    try:
-        meeting = get_object_or_404(Meeting, id=meeting_id)
-        data = json.loads(request.body)
-        old_speaker = data.get('old_speaker', '').strip()
-        new_speaker = data.get('new_speaker', '').strip()
-        
-        if not old_speaker or not new_speaker:
-            return JsonResponse({'status': 'error', 'message': 'Speaker names are required'}, status=400)
-        
-        # 同じmeetingのTranscriptでspeakerを更新
-        updated_count = Transcript.objects.filter(
-            meeting=meeting,
-            speaker=old_speaker
-        ).update(speaker=new_speaker)
-        
-        return JsonResponse({
-            'status': 'success',
-            'updated_count': updated_count
         })
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
