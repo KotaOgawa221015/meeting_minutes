@@ -707,7 +707,7 @@ def tts_ping(request):
     """VOICEVOXエンジンが起動しているか確認"""
     try:
         # まず /version を試す
-        response = requests.get(f'{VOICEVOX_BASE_URL}/version', timeout=2)
+        response = requests.get(f'{VOICEVOX_BASE_URL}/version', timeout=2, proxies={'http': None, 'https': None})
         if response.status_code == 200:
             return JsonResponse({
                 'status': 'success',
@@ -716,7 +716,7 @@ def tts_ping(request):
             })
         
         # /version が失敗した場合は /core_versions を試す
-        response = requests.get(f'{VOICEVOX_BASE_URL}/core_versions', timeout=2)
+        response = requests.get(f'{VOICEVOX_BASE_URL}/core_versions', timeout=2, proxies={'http': None, 'https': None})
         if response.status_code == 200:
             return JsonResponse({
                 'status': 'success',
@@ -755,7 +755,9 @@ def tts_speak(request):
     try:
         data = json.loads(request.body)
         text = data.get('text', '').strip()
-        speaker_id = data.get('speaker_id', 1)  # デフォルト: ずんだもん(1)
+        speaker_id = data.get('speaker_id', 3)  # デフォルト: ずんだもん(ノーマル)
+        
+        print(f"[TTS] Request: text='{text[:50]}...' speaker_id={speaker_id}")
         
         if not text:
             return JsonResponse({
@@ -764,13 +766,18 @@ def tts_speak(request):
             }, status=400)
         
         # 1. 音声合成用のクエリを作成
+        print(f"[TTS] Calling audio_query...")
         query_response = requests.post(
             f'{VOICEVOX_BASE_URL}/audio_query',
             params={'text': text, 'speaker': speaker_id},
-            timeout=10
+            timeout=15,
+            proxies={'http': None, 'https': None}
         )
         
+        print(f"[TTS] audio_query response: {query_response.status_code}")
+        
         if query_response.status_code != 200:
+            print(f"[TTS] audio_query failed: {query_response.text}")
             return JsonResponse({
                 'status': 'error',
                 'message': f'音声クエリの作成に失敗しました: {query_response.status_code}'
@@ -779,14 +786,19 @@ def tts_speak(request):
         query_data = query_response.json()
         
         # 2. 音声を合成
+        print(f"[TTS] Calling synthesis...")
         synthesis_response = requests.post(
             f'{VOICEVOX_BASE_URL}/synthesis',
             params={'speaker': speaker_id},
             json=query_data,
-            timeout=30
+            timeout=30,
+            proxies={'http': None, 'https': None}
         )
         
+        print(f"[TTS] synthesis response: {synthesis_response.status_code}, content_length={len(synthesis_response.content)}")
+        
         if synthesis_response.status_code != 200:
+            print(f"[TTS] synthesis failed: {synthesis_response.text}")
             return JsonResponse({
                 'status': 'error',
                 'message': f'音声合成に失敗しました: {synthesis_response.status_code}'
@@ -796,28 +808,34 @@ def tts_speak(request):
         import base64
         audio_base64 = base64.b64encode(synthesis_response.content).decode('utf-8')
         
+        print(f"[TTS] Success: audio_base64 length={len(audio_base64)}")
+        
         return JsonResponse({
             'status': 'success',
             'audio': audio_base64,
             'content_type': 'audio/wav'
         })
         
-    except requests.exceptions.ConnectionError:
+    except requests.exceptions.ConnectionError as e:
+        print(f"[TTS] ConnectionError: {e}")
         return JsonResponse({
             'status': 'error',
             'message': 'VOICEVOXエンジンに接続できません。VOICEVOXを起動してください。'
         }, status=503)
-    except requests.exceptions.Timeout:
+    except requests.exceptions.Timeout as e:
+        print(f"[TTS] Timeout: {e}")
         return JsonResponse({
             'status': 'error',
             'message': '音声合成がタイムアウトしました。テキストが長すぎる可能性があります。'
         }, status=503)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"[TTS] JSONDecodeError: {e}")
         return JsonResponse({
             'status': 'error',
             'message': 'Invalid JSON'
         }, status=400)
     except Exception as e:
+        print(f"[TTS] Exception: {type(e).__name__}: {e}")
         return JsonResponse({
             'status': 'error',
             'message': f'エラー: {str(e)}'
@@ -829,7 +847,7 @@ def tts_diagnose(request):
     """VOICEVOXの診断情報を取得（利用可能なスピーカー一覧など）"""
     try:
         # スピーカー一覧を取得
-        speakers_response = requests.get(f'{VOICEVOX_BASE_URL}/speakers', timeout=5)
+        speakers_response = requests.get(f'{VOICEVOX_BASE_URL}/speakers', timeout=5, proxies={'http': None, 'https': None})
         
         if speakers_response.status_code != 200:
             return JsonResponse({

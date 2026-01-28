@@ -1279,6 +1279,19 @@
                     <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
                         ONにするとAIの発言をVOICEVOXで読み上げます。
                     </div>
+                    <!-- スピーカー選択 -->
+                    <div style="margin-top: 10px;">
+                        <label for="voicevoxSpeakerSelect" style="font-size: 12px; opacity: 0.8;">声を選択:</label>
+                        <select id="voicevoxSpeakerSelect" style="width: 100%; margin-top: 5px; padding: 6px 8px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 12px; cursor: pointer;">
+                            <option value="3" style="color: black;">ずんだもん（ノーマル）</option>
+                            <option value="1" style="color: black;">ずんだもん（あまあま）</option>
+                            <option value="2" style="color: black;">四国めたん（ノーマル）</option>
+                            <option value="0" style="color: black;">四国めたん（あまあま）</option>
+                            <option value="8" style="color: black;">春日部つむぎ</option>
+                            <option value="10" style="color: black;">雨晴はう</option>
+                            <option value="14" style="color: black;">冥鳴ひまり</option>
+                        </select>
+                    </div>
                     <div id="voicevoxStatus" style="font-size: 11px; margin-top: 8px; padding: 5px 8px; border-radius: 5px; display: none;"></div>
                 </div>
             </div>
@@ -1394,10 +1407,11 @@
         // VOICEVOX関連の変数
         const voicevoxToggle = document.getElementById('voicevoxToggle');
         const voicevoxStatus = document.getElementById('voicevoxStatus');
+        const voicevoxSpeakerSelect = document.getElementById('voicevoxSpeakerSelect');
         let voicevoxEnabled = false;
         let voicevoxAudioQueue = [];  // 読み上げキュー
         let voicevoxIsPlaying = false;  // 現在再生中かどうか
-        let voicevoxSpeakerId = 1;  // デフォルト: ずんだもん(ノーマル)
+        let voicevoxSpeakerId = 3;  // デフォルト: ずんだもん(ノーマル) ※VOICEVOXのspeaker ID
         
         console.log('DOM elements initialized:');
         console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
@@ -4814,6 +4828,22 @@
                     voicevoxAudioQueue = [];  // キューをクリア
                     voicevoxStatus.style.display = 'none';
                     console.log('VOICEVOX読み上げ: OFF');
+                }
+            });
+        }
+        
+        /**
+         * VOICEVOXスピーカー選択のイベントハンドラ
+         */
+        if (voicevoxSpeakerSelect) {
+            voicevoxSpeakerSelect.addEventListener('change', function() {
+                voicevoxSpeakerId = parseInt(this.value, 10);
+                console.log('VOICEVOXスピーカーID変更:', voicevoxSpeakerId);
+                
+                // 選択した声をステータスに表示
+                const selectedOption = this.options[this.selectedIndex];
+                if (voicevoxEnabled) {
+                    updateVoicevoxStatus('🔊 ' + selectedOption.text + ' を選択', false);
                 }
             });
         }
