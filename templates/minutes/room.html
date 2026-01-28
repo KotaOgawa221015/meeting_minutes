@@ -1270,8 +1270,8 @@
                     </div>
                 </div>
 
-                <!-- VOICEVOX読み上げ設定 -->
-                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px;">
+                <!-- VOICEVOX読み上げ設定（隠し機能） -->
+                <div id="voicevoxPanel" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px; display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <label for="voicevoxToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">🔊 AI読み上げ</label>
                         <input type="checkbox" id="voicevoxToggle" style="transform: scale(1.2); cursor: pointer;">
@@ -1405,6 +1405,7 @@
         const endMeetingBtn = document.getElementById('endMeetingBtn');
         
         // VOICEVOX関連の変数
+        const voicevoxPanel = document.getElementById('voicevoxPanel');
         const voicevoxToggle = document.getElementById('voicevoxToggle');
         const voicevoxStatus = document.getElementById('voicevoxStatus');
         const voicevoxSpeakerSelect = document.getElementById('voicevoxSpeakerSelect');
@@ -1412,6 +1413,22 @@
         let voicevoxAudioQueue = [];  // 読み上げキュー
         let voicevoxIsPlaying = false;  // 現在再生中かどうか
         let voicevoxSpeakerId = 3;  // デフォルト: ずんだもん(ノーマル) ※VOICEVOXのspeaker ID
+        
+        // 隠し機能の初期化
+        initializeSecretFeature();
+        
+        function initializeSecretFeature() {
+            // localStorageで隠し機能が有効化されているか確認
+            const isSecretEnabled = localStorage.getItem('voicevox_feature_enabled') === 'true';
+            
+            if (isSecretEnabled && voicevoxPanel) {
+                voicevoxPanel.style.display = 'block';
+                console.log('🔓 VOICEVOX読み上げ機能が有効です');
+            } else if (voicevoxPanel) {
+                voicevoxPanel.style.display = 'none';
+                console.log('🔒 VOICEVOX読み上げ機能は隠し機能です（README.htmlで有効化してください）');
+            }
+        }
         
         console.log('DOM elements initialized:');
         console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
