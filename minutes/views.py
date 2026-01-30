@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
 from .models import Meeting, MinuteSummary, Transcript, TranscriptStamp, TranscriptComment, TranscriptMark, AIMember, AIMemberResponse
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 def index(request):
     """会議一覧"""
@@ -540,6 +542,17 @@ def add_ai_member(request, meeting_id):
                 'created_at': ai_member.created_at.isoformat()
             })
         
+        # WebSocket で他のクライアントに通知
+        channel_layer = get_channel_layer()
+        room_group_name = f'meeting_{meeting_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'ai_member_added',
+                'ai_members': ai_members
+            }
+        )
+        
         return JsonResponse({
             'status': 'success',
             'ai_members': ai_members,
@@ -588,6 +601,17 @@ def delete_ai_member(request, ai_member_id):
         meeting_id = ai_member.meeting.id
         ai_member.delete()
         
+        # WebSocket で他のクライアントに通知
+        channel_layer = get_channel_layer()
+        room_group_name = f'meeting_{meeting_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'ai_member_removed',
+                'member_id': ai_member_id
+            }
+        )
+        
         return JsonResponse({
             'status': 'success',
             'message': 'AI member deleted',
@@ -610,6 +634,19 @@ def rename_ai_member(request, ai_member_id):
         
         ai_member.name = new_name
         ai_member.save()
+        
+        # WebSocket で他のクライアントに通知
+        meeting_id = ai_member.meeting.id
+        channel_layer = get_channel_layer()
+        room_group_name = f'meeting_{meeting_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'ai_member_renamed',
+                'member_id': ai_member.id,
+                'member_name': new_name
+            }
+        )
         
         return JsonResponse({
             'status': 'success',
