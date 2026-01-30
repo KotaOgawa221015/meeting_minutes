@@ -333,6 +333,7 @@
                 </li>
             </ol>
         </div>
+
         <h2>🎯 ディベートシステムの使い方</h2>
 
         <div class="feature-section">
@@ -437,126 +438,6 @@
         </div>
 
         <a href="{% url 'index' %}" class="back-link">← ホームに戻る</a>
-        
-        <!-- 隠し機能トリガーボタン -->
-        <button id="secretTrigger" style="
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: rgba(102, 126, 234, 0.2);
-            border: 2px solid rgba(102, 126, 234, 0.4);
-            cursor: pointer;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.5;
-            transition: all 0.3s ease;
-            z-index: 100;
-            color: #667eea;
-            hover: opacity 0.8;
-        " title="隠し機能を有効化" onclick="handleSecretTrigger()">🔐</button>
     </div>
-    
-    <script>
-        // 隠し機能を有効化するためのシークレットトリガー
-        let secretClickCount = 0;
-        let secretClickTimeout;
-        
-        const secretTrigger = document.getElementById('secretTrigger');
-        
-        // ボタンをクリックするたびにカウント
-        function handleSecretTrigger() {
-            secretClickCount++;
-            
-            // ボタンの見た目を変更（フィードバック）
-            secretTrigger.style.opacity = '0.7';
-            secretTrigger.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                secretTrigger.style.opacity = '0.5';
-                secretTrigger.style.transform = 'scale(1)';
-            }, 100);
-            
-            // カウント表示（コンソール用）
-            console.log(`🔐 ボタンクリック: ${secretClickCount}/5`);
-            
-            // タイムアウトをリセット
-            clearTimeout(secretClickTimeout);
-            secretClickTimeout = setTimeout(() => {
-                secretClickCount = 0;
-                console.log('🔄 クリックカウントがリセットされました');
-            }, 3000); // 3秒以内に5回クリック
-            
-            // 5回クリックで機能を有効化
-            if (secretClickCount === 5) {
-                enableSecretFeature();
-                secretClickCount = 0;
-            }
-        }
-        
-        // ボタンのホバーエフェクト
-        if (secretTrigger) {
-            secretTrigger.addEventListener('mouseenter', function() {
-                this.style.opacity = '0.8';
-            });
-            secretTrigger.addEventListener('mouseleave', function() {
-                this.style.opacity = '0.5';
-            });
-        }
-        
-        function enableSecretFeature() {
-            // localStorageに隠し機能の有効状態を保存
-            localStorage.setItem('voicevox_feature_enabled', 'true');
-            
-            // ユーザーにフィードバック
-            const message = document.createElement('div');
-            message.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 30px 50px;
-                border-radius: 15px;
-                font-size: 18px;
-                font-weight: 600;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-                z-index: 10000;
-                text-align: center;
-                animation: slideIn 0.5s ease-out;
-            `;
-            message.textContent = '✨ 隠し機能「AI読み上げ」が有効化されました！';
-            document.body.appendChild(message);
-            
-            // アニメーション定義
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translate(-50%, -60%);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translate(-50%, -50%);
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-            
-            // 3秒後にメッセージを削除
-            setTimeout(() => {
-                message.style.opacity = '0';
-                message.style.transition = 'opacity 0.5s ease-out';
-                setTimeout(() => message.remove(), 500);
-            }, 3000);
-            
-            console.log('🔓 Secret feature enabled: VOICEVOX読み上げ機能');
-        }
-    </script>
 </body>
 </html>

@@ -1270,10 +1270,10 @@
                     </div>
                 </div>
 
-                <!-- VOICEVOX読み上げ設定（隠し機能） -->
-                <div id="voicevoxPanel" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px; display: none;">
+                <!-- VOICEVOX読み上げ設定 -->
+                <div id="voicevoxPanel" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="voicevoxToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">🔊 AI読み上げ</label>
+                        <label for="voicevoxToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">🔊 読み上げ機能</label>
                         <input type="checkbox" id="voicevoxToggle" style="transform: scale(1.2); cursor: pointer;">
                     </div>
                     <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
@@ -1283,13 +1283,14 @@
                     <div style="margin-top: 10px;">
                         <label for="voicevoxSpeakerSelect" style="font-size: 12px; opacity: 0.8;">声を選択:</label>
                         <select id="voicevoxSpeakerSelect" style="width: 100%; margin-top: 5px; padding: 6px 8px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 12px; cursor: pointer;">
-                            <option value="3" style="color: black;">ずんだもん（ノーマル）</option>
-                            <option value="1" style="color: black;">ずんだもん（あまあま）</option>
-                            <option value="2" style="color: black;">四国めたん（ノーマル）</option>
-                            <option value="0" style="color: black;">四国めたん（あまあま）</option>
+                            <option value="3" style="color: black;">ずんだもん</option>
+                            <option value="2" style="color: black;">四国めたん</option>
                             <option value="8" style="color: black;">春日部つむぎ</option>
                             <option value="10" style="color: black;">雨晴はう</option>
                             <option value="14" style="color: black;">冥鳴ひまり</option>
+                            <option value="11" style="color: black;">玄野武宏</option>
+                            <option value="13" style="color: black;">青山龍星</option>
+                            <option value="17" style="color: black;">満別花丸</option>
                         </select>
                     </div>
                     <div id="voicevoxStatus" style="font-size: 11px; margin-top: 8px; padding: 5px 8px; border-radius: 5px; display: none;"></div>
@@ -1413,22 +1414,6 @@
         let voicevoxAudioQueue = [];  // 読み上げキュー
         let voicevoxIsPlaying = false;  // 現在再生中かどうか
         let voicevoxSpeakerId = 3;  // デフォルト: ずんだもん(ノーマル) ※VOICEVOXのspeaker ID
-        
-        // 隠し機能の初期化
-        initializeSecretFeature();
-        
-        function initializeSecretFeature() {
-            // localStorageで隠し機能が有効化されているか確認
-            const isSecretEnabled = localStorage.getItem('voicevox_feature_enabled') === 'true';
-            
-            if (isSecretEnabled && voicevoxPanel) {
-                voicevoxPanel.style.display = 'block';
-                console.log('🔓 VOICEVOX読み上げ機能が有効です');
-            } else if (voicevoxPanel) {
-                voicevoxPanel.style.display = 'none';
-                console.log('🔒 VOICEVOX読み上げ機能は隠し機能です（README.htmlで有効化してください）');
-            }
-        }
         
         console.log('DOM elements initialized:');
         console.log('- startBtn:', startBtn ? 'found' : 'NOT FOUND');
