@@ -2350,10 +2350,10 @@
                     console.log('Transcripts restored. Count:', transcriptCount);
                     
                     // 参加者を収集
-                    participants.humanParticipants = {};
+                    participants.humanParticipantsById = {};
                     data.transcripts.forEach(transcript => {
                         if (transcript.speaker && transcript.speaker.trim()) {
-                            participants.humanParticipants[transcript.speaker] = true;
+                            participants.humanParticipantsById[transcript.speaker] = true;
                         }
                     });
                 }
@@ -2408,7 +2408,7 @@
             aiMembersContainer.innerHTML = '';
             
             // 人間参加者の数をカウント
-            const humanCount = Object.keys(participants.humanParticipants).length;
+            const humanCount = Object.keys(participants.humanParticipantsById).length;
             if (participantCount) {
                 participantCount.textContent = `(${humanCount}/8)`;
                 // 上限に近づいたら色を変更
@@ -3589,8 +3589,8 @@
                 .then(data => {
                     if (data.status === 'success') {
                         // UIを更新
-                        delete participants.humanParticipants[oldSpeaker];
-                        participants.humanParticipants[newSpeaker] = true;
+                        delete participants.humanParticipantsById[oldSpeaker];
+                        participants.humanParticipantsById[newSpeaker] = true;
                         renderParticipants();
                         // トランスクリプトのspeakerも更新
                         document.querySelectorAll('.speaker').forEach(speakerEl => {
@@ -5289,7 +5289,7 @@
                 const fullName = currentUserElement.dataset.fullName;
                 const displayName = fullName || username;
                 if (displayName) {
-                    participants.humanParticipants[displayName] = true;
+                    participants.humanParticipantsById[displayName] = true;
                 }
             }
             
@@ -5532,4 +5532,8 @@
         }
 </script>
 </body>
-</html>
+</html>$filePath = "c:\Users\221063\workspace\meeting_minutes\templates\minutes\room.html"
+$content = Get-Content $filePath -Raw
+$content = $content -replace 'participants\.humanParticipants(?!ById)', 'participants.humanParticipantsById'
+Set-Content $filePath $content
+Write-Host "修正完了: 6 箇所を置換しました"

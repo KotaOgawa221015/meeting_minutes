@@ -1045,7 +1045,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
         speaker_display = speaker_name or self.speaker_name or '参加者'
         
         # speaker が指定されている場合、参加者数をチェック（最大20人）
-        if speaker and speaker.strip():
+        if speaker_name and speaker_name.strip():
             # 既存の異なるspeaker数をカウント
             existing_speakers = Transcript.objects.filter(
                 meeting=meeting
@@ -1054,7 +1054,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             unique_speakers = set(filter(None, existing_speakers))
             
             # 新しいspeakerで、既に20人いる場合はエラー
-            if speaker not in unique_speakers and len(unique_speakers) >= 20:
+            if speaker_name not in unique_speakers and len(unique_speakers) >= 20:
                 print(f"[Meeting {self.meeting_id}] 参加者数上限エラー: 既に20人の参加者がいます")
                 raise ValueError('会議の参加者数が上限（20人）に達しています')
         
