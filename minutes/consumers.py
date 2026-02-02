@@ -280,9 +280,10 @@ class MeetingConsumer(AsyncWebsocketConsumer):
             final_speaker_name = speaker_name or self.speaker_name or '参加者'
             final_speaker_id = speaker_id or self.speaker_id
             
-            # テキストをDBに保存（speaker='手動入力'として保存される）
+            # テキストをDBに保存（提供されたspeaker_nameを使用、またはデフォルト値）
             try:
-                transcript_id = await self.save_transcript(text, elapsed_time, speaker='手動入力')
+                db_speaker_name = final_speaker_name
+                transcript_id = await self.save_transcript(text, elapsed_time, speaker_name=db_speaker_name)
             except ValueError as e:
                 # 参加者数上限エラー
                 print(f"[Meeting {self.meeting_id}] 参加者数上限エラー: {e}")
@@ -846,11 +847,28 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             }))
             return
         
-        # タイムスタンプ順に並べて全文を結合
-        sorted_transcripts = sorted(transcripts, key=lambda t: t.timestamp)
-        full_text = "\n".join([f"[{t.timestamp:.0f}秒] {t.text}" for t in sorted_transcripts])
+        # AIの発言を含めるか確認
+        meeting = await self.get_meeting()
+        include_ai_in_summary = meeting.include_ai_in_summary
         
-        print(f"[Meeting {self.meeting_id}] 全文字起こし: {len(sorted_transcripts)}セグメント, {len(full_text)}文字")
+        # AIメンバーの名前リストを常に取得
+        ai_members = await self.get_ai_members()
+        ai_member_names = [member.name for member in ai_members]
+        
+        if not include_ai_in_summary and ai_member_names:
+            print(f"[Meeting {self.meeting_id}] 要約からAIの発言を除外: {ai_member_names}")
+        elif include_ai_in_summary and ai_member_names:
+            print(f"[Meeting {self.meeting_id}] 要約にAIの発言を含める: {ai_member_names}")
+        
+        # タイムスタンプ順に並べ、AIの発言をフィルタリング
+        sorted_transcripts = sorted(transcripts, key=lambda t: t.timestamp)
+        if not include_ai_in_summary:
+            # AIメンバーの発言を除外
+            sorted_transcripts = [t for t in sorted_transcripts if t.speaker not in ai_member_names and not t.speaker.startswith('AI')]
+        
+        full_text = "\n".join([f"[{t.timestamp:.0f}秒] {t.speaker}: {t.text}" for t in sorted_transcripts])
+        
+        print(f"[Meeting {self.meeting_id}] 全文字起こし: {len(sorted_transcripts)}セグメント, {len(full_text)}文字 (AI除外: {not include_ai_in_summary})")
         
         try:
             client = OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -1192,15 +1210,14 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 
                 # AI議論時は短い間隔で返答を許可（永続的な連鎖を実現）
                 if is_ai_chain:
-                    min_interval = 3.0  # AI同士は3秒の短い間隔
+                    min_interval = 15.0  # AI同士は15秒の間隔（読み上げ完了待機）
                 else:
-                    min_interval = self.ai_member_intervals.get(ai_member.id, 20)
+                    min_interval = self.ai_member_intervals.get(ai_member.id, 65)
                 
                 # 発言タイミングに達していない場合はスキップ
                 if time_since_last < min_interval:
                     continue
-                
-                # このAIメンバーが発言すべきか判断
+                                # このAIメンバーが発言すべきか判断
                 should_respond = await self.should_ai_respond(ai_member, recent_text, elapsed_time)
                 
                 if should_respond:
@@ -1217,9 +1234,9 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 # 最初の候補者を選択
                 selected_member = candidates[0]
                 
-                # AI連鎖時はより長い遅延を設定
-                base_delay = 2.0 if is_ai_chain else 1.0
-                delay = base_delay + random.uniform(0.2, 0.8)
+                # AI連鎖時はより長い遅延を設定してキューを防止（読み上げ時間を考慮）
+                base_delay = 8.0 if is_ai_chain else 5.0
+                delay = base_delay + random.uniform(1.0, 3.0)
                 
                 # スケジュール化された非同期タスク
                 asyncio.create_task(
@@ -1255,12 +1272,12 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
     def get_interval_for_personality(self, personality):
         """性格タイプに応じた最小発言間隔を返す"""
         intervals = {
-            'idea': 25,        # アイデア提案型: やや頻繁
-            'cheerful': 20,    # 明るい: 頻繁
-            'negative': 35,    # ネガティブ: 慎重に
-            'angry': 40,       # 怒りっぽい: 控えめ
+            'idea': 60,        # アイデア提案型: 60秒
+            'cheerful': 55,    # 明るい: 55秒
+            'negative': 70,    # ネガティブ: 70秒
+            'angry': 75,       # 怒りっぽい: 75秒
         }
-        return intervals.get(personality, 30)
+        return intervals.get(personality, 65)
 
     async def _delayed_ai_response(self, ai_member, conversation_context, elapsed_time, delay, transcript_id, is_ai_chain, remaining_candidates=None):
         """遅延後にAI返答を生成"""
@@ -1298,8 +1315,8 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
                 # 次の候補を処理（最初の候補は既に処理済み）
                 next_candidates = remaining_candidates[1:]
                 
-                # 少し遅延させて、次の判断をトリガー
-                await asyncio.sleep(0.5)
+                # より長く遅延させて、読み上げ完了を待機
+                await asyncio.sleep(10.0)
                 
                 # 会話コンテキストを最新化（最新のAIレスポンスを含める）
                 transcripts = await self.get_all_transcripts()
@@ -1320,7 +1337,7 @@ JSON形式で返してください: {{"message": "介入メッセージ"}}
             # または、AI連鎖中で議論モードなら永続的に続ける
             elif is_ai_chain and self.ai_discussion_mode:
                 print(f"[Meeting {self.meeting_id}] AI議論モード: 新規トリガーを開始（exclude_member_id=None で全員判断可能）")
-                await asyncio.sleep(1.0)  # 1秒間隔を開ける
+                await asyncio.sleep(8.0)  # 8秒間隔を開ける（読み上げ完了待機）
                 asyncio.create_task(
                     self.trigger_ai_member_response(
                         transcript_id=transcript_id,
@@ -1467,7 +1484,7 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
                 # 最後のAIレスポンスIDを更新（次のAIがこれを参照する）
                 self.last_ai_response_id = ai_response_id
                 
-                # クライアントに送信
+                # VoiceVox情報を含めてクライアントに送信
                 await self.send(text_data=json.dumps({
                     'type': 'ai_response',
                     'ai_member_id': ai_member.id,
@@ -1475,10 +1492,14 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
                     'ai_member_personality': ai_member.personality,
                     'response': response_text,
                     'timestamp': elapsed_time,
-                    'response_id': ai_response_id
+                    'response_id': ai_response_id,
+                    'voicevox_speaker_id': ai_member.voicevox_speaker_id,
+                    'voicevox_style_id': ai_member.voicevox_style_id,
+                    'voicevox_speed': ai_member.voicevox_speed,
+                    'voicevox_pitch': ai_member.voicevox_pitch
                 }))
                 
-                print(f"[Meeting {self.meeting_id}] AI返答: {ai_member.name} ({ai_member.get_personality_display()}): {response_text} (response_id={ai_response_id})")
+                print(f"[Meeting {self.meeting_id}] AI返答: {ai_member.name} ({ai_member.get_personality_display()}): {response_text} (response_id={ai_response_id}, VoiceVox ID={ai_member.voicevox_speaker_id}, Style={ai_member.voicevox_style_id})")
         
         except Exception as e:
             print(f"[Meeting {self.meeting_id}] AI返答生成エラー: {e}")
@@ -1502,6 +1523,17 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
             triggered_by_ai_response_id=triggered_by_ai_response_id  # AI→AIの場合のトリガーソース
         )
         print(f"[Meeting {self.meeting_id}] AI返答DB保存: {ai_response.id}")
+        
+        # AI応答をTranscriptテーブルにも保存（要約生成に含めるため）
+        meeting = Meeting.objects.get(id=self.meeting_id)
+        transcript = Transcript.objects.create(
+            meeting=meeting,
+            speaker=ai_member.name,
+            text=response_text,
+            timestamp=elapsed_time
+        )
+        print(f"[Meeting {self.meeting_id}] Transcript保存: {transcript.id} ({ai_member.name})")
+        
         return ai_response.id
 
     @database_sync_to_async

@@ -231,7 +231,7 @@
                         {% if meeting.is_ended %}
                             <a href="/meeting/{{ meeting.id }}/detail/" class="btn btn-secondary btn-small">履歴を表示</a>
                         {% elif meeting.status == 'recording' %}
-                            <a href="/meeting/{{ meeting.id }}/" class="btn btn-primary btn-small">録音を再開</a>
+                            <a href="/meeting/{{ meeting.id }}/" class="btn btn-primary btn-small">入室</a>
                         {% else %}
                             <a href="/meeting/{{ meeting.id }}/detail/" class="btn btn-primary btn-small">議事録を見る</a>
                         {% endif %}

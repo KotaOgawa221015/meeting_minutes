@@ -47,7 +47,7 @@
         
         .participant-card {
             padding: 15px;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
             border-radius: 10px;
             background: rgba(255,255,255,0.1);
             transition: all 0.3s;
@@ -605,8 +605,8 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            padding: 12px;
-            margin-bottom: 8px;
+            padding: 8px 12px;
+            margin-bottom: 4px;
             background: #f8fafc;
             border-radius: 8px;
             border-left: 4px solid #667eea;
@@ -914,20 +914,11 @@
         }
         
         .transcript-item.has-stamp {
-            border-top: 3px solid #667eea;
+            /* border-top は不要 */
         }
         
         .transcript-item.has-mark {
             background-color: var(--mark-color, transparent);
-        }
-        
-        .transcript-features {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #e5e7eb;
         }
         
         .stamp-container {
@@ -1347,11 +1338,11 @@
     <div id="addParticipantModal" class="username-modal" style="display:none;">
         <div class="username-modal-content">
             <h2>👥 参加者を追加</h2>
-            <p>マイクと参加者名を設定してください</p>
+            <p>参加者名を設定してください（マイクは任意）</p>
             <div style="margin-bottom: 15px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px;">🎤 マイク</label>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px;">🎤 マイク <span style="color: #9ca3af; font-weight: 400; font-size: 12px;">（任意）</span></label>
                 <select id="microphoneSelectDropdown" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-                    <option value="">マイクを選択...</option>
+                    <option value="">マイクを選択... / マイクなし</option>
                 </select>
             </div>
             <div style="margin-bottom: 15px;">
@@ -1372,17 +1363,13 @@
             <div class="section">
                 <div class="section-title">👥 参加者 <span id="participantCount" style="font-size: 12px; color: #9ca3af;">(0/8)</span></div>
                 
-                <div id="participantsList" style="display: flex; flex-direction: column; gap: 12px;">
+                <div id="participantsList" style="display: flex; flex-direction: column; gap: 6px;">
                     <!-- 参加者がここに動的に追加されます -->
                 </div>
                 
                 <button id="addParticipantBtn" style="width: 100%; margin-top: 12px; padding: 10px 15px; background: rgba(16,185,129,0.2); color: white; border: 2px dashed rgba(16,185,129,0.5); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s;">
                     ⊕ 参加者を追加
                 </button>
-                
-                <div id="aiMembersContainer" style="margin-top: 15px; padding-top: 15px;">
-                    <!-- AIファシリテーター / AIメンバーがここに動的に追加されます -->
-                </div>
                 
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -1412,12 +1399,20 @@
 
                 <div class="section-title">⚙️ 設定</div>
                 <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <label for="aiDiscussionToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">AI同士の議論</label>
                         <input type="checkbox" id="aiDiscussionToggle" style="transform: scale(1.2); cursor: pointer;">
                     </div>
-                    <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
+                    <div style="font-size: 11px; margin-bottom: 10px; opacity: 0.7;">
                         ONにするとAIの発言に対して他のAIが反応します。
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="includeAISummaryToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">📊 要約にAIを含める</label>
+                        <input type="checkbox" id="includeAISummaryToggle" style="transform: scale(1.2); cursor: pointer;">
+                    </div>
+                    <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
+                        ONにすると要約にAIの発言も含めます。
                     </div>
                 </div>
 
@@ -1429,19 +1424,6 @@
                     </div>
                     <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
                         ONにするとAIの発言をVOICEVOXで読み上げます。
-                    </div>
-                    <!-- スピーカー選択 -->
-                    <div style="margin-top: 10px;">
-                        <label for="voicevoxSpeakerSelect" style="font-size: 12px; opacity: 0.8;">声を選択:</label>
-                        <select id="voicevoxSpeakerSelect" style="width: 100%; margin-top: 5px; padding: 6px 8px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 12px; cursor: pointer;">
-                            <option value="3" style="color: black;">ずんだもん</option>
-                            <option value="2" style="color: black;">四国めたん</option>
-                            <option value="8" style="color: black;">春日部つむぎ</option>
-                            <option value="10" style="color: black;">雨晴はう</option>
-                            <option value="14" style="color: black;">冥鳴ひまり</option>
-                            <option value="13" style="color: black;">青山龍星</option>
-                            <option value="17" style="color: black;">満別花丸</option>
-                        </select>
                     </div>
                     <div id="voicevoxStatus" style="font-size: 11px; margin-top: 8px; padding: 5px 8px; border-radius: 5px; display: none;"></div>
                 </div>
@@ -1470,6 +1452,12 @@
                     </div>
                     <div class="input-container">
                         <div class="input-wrapper">
+                            <select 
+                                id="usernameSelect" 
+                                style="padding: 10px 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; color: #333; cursor: pointer; min-width: 150px;"
+                            >
+                                <option value="">ユーザーを選択...</option>
+                            </select>
                             <input 
                                 type="text" 
                                 class="manual-input" 
@@ -1557,6 +1545,7 @@
         const statTranscripts = document.getElementById('statTranscripts');
         const manualInput = document.getElementById('manualInput');
         const sendBtn = document.getElementById('sendBtn');
+        const usernameSelect = document.getElementById('usernameSelect');
         const addPanelBtn = document.getElementById('addPanelBtn');
         const featureSelector = document.getElementById('featureSelector');
         const closeSelectorBtn = document.getElementById('closeSelectorBtn');
@@ -1567,7 +1556,6 @@
         const voicevoxPanel = document.getElementById('voicevoxPanel');
         const voicevoxToggle = document.getElementById('voicevoxToggle');
         const voicevoxStatus = document.getElementById('voicevoxStatus');
-        const voicevoxSpeakerSelect = document.getElementById('voicevoxSpeakerSelect');
         let voicevoxEnabled = false;
         let voicevoxAudioQueue = [];  // 読み上げキュー
         let voicevoxIsPlaying = false;  // 現在再生中かどうか
@@ -1972,22 +1960,17 @@
                 return;
             }
             
-            if (!micId) {
-                alert('マイクを選択してください。');
-                return;
-            }
-            
             // 参加者IDを生成
             const participantId = 'participant_' + Date.now();
             
-            // マイク情報を取得
-            const selectedMic = availableMicrophones.find(m => m.deviceId === micId);
+            // マイク情報を取得（選択されていない場合はnull）
+            const selectedMic = micId ? availableMicrophones.find(m => m.deviceId === micId) : null;
             
             // 参加者情報を保存
             participantMicrophones[participantId] = {
                 name: name,
-                microphoneId: micId,
-                microphoneLabel: selectedMic ? (selectedMic.label || `マイク`) : 'マイク',
+                microphoneId: micId || null,
+                microphoneLabel: selectedMic ? (selectedMic.label || `マイク`) : 'マイクなし',
                 groupId: selectedMic ? selectedMic.groupId : null
             };
             
@@ -1998,6 +1981,7 @@
             
             // UIを更新
             renderParticipants();
+            updateUsernameDropdown();
             closeAddParticipantModal();
         }
 
@@ -2006,10 +1990,52 @@
             if (confirm('この参加者を削除しますか？')) {
                 delete participantMicrophones[participantId];
                 localStorage.setItem(`participantMicrophones_${meetingId}`, JSON.stringify(participantMicrophones));
+                
+                // 削除した参加者が選択されていた場合は選択をクリア
+                if (usernameSelect.value === participantId) {
+                    usernameSelect.value = '';
+                    currentUserName = null;
+                    localStorage.removeItem(`selectedUsername_${meetingId}`);
+                }
+                
                 renderParticipants();
+                updateUsernameDropdown();
                 console.log('参加者削除:', participantId);
             }
         }
+
+        // ユーザー名選択ドロップダウンを更新
+        function updateUsernameDropdown() {
+            usernameSelect.innerHTML = '<option value="">ユーザーを選択...</option>';
+            
+            Object.entries(participantMicrophones).forEach(([participantId, participantInfo]) => {
+                const option = document.createElement('option');
+                option.value = participantId;
+                option.textContent = participantInfo.name;
+                usernameSelect.appendChild(option);
+            });
+            
+            // 保存されたユーザーを復元
+            const savedUsername = localStorage.getItem(`selectedUsername_${meetingId}`);
+            if (savedUsername && participantMicrophones[savedUsername]) {
+                usernameSelect.value = savedUsername;
+                currentUserName = participantMicrophones[savedUsername].name;
+            }
+        }
+
+        // ユーザー名選択時のイベントリスナー
+        usernameSelect.addEventListener('change', (e) => {
+            const selectedId = e.target.value;
+            if (selectedId && participantMicrophones[selectedId]) {
+                currentUserName = participantMicrophones[selectedId].name;
+                localStorage.setItem(`selectedUsername_${meetingId}`, selectedId);
+                console.log('選択されたユーザー:', currentUserName);
+            } else {
+                currentUserName = null;
+                localStorage.removeItem(`selectedUsername_${meetingId}`);
+                console.log('ユーザー選択がクリアされました');
+            }
+        });
 
         // ページロード時に復元
         (async () => {
@@ -2022,6 +2048,9 @@
                 participantMicrophones = JSON.parse(savedParticipantMics);
                 console.log('保存済み参加者マイク情報を復元:', participantMicrophones);
             }
+            
+            // ユーザー名選択ドロップダウンを初期化
+            updateUsernameDropdown();
             
             await initializeMeetingStatus();
             console.log('initializeMeetingStatus completed');
@@ -2404,6 +2433,10 @@
             const aiMembersContainer = document.getElementById('aiMembersContainer');
             const participantCount = document.getElementById('participantCount');
             
+            console.log('[DEBUG] renderParticipants called');
+            console.log('[DEBUG] aiMembersContainer element:', aiMembersContainer);
+            console.log('[DEBUG] aiMembersContainer parent:', aiMembersContainer?.parentElement);
+            
             participantsList.innerHTML = '';
             aiMembersContainer.innerHTML = '';
             
@@ -2500,7 +2533,6 @@
                             <input type="text" class="participant-name-input" value="${member.name}" data-ai-member-id="${id}" style="font-size: 15px; font-weight: 600; color: white; background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 2px 4px; width: 120px;" />
                             <div class="participant-role">${personalityLabels[member.personality] || member.personality}</div>
                         </div>
-                        <span style="font-size: 11px; background: rgba(99,102,241,0.35); color: #eef2ff; padding: 4px 6px; border-radius: 6px;">AI</span>
                         <button class="participant-remove-btn" data-type="ai_member" data-id="${id}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; margin-left: 4px;">×</button>
                     </div>
                 `;
@@ -3516,6 +3548,31 @@
                         </select>
                     </div>
                     <div style="margin-bottom: 10px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVoxスピーカー</label>
+                        <select class="ai-voicevox-speaker" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                            <option value="">スピーカーを選択...</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVoxスタイル</label>
+                        <select class="ai-voicevox-style" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                            <option value="">スタイルを選択...</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <button class="ai-voicevox-advanced-toggle" style="width: 100%; padding: 6px 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; color: #374151; cursor: pointer; font-size: 13px; font-weight: 500;">▶ 速度・ピッチを設定</button>
+                        <div class="ai-voicevox-advanced" style="display: none; margin-top: 10px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                            <div style="margin-bottom: 10px;">
+                                <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVox速度 <span class="ai-voicevox-speed-value" style="float: right; color: #6b7280;">1.0</span></label>
+                                <input type="range" class="ai-voicevox-speed" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%; cursor: pointer;">
+                            </div>
+                            <div style="margin-bottom: 0;">
+                                <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVoxピッチ <span class="ai-voicevox-pitch-value" style="float: right; color: #6b7280;">0.0</span></label>
+                                <input type="range" class="ai-voicevox-pitch" min="-0.15" max="0.15" step="0.05" value="0.0" style="width: 100%; cursor: pointer;">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 10px;">
                         <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">追加する数</label>
                         <input type="number" class="ai-count" value="1" min="1" max="8" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                     </div>
@@ -3535,11 +3592,139 @@
             setupPanelCollapse(panel, header);
 
             const personalitySelect = body.querySelector('.ai-personality');
+            const voicevoxSpeakerSelect = body.querySelector('.ai-voicevox-speaker');
+            const advancedToggle = body.querySelector('.ai-voicevox-advanced-toggle');
+            const advancedDiv = body.querySelector('.ai-voicevox-advanced');
+            const voicevoxStyleSelect = body.querySelector('.ai-voicevox-style');
             const countInput = body.querySelector('.ai-count');
             const addAIBtn = body.querySelector(`#add-ai-btn-${panelId}`);
             const aiMembersList = body.querySelector(`#ai-members-list-${panelId}`);
+            const voicevoxSpeedInput = body.querySelector('.ai-voicevox-speed');
+            const voicevoxSpeedValue = body.querySelector('.ai-voicevox-speed-value');
+            const voicevoxPitchInput = body.querySelector('.ai-voicevox-pitch');
+            const voicevoxPitchValue = body.querySelector('.ai-voicevox-pitch-value');
+            
+            // アコーディオン機能
+            advancedToggle.addEventListener('click', () => {
+                const isHidden = advancedDiv.style.display === 'none';
+                advancedDiv.style.display = isHidden ? 'block' : 'none';
+                advancedToggle.textContent = isHidden ? '▼ 速度・ピッチを設定' : '▶ 速度・ピッチを設定';
+            });
+            
+            // スピーカー選択変更時にスタイルを更新
+            voicevoxSpeakerSelect.addEventListener('change', (e) => {
+                console.log('[DEBUG] Speaker change event fired');
+                console.log('[DEBUG] Speaker ID value:', e.target.value, 'type:', typeof e.target.value);
+                const speakerId = e.target.value;  // 文字列のまま使用
+                console.log('[DEBUG] voicevoxSpeakers array length:', voicevoxSpeakers.length);
+                console.log('[DEBUG] voicevoxSpeakers:', voicevoxSpeakers);
+                
+                if (!speakerId || speakerId === '') {
+                    console.log('[DEBUG] No speaker selected');
+                    voicevoxStyleSelect.innerHTML = '<option value="">スタイルを選択...</option>';
+                    return;
+                }
+                
+                const selectedSpeaker = voicevoxSpeakers.find(s => String(s.id) === String(speakerId));
+                console.log('[DEBUG] Looking for speaker with ID:', speakerId);
+                console.log('[DEBUG] All speaker IDs:', voicevoxSpeakers.map(s => ({ name: s.name, id: s.id, id_type: typeof s.id })));
+                console.log('[DEBUG] Selected speaker:', selectedSpeaker);
+                
+                // スタイルドロップダウンをクリア
+                voicevoxStyleSelect.innerHTML = '<option value="">スタイルを選択...</option>';
+                
+                if (selectedSpeaker && selectedSpeaker.styles && Array.isArray(selectedSpeaker.styles)) {
+                    console.log('[DEBUG] Speaker has', selectedSpeaker.styles.length, 'styles');
+                    console.log('[DEBUG] Styles data:', JSON.stringify(selectedSpeaker.styles, null, 2));
+                    selectedSpeaker.styles.forEach((style, index) => {
+                        console.log(`[DEBUG] Adding style ${index}:`, style.style_id, style.style_name);
+                        const option = document.createElement('option');
+                        option.value = style.style_id;
+                        option.textContent = style.style_name;
+                        voicevoxStyleSelect.appendChild(option);
+                    });
+                    console.log('[DEBUG] Total style options added:', voicevoxStyleSelect.options.length - 1, '(excluding default)');
+                    // 最初のスタイルを選択
+                    if (selectedSpeaker.styles.length > 0) {
+                        voicevoxStyleSelect.value = selectedSpeaker.styles[0].style_id;
+                        console.log('[DEBUG] Default style selected:', selectedSpeaker.styles[0].style_id);
+                    }
+                } else {
+                    console.warn('[WARN] Selected speaker not found or has no styles', {selectedSpeaker, styles: selectedSpeaker?.styles, isArray: Array.isArray(selectedSpeaker?.styles)});
+                }
+            });
+            
+            // VoiceVoxスライダーのイベントリスナー
+            voicevoxSpeedInput.addEventListener('input', (e) => {
+                voicevoxSpeedValue.textContent = parseFloat(e.target.value).toFixed(1);
+            });
+            voicevoxPitchInput.addEventListener('input', (e) => {
+                voicevoxPitchValue.textContent = parseFloat(e.target.value).toFixed(2);
+            });
             
             let aiMembers = [];
+            let voicevoxSpeakers = [];  // VoiceVoxスピーカー一覧をキャッシュ
+            
+            // VoiceVoxスピーカー一覧を読み込む
+            function loadVoicevoxSpeakers() {
+                if (voicevoxSpeakers.length > 0) {
+                    console.log('[DEBUG] Using cached speakers:', voicevoxSpeakers.length);
+                    return Promise.resolve();  // キャッシュされていれば使用
+                }
+                
+                console.log('[DEBUG] Loading VoiceVox speakers...');
+                console.log('[DEBUG] voicevoxSpeakerSelect element:', voicevoxSpeakerSelect);
+                console.log('[DEBUG] voicevoxSpeakerSelect is null?', voicevoxSpeakerSelect === null);
+                
+                if (!voicevoxSpeakerSelect) {
+                    console.error('[ERROR] voicevoxSpeakerSelect element not found!');
+                    return Promise.reject('voicevoxSpeakerSelect element not found');
+                }
+                
+                return fetch('/voicevox/speakers/')
+                    .then(response => {
+                        console.log('[DEBUG] Response status:', response.status);
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('[DEBUG] VoiceVox speakers data:', data);
+                        console.log('[DEBUG] Response data.speakers:', JSON.stringify(data.speakers, null, 2));
+                        if (data.status === 'success') {
+                            voicevoxSpeakers = data.speakers;  // スピーカーごとにグループ化されたデータ
+                            console.log('[DEBUG] Speakers loaded:', voicevoxSpeakers.length, 'speakers');
+                            console.log('[DEBUG] First speaker:', JSON.stringify(voicevoxSpeakers[0], null, 2));
+                            console.log('[DEBUG] First speaker styles:', voicevoxSpeakers[0]?.styles);
+                            
+                            // ドロップダウンを更新
+                            if (voicevoxSpeakerSelect) {
+                                voicevoxSpeakerSelect.innerHTML = '<option value="">スピーカーを選択...</option>';
+                                voicevoxSpeakers.forEach((speaker, index) => {
+                                    console.log(`[DEBUG] Adding speaker ${index}:`, speaker.name, 'ID:', speaker.id, 'with', speaker.styles?.length || 0, 'styles');
+                                    const option = document.createElement('option');
+                                    option.value = String(speaker.id);  // IDを文字列として保存
+                                    option.textContent = speaker.name;
+                                    voicevoxSpeakerSelect.appendChild(option);
+                                });
+                                console.log('[DEBUG] Dropdown updated with', voicevoxSpeakerSelect.options.length - 1, 'options (excluding default)');
+                                
+                                // デフォルト値を設定（最初のスピーカーを選択）
+                                if (voicevoxSpeakers.length > 0) {
+                                    voicevoxSpeakerSelect.value = String(voicevoxSpeakers[0].id);
+                                    console.log('[DEBUG] Default speaker set to:', voicevoxSpeakers[0].name, 'ID:', voicevoxSpeakers[0].id);
+                                    // デフォルトスピーカー選択時にスタイルドロップダウンを更新
+                                    voicevoxSpeakerSelect.dispatchEvent(new Event('change'));
+                                }
+                            } else {
+                                console.error('[ERROR] voicevoxSpeakerSelect became null during update!');
+                            }
+                        } else {
+                            console.error('VoiceVox speakers API error:', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('[ERROR] Failed to load VoiceVox speakers:', error);
+                    });
+            }
                         
             function loadAIMembers() {
                 fetch(`/meeting/${meetingId}/ai-members/`)
@@ -3610,6 +3795,25 @@
                 });
             }
             
+            function getVoicevoxDisplayName(speakerId, styleId) {
+                const speaker = voicevoxSpeakers.find(s => s.id === speakerId);
+                if (!speaker) return null;
+                
+                if (styleId !== undefined && styleId !== null && styleId !== 0) {
+                    const style = speaker.styles.find(st => st.style_id === styleId);
+                    if (style) {
+                        return `${speaker.name} (${style.style_name})`;
+                    }
+                }
+                
+                // スタイルが指定されていない場合は最初のスタイルを返す
+                if (speaker.styles && speaker.styles.length > 0) {
+                    return `${speaker.name} (${speaker.styles[0].style_name})`;
+                }
+                
+                return speaker.name;
+            }
+            
             function renderAIMembers() {
                 aiMembersList.innerHTML = '';
                 
@@ -3664,6 +3868,7 @@
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
                             <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
+                            <div style="font-size: 10px; color: #d1d5db; margin-top: 2px;">VoiceVox: ${getVoicevoxDisplayName(member.voicevox_speaker_id, member.voicevox_style_id) || `ID=${member.voicevox_speaker_id}`} (速度: ${member.voicevox_speed.toFixed(1)}, ピッチ: ${member.voicevox_pitch.toFixed(2)})</div>
                         </div>
                         <button data-member-id="${member.id}" class="delete-ai-btn" style="background: ${member.personality === 'facilitator' ? '#d1d5db' : '#fee2e2'}; border: none; color: ${member.personality === 'facilitator' ? '#9ca3af' : '#ef4444'}; padding: 4px 8px; border-radius: 4px; cursor: ${member.personality === 'facilitator' ? 'not-allowed' : 'pointer'}; font-size: 12px;" ${member.personality === 'facilitator' ? 'disabled' : ''}>削除</button>
                     `;
@@ -3689,11 +3894,55 @@
                 const personality = personalitySelect.value;
                 const count = parseInt(countInput.value) || 1;
                 
+                // 速度、ピッチの値を取得
+                const voicevoxSpeed = parseFloat(voicevoxSpeedInput.value) || 1.0;
+                const voicevoxPitch = parseFloat(voicevoxPitchInput.value) || 0.0;
+                
+                // デバッグ: ドロップダウン要素と値の詳細チェック
+                console.log('[DEBUG A] voicevoxSpeakerSelect element exists?', voicevoxSpeakerSelect !== null);
+                console.log('[DEBUG B] voicevoxSpeakerSelect.value:', voicevoxSpeakerSelect.value);
+                console.log('[DEBUG C] voicevoxSpeakerSelect.selectedIndex:', voicevoxSpeakerSelect.selectedIndex);
+                console.log('[DEBUG D] voicevoxSpeakerSelect.options.length:', voicevoxSpeakerSelect.options.length);
+                if (voicevoxSpeakerSelect.selectedIndex >= 0) {
+                    console.log('[DEBUG E] Selected option value:', voicevoxSpeakerSelect.options[voicevoxSpeakerSelect.selectedIndex].value);
+                    console.log('[DEBUG F] Selected option text:', voicevoxSpeakerSelect.options[voicevoxSpeakerSelect.selectedIndex].text);
+                }
+                console.log('[DEBUG G] voicevoxSpeakers array:', JSON.stringify(voicevoxSpeakers.map(s => ({id: s.id, name: s.name}))));
+                
+                // スピーカーIDを取得（選択値が空の場合は voicevoxSpeakers[0].id を使用）
+                let voicevoxSpeakerId = parseInt(voicevoxSpeakerSelect.value);
+                console.log('[DEBUG H] parseInt(voicevoxSpeakerSelect.value):', voicevoxSpeakerId);
+                
+                if (!voicevoxSpeakerId || voicevoxSpeakerId === 0 || isNaN(voicevoxSpeakerId)) {
+                    if (voicevoxSpeakers.length > 0) {
+                        voicevoxSpeakerId = voicevoxSpeakers[0].id;
+                        console.log('[DEBUG I] Using voicevoxSpeakers[0].id:', voicevoxSpeakerId);
+                    } else {
+                        voicevoxSpeakerId = 1; // 最後のフォールバック
+                        console.log('[DEBUG J] Using hardcoded fallback: 1');
+                    }
+                }
+                
+                console.log('[DEBUG K] Final voicevoxSpeakerId to send:', voicevoxSpeakerId);
+                
+                // スタイルIDを取得
+                const voicevoxStyleId = parseInt(voicevoxStyleSelect.value) || 0;
+                
                 // 8人に達しているかチェック
                 if (aiMembers.length >= 8) {
                     alert('AIメンバーは最大8人です。これ以上追加することはできません。');
                     return;
                 }
+                
+                const requestBody = {
+                    personality: personality,
+                    count: personality === 'facilitator' ? 1 : count,
+                    voicevox_speaker_id: voicevoxSpeakerId,
+                    voicevox_style_id: voicevoxStyleId,
+                    voicevox_speed: voicevoxSpeed,
+                    voicevox_pitch: voicevoxPitch
+                };
+                console.log('[DEBUG L] Request body to send:', JSON.stringify(requestBody, null, 2));
                 
                 fetch(`/meeting/${meetingId}/add-ai-member/`, {
                     method: 'POST',
@@ -3701,16 +3950,22 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken')
                     },
-                    body: JSON.stringify({
-                        personality: personality,
-                        count: personality === 'facilitator' ? 1 : count
-                    })
+                    body: JSON.stringify(requestBody)
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
                         loadAIMembers();
                         countInput.value = 1;
+                        if (voicevoxSpeakers.length > 0) {
+                            voicevoxSpeakerSelect.value = String(voicevoxSpeakers[0].id);  // 文字列に変換
+                            // スタイルドロップダウンを更新
+                            voicevoxSpeakerSelect.dispatchEvent(new Event('change'));
+                        }
+                        body.querySelector('.ai-voicevox-speed').value = 1.0;
+                        body.querySelector('.ai-voicevox-pitch').value = 0.0;
+                        body.querySelector('.ai-voicevox-speed-value').textContent = '1.0';
+                        body.querySelector('.ai-voicevox-pitch-value').textContent = '0.0';
                         alert(`${data.ai_members.length}個のAIメンバーを追加しました`);
                         // グローバルデータと全パネルを同期
                         syncAIMembersData();
@@ -3724,7 +3979,23 @@
                 });
             });
             
-            // 初期ロード
+            // 初期ロード - 確実にvoicevoxSpeakersを初期化してからpanelを表示
+            console.log('[DEBUG INIT] Panel initialization started');
+            console.log('[DEBUG INIT] voicevoxSpeakers before load:', voicevoxSpeakers.length);
+            
+            // voicevoxSpeakersが既にロードされている場合はそのまま使用
+            // そうでない場合は、APIからロードする
+            if (voicevoxSpeakers.length === 0) {
+                // 非同期で読み込みを開始
+                loadVoicevoxSpeakers().then(() => {
+                    console.log('[DEBUG INIT] voicevoxSpeakers loaded:', voicevoxSpeakers.length);
+                }).catch(err => {
+                    console.error('[ERROR INIT] Failed to load speakers:', err);
+                });
+            } else {
+                console.log('[DEBUG INIT] voicevoxSpeakers already loaded:', voicevoxSpeakers.length);
+            }
+            
             loadAIMembers();
             
             activePanels[panelId] = {
@@ -3765,6 +4036,14 @@
         }
 
         function connectWebSocket() {
+            // WebSocket接続前に参加者データをリセット
+            participants = {
+                facilitator: null,
+                aiMembers: {},
+                humanParticipantsById: {}
+            };
+            aiMembersData = {};
+            
             // 既存のソケットがあればクローズ
             if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
                 console.log('Closing existing WebSocket before reconnecting');
@@ -3776,6 +4055,9 @@
             socket.onopen = () => {
                 console.log('WebSocket接続成功');
                 statusText.textContent = '接続完了 - 録音準備完了';
+                
+                // サーバーから最新のAIメンバーを同期して、古いデータを削除
+                syncAIMembersData();
             };
 
             socket.onmessage = (event) => {
@@ -3792,7 +4074,7 @@
                 } else if (data.type === 'facilitator_message') {
                     addFacilitatorMessage(data.message, data.phase, data.progress);
                 } else if (data.type === 'ai_response') {
-                    addAIResponse(data.ai_member_name, data.ai_member_personality, data.response, data.timestamp);
+                    addAIResponse(data.ai_member_name, data.ai_member_personality, data.response, data.timestamp, data.voicevox_speaker_id, data.voicevox_style_id, data.voicevox_speed, data.voicevox_pitch);
                 } else if (data.type === 'facilitator_enabled') {
                     console.log('Facilitator enabled with duration:', data.duration_seconds);
                     addFacilitatorToUI();
@@ -3974,9 +4256,13 @@
                 // チェックボックス形式のHTML
                 const checkboxHTML = participantIds.map(id => {
                     const info = participantMicrophones[id];
+                    const hasMicrophone = info.microphoneId !== null && info.microphoneId !== '';
+                    const disabled = !hasMicrophone ? 'disabled' : '';
+                    const disabledStyle = !hasMicrophone ? 'opacity: 0.5; cursor: not-allowed;' : '';
+                    
                     return `
-                        <label style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer;">
-                            <input type="checkbox" id="checkbox_${id}" value="${id}" style="width: 18px; height: 18px; cursor: pointer; margin-right: 12px;" checked>
+                        <label style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: #f3f4f6; border-radius: 6px; cursor: pointer; ${disabledStyle}">
+                            <input type="checkbox" id="checkbox_${id}" value="${id}" style="width: 18px; height: 18px; cursor: pointer; margin-right: 12px;" ${disabled} ${hasMicrophone ? 'checked' : ''}>
                             <span style="flex: 1;">${info.name} <small style="color: #666;">(${info.microphoneLabel})</small></span>
                         </label>
                     `;
@@ -4673,7 +4959,7 @@
             }
         }
 
-        function addAIResponse(aiName, aiPersonality, responseText, timestamp) {
+        function addAIResponse(aiName, aiPersonality, responseText, timestamp, voicevoxSpeakerId = 1, voicevoxStyleId = 0, voicevoxSpeed = 1.0, voicevoxPitch = 0.0) {
             const item = document.createElement('div');
             item.className = 'bubble ai';
             item.setAttribute('data-id', `ai-response-${Date.now()}`);
@@ -4697,9 +4983,9 @@
             transcriptArea.appendChild(item);
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
             
-            // VOICEVOX読み上げ
+            // VOICEVOX読み上げ（VoiceVox設定を使用）
             if (voicevoxEnabled) {
-                voicevoxSpeak(responseText);
+                voicevoxSpeak(responseText, voicevoxSpeakerId, voicevoxSpeed, voicevoxPitch);
             }
         }
         
@@ -5252,6 +5538,36 @@
             });
         }
 
+        const includeAISummaryToggle = document.getElementById('includeAISummaryToggle');
+        if (includeAISummaryToggle) {
+            includeAISummaryToggle.addEventListener('change', (e) => {
+                const isEnabled = e.target.checked;
+                console.log('Include AI in Summary:', isEnabled ? 'ON' : 'OFF');
+                
+                // サーバーに設定を送信
+                const url = `/meeting/${meetingId}/update-summary-settings/`;
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        include_ai_in_summary: isEnabled
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Summary settings updated:', data);
+                })
+                .catch(error => {
+                    console.error('Failed to update summary settings:', error);
+                    e.target.checked = !isEnabled;
+                    alert('設定の更新に失敗しました。');
+                });
+            });
+        }
+
         sendBtn.addEventListener('click', addManualTranscript);
         addPanelBtn.addEventListener('click', showAddFeatureModal);
         closeSelectorBtn.addEventListener('click', hideAddFeatureModal);
@@ -5380,11 +5696,19 @@
         /**
          * テキストをVOICEVOXで読み上げる
          */
-        async function voicevoxSpeak(text) {
+        async function voicevoxSpeak(text, speakerId = null, speed = null, pitch = null) {
             if (!voicevoxEnabled || !text) return;
             
+            // VoiceVoxパラメータをオブジェクトで保持
+            const voicevoxParams = {
+                text: text,
+                speaker_id: speakerId !== null ? speakerId : voicevoxSpeakerId,
+                speed: speed !== null ? speed : 1.0,
+                pitch: pitch !== null ? pitch : 0.0
+            };
+            
             // 読み上げキューに追加
-            voicevoxAudioQueue.push(text);
+            voicevoxAudioQueue.push(voicevoxParams);
             
             // 既に再生中なら処理しない（キューから順次処理される）
             if (voicevoxIsPlaying) return;
@@ -5402,7 +5726,7 @@
             voicevoxIsPlaying = true;
             
             while (voicevoxAudioQueue.length > 0 && voicevoxEnabled) {
-                const text = voicevoxAudioQueue.shift();
+                const voicevoxParams = voicevoxAudioQueue.shift();
                 
                 try {
                     const response = await fetch('/tts/speak/', {
@@ -5411,10 +5735,7 @@
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCookie('csrftoken')
                         },
-                        body: JSON.stringify({
-                            text: text,
-                            speaker_id: voicevoxSpeakerId
-                        })
+                        body: JSON.stringify(voicevoxParams)
                     });
                     
                     const data = await response.json();
@@ -5515,21 +5836,6 @@
             });
         }
         
-        /**
-         * VOICEVOXスピーカー選択のイベントハンドラ
-         */
-        if (voicevoxSpeakerSelect) {
-            voicevoxSpeakerSelect.addEventListener('change', function() {
-                voicevoxSpeakerId = parseInt(this.value, 10);
-                console.log('VOICEVOXスピーカーID変更:', voicevoxSpeakerId);
-                
-                // 選択した声をステータスに表示
-                const selectedOption = this.options[this.selectedIndex];
-                if (voicevoxEnabled) {
-                    updateVoicevoxStatus('🔊 ' + selectedOption.text + ' を選択', false);
-                }
-            });
-        }
 </script>
 </body>
 </html>$filePath = "c:\Users\221063\workspace\meeting_minutes\templates\minutes\room.html"

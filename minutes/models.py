@@ -29,6 +29,7 @@ class Meeting(models.Model):
     use_facilitator = models.BooleanField(default=False, help_text='AIファシリテーター機能を有効にする')
     use_timekeeper = models.BooleanField(default=True, help_text='タイムキーパー機能を有効にする')
     is_ended = models.BooleanField(default=False, help_text='会議が終了したかどうか')
+    include_ai_in_summary = models.BooleanField(default=True, help_text='要約にAIの発言を含めるかどうか')
 
     class Meta:
         ordering = ['-created_at']
@@ -159,6 +160,10 @@ class AIMember(models.Model):
         default='facilitator'
     )
     is_active = models.BooleanField(default=True)
+    voicevox_speaker_id = models.IntegerField(default=1)  # VoiceVoxのスピーカーID
+    voicevox_style_id = models.IntegerField(default=0)  # VoiceVoxのスタイルID
+    voicevox_speed = models.FloatField(default=1.0)  # 再生速度 (0.5-2.0)
+    voicevox_pitch = models.FloatField(default=0.0)  # ピッチ (-0.15-0.15)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

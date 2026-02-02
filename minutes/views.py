@@ -486,7 +486,24 @@ def add_ai_member(request, meeting_id):
         meeting = get_object_or_404(Meeting, id=meeting_id)
         data = json.loads(request.body)
         personality = data.get('personality', 'idea')
-        count = int(data.get('count', 1))
+        count = int(data.get('count', 1) or 1)
+        voicevox_speaker_id = int(data.get('voicevox_speaker_id') or 1)
+        voicevox_style_id = int(data.get('voicevox_style_id') or 0)
+        voicevox_speed = float(data.get('voicevox_speed') or 1.0)
+        voicevox_pitch = float(data.get('voicevox_pitch') or 0.0)
+        
+        # DEBUG: ログ出力
+        with open('debug_add_ai_member.log', 'a', encoding='utf-8') as f:
+            f.write(f'=== add_ai_member called ===\n')
+            f.write(f'Raw data: {data}\n')
+            f.write(f'voicevox_speaker_id from request: {data.get("voicevox_speaker_id")}\n')
+            f.write(f'voicevox_speaker_id parsed: {voicevox_speaker_id}\n\n')
+        
+        # VoiceVoxパラメータの範囲チェック
+        if not (0.5 <= voicevox_speed <= 2.0):
+            return JsonResponse({'status': 'error', 'message': '速度は0.5〜2.0の範囲で指定してください'}, status=400)
+        if not (-0.15 <= voicevox_pitch <= 0.15):
+            return JsonResponse({'status': 'error', 'message': 'ピッチは-0.15〜0.15の範囲で指定してください'}, status=400)
         
         # 追加数の上限チェック
         if count < 1 or count > 8:
@@ -526,18 +543,30 @@ def add_ai_member(request, meeting_id):
         
         # AIメンバーを作成
         ai_members = []
+        with open('debug_add_ai_member.log', 'a', encoding='utf-8') as f:
+            f.write(f'About to create AI member with voicevox_speaker_id={voicevox_speaker_id}\n')
         for i in range(count):
             ai_member = AIMember.objects.create(
                 meeting=meeting,
                 personality=personality,
-                is_active=True
+                is_active=True,
+                voicevox_speaker_id=voicevox_speaker_id,
+                voicevox_style_id=voicevox_style_id,
+                voicevox_speed=voicevox_speed,
+                voicevox_pitch=voicevox_pitch
             )
+            with open('debug_add_ai_member.log', 'a', encoding='utf-8') as f:
+                f.write(f'Created AI member {i}: id={ai_member.id}, voicevox_speaker_id={ai_member.voicevox_speaker_id}\n')
             ai_members.append({
                 'id': ai_member.id,
                 'name': ai_member.name,
                 'personality': ai_member.personality,
                 'personality_display': ai_member.get_personality_display(),
                 'is_active': ai_member.is_active,
+                'voicevox_speaker_id': ai_member.voicevox_speaker_id,
+                'voicevox_style_id': ai_member.voicevox_style_id,
+                'voicevox_speed': ai_member.voicevox_speed,
+                'voicevox_pitch': ai_member.voicevox_pitch,
                 'response_count': ai_member.responses.count(),
                 'created_at': ai_member.created_at.isoformat()
             })
@@ -578,6 +607,10 @@ def get_ai_members(request, meeting_id):
                 'personality': ai_member.personality,
                 'personality_display': ai_member.get_personality_display(),
                 'is_active': ai_member.is_active,
+                'voicevox_speaker_id': ai_member.voicevox_speaker_id,
+                'voicevox_style_id': ai_member.voicevox_style_id,
+                'voicevox_speed': ai_member.voicevox_speed,
+                'voicevox_pitch': ai_member.voicevox_pitch,
                 'response_count': ai_member.responses.count(),
                 'created_at': ai_member.created_at.isoformat()
             }
@@ -737,6 +770,162 @@ def delete_all_ai_members(request, meeting_id):
 import requests
 
 VOICEVOX_BASE_URL = 'http://127.0.0.1:50021'
+VOICEVOX_SPEAKERS_CACHE = {}
+VOICEVOX_SPEAKERS_CACHE_TIME = 0
+
+
+@require_http_methods(["GET"])
+def voicevox_speakers(request):
+    """VOICEVOXのスピーカー一覧を取得（キャッシュ付き）"""
+    try:
+        import time
+        global VOICEVOX_SPEAKERS_CACHE, VOICEVOX_SPEAKERS_CACHE_TIME
+        
+        # キャッシュが有効（5分以内）の場合はキャッシュを返す
+        if VOICEVOX_SPEAKERS_CACHE and (time.time() - VOICEVOX_SPEAKERS_CACHE_TIME) < 300:
+            return JsonResponse({
+                'status': 'success',
+                'speakers': VOICEVOX_SPEAKERS_CACHE
+            })
+        
+        # VOICEVOX API から スピーカー一覧を取得
+        response = requests.get(
+            f'{VOICEVOX_BASE_URL}/speakers',
+            timeout=5,
+            proxies={'http': None, 'https': None}
+        )
+        
+        if response.status_code != 200:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'VOICEVOXスピーカー情報の取得に失敗しました'
+            }, status=503)
+        
+        speakers_data = response.json()
+        
+        # スピーカーデータをスピーカーごとにグループ化
+        # 実装対象のスピーカーのみを処理
+        # スピーカー名とIDのマッピング（VOICEVOXの仕様に基づく）
+        speaker_id_map = {
+            'ずんだもん': 3,
+            '四国めたん': 2,
+            '春日部つむぎ': 8,
+            '雨春はう': 10,
+            '玄野武宏': 11,
+            '冥鳴ひまり': 12,
+            '満別花丸': 13
+        }
+        
+        speakers_by_name = {}
+        for speaker in speakers_data:
+            speaker_name = speaker.get('name', 'Unknown')
+            
+            # 実装対象外のスピーカーはスキップ
+            if speaker_name not in speaker_id_map:
+                continue
+            
+            # マッピングからスピーカーIDを取得
+            speaker_id = speaker_id_map[speaker_name]
+            styles = speaker.get('styles', [])
+            
+            if speaker_name not in speakers_by_name:
+                speakers_by_name[speaker_name] = {
+                    'name': speaker_name,
+                    'id': speaker_id,
+                    'styles': []
+                }
+            
+            for style in styles:
+                speakers_by_name[speaker_name]['styles'].append({
+                    'style_id': style.get('id'),
+                    'style_name': style.get('name', 'Normal'),
+                    'display_name': f"{speaker_name} ({style.get('name', 'Normal')})"
+                })
+        
+        # リスト形式に変換し、指定された順序で並べ替え
+        speakers_list = list(speakers_by_name.values())
+        allowed_order = ['ずんだもん', '四国めたん', '春日部つむぎ', '雨春はう', '玄野武宏', '冥鳴ひまり', '満別花丸']
+        speakers = sorted(speakers_list, key=lambda s: allowed_order.index(s['name']) if s['name'] in allowed_order else 999)
+        
+        # キャッシュに保存
+        VOICEVOX_SPEAKERS_CACHE = speakers
+        VOICEVOX_SPEAKERS_CACHE_TIME = time.time()
+        
+        return JsonResponse({
+            'status': 'success',
+            'speakers': speakers
+        })
+        
+    except requests.exceptions.ConnectionError:
+        # VOICEVOXが起動していない場合は、デフォルトスピーカーを返す
+        # 実装対象：ずんだもん、四国めたん、春日部つむぎ、雨春はう、玄野武宏、冥鳴ひまり、満別花丸
+        default_speakers = [
+            {
+                'name': 'ずんだもん',
+                'id': 3,
+                'styles': [
+                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': 'ずんだもん (ノーマル)'},
+                    {'style_id': 1, 'style_name': '喜び', 'display_name': 'ずんだもん (喜び)'},
+                    {'style_id': 2, 'style_name': '悲しみ', 'display_name': 'ずんだもん (悲しみ)'},
+                    {'style_id': 3, 'style_name': '怒り', 'display_name': 'ずんだもん (怒り)'},
+                ]
+            },
+            {
+                'name': '四国めたん',
+                'id': 2,
+                'styles': [
+                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '四国めたん (ノーマル)'},
+                    {'style_id': 1, 'style_name': '喜び', 'display_name': '四国めたん (喜び)'},
+                    {'style_id': 2, 'style_name': '悲しみ', 'display_name': '四国めたん (悲しみ)'},
+                    {'style_id': 3, 'style_name': '怒り', 'display_name': '四国めたん (怒り)'},
+                ]
+            },
+            {
+                'name': '春日部つむぎ',
+                'id': 8,
+                'styles': [
+                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '春日部つむぎ (ノーマル)'},
+                ]
+            },
+            {
+                'name': '雨春はう',
+                'id': 10,
+                'styles': [
+                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '雨春はう (ノーマル)'},
+                ]
+            },
+            {
+                'name': '玄野武宏',
+                'id': 11,
+                'styles': [
+                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '玄野武宏 (ノーマル)'},
+                ]
+            },
+            {
+                'name': '冥鳴ひまり',
+                'id': 12,
+                'styles': [
+                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '冥鳴ひまり (ノーマル)'},
+                ]
+            },
+            {
+                'name': '満別花丸',
+                'id': 13,
+                'styles': [
+                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '満別花丸 (ノーマル)'},
+                ]
+            }
+        ]
+        return JsonResponse({
+            'status': 'success',
+            'speakers': default_speakers,
+            'warning': 'VOICEVOXエンジンに接続できないため、デフォルトスピーカーを使用しています'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'エラー: {str(e)}'
+        }, status=500)
 
 
 @require_http_methods(["GET"])
@@ -793,8 +982,10 @@ def tts_speak(request):
         data = json.loads(request.body)
         text = data.get('text', '').strip()
         speaker_id = data.get('speaker_id', 3)  # デフォルト: ずんだもん(ノーマル)
+        speed = float(data.get('speed', 1.0))  # 再生速度 (0.5-2.0)
+        pitch = float(data.get('pitch', 0.0))  # ピッチ (-0.15-0.15)
         
-        print(f"[TTS] Request: text='{text[:50]}...' speaker_id={speaker_id}")
+        print(f"[TTS] Request: text='{text[:50]}...' speaker_id={speaker_id}, speed={speed}, pitch={pitch}")
         
         if not text:
             return JsonResponse({
@@ -821,6 +1012,12 @@ def tts_speak(request):
             }, status=503)
         
         query_data = query_response.json()
+        
+        # VoiceVoxパラメータ（速度・ピッチ）を適用
+        if 'speedScale' in query_data:
+            query_data['speedScale'] = speed
+        if 'pitchScale' in query_data:
+            query_data['pitchScale'] = pitch
         
         # 2. 音声を合成
         print(f"[TTS] Calling synthesis...")
@@ -915,6 +1112,35 @@ def tts_diagnose(request):
             'message': 'VOICEVOXエンジンに接続できません。'
         }, status=503)
     except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'エラー: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def update_summary_settings(request, meeting_id):
+    """要約設定を更新（AIメンバーを含めるかどうか）"""
+    try:
+        meeting = get_object_or_404(Meeting, id=meeting_id)
+        data = json.loads(request.body)
+        
+        # include_ai_in_summary フラグを更新
+        include_ai_in_summary = data.get('include_ai_in_summary', False)
+        meeting.include_ai_in_summary = include_ai_in_summary
+        meeting.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'include_ai_in_summary': meeting.include_ai_in_summary
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON'
+        }, status=400)
+    except Exception as e:
+        print(f"[ERROR] Failed to update summary settings: {str(e)}")
         return JsonResponse({
             'status': 'error',
             'message': f'エラー: {str(e)}'
