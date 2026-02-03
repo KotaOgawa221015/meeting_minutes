@@ -1358,7 +1358,7 @@
     
     <div class="app">
         <aside>
-            <div class="logo">🤖 AI議事録</div>
+            <div class="logo">AI議事録</div>
             
             <div class="section">
                 <div class="section-title">👥 参加者 <span id="participantCount" style="font-size: 12px; color: #9ca3af;">(0/8)</span></div>
@@ -1373,7 +1373,7 @@
                 
                 <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <div style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9);">🤖 AIメンバー</div>
+                        <div style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9);">AIメンバー</div>
                         <button id="deleteAllAIMembers" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">全削除</button>
                     </div>
                     <div id="aiMembersContainer">
@@ -1385,7 +1385,7 @@
             </div>
             
             <div class="section">
-                <div class="section-title">📈 統計</div>
+                <div class="section-title">統計</div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value" id="statDuration">00:00</div>
@@ -1397,7 +1397,7 @@
                     </div>
                 </div>
 
-                <div class="section-title">⚙️ 設定</div>
+                <div class="section-title">設定</div>
                 <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <label for="aiDiscussionToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">AI同士の議論</label>
@@ -1408,7 +1408,7 @@
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="includeAISummaryToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">📊 要約にAIを含める</label>
+                        <label for="includeAISummaryToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">要約にAIを含める</label>
                         <input type="checkbox" id="includeAISummaryToggle" style="transform: scale(1.2); cursor: pointer;">
                     </div>
                     <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
@@ -1419,26 +1419,12 @@
                 <!-- VOICEVOX読み上げ設定 -->
                 <div id="voicevoxPanel" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="voicevoxToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">🔊 読み上げ機能</label>
+                        <label for="voicevoxToggle" style="font-size: 14px; font-weight: 600; cursor: pointer;">読み上げ機能</label>
                         <input type="checkbox" id="voicevoxToggle" style="transform: scale(1.2); cursor: pointer;">
                     </div>
                     <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">
                         ONにするとAIの発言をVOICEVOXで読み上げます。
                     </div>
-                    <!-- スピーカー選択 -->
-                    <div style="margin-top: 10px;">
-                        <label for="voicevoxSpeakerSelect" style="font-size: 12px; opacity: 0.8;">声を選択:</label>
-                        <select id="voicevoxSpeakerSelect" style="width: 100%; margin-top: 5px; padding: 6px 8px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 12px; cursor: pointer;">
-                            <option value="3" style="color: black;">ずんだもん</option>
-                            <option value="2" style="color: black;">四国めたん</option>
-                            <option value="8" style="color: black;">春日部つむぎ</option>
-                            <option value="10" style="color: black;">雨晴はう</option>
-                            <option value="14" style="color: black;">冥鳴ひまり</option>
-                            <option value="11" style="color: black;">玄野武宏</option>
-                            <option value="17" style="color: black;">満別花丸</option>
-                        </select>
-                    </div>
-                    <div id="voicevoxStatus" style="font-size: 11px; margin-top: 8px; padding: 5px 8px; border-radius: 5px; display: none;"></div>
                 </div>
             </div>
 
@@ -1460,7 +1446,7 @@
 
             <div class="content">
                 <section class="panel">
-                    <div class="panel-header">📝 文字起こし(リアルタイム)</div>
+                    <div class="panel-header">文字起こし(リアルタイム)</div>
                     <div class="panel-body talk" id="transcriptArea">
                     </div>
                     <div class="input-container">
@@ -1484,7 +1470,7 @@
 
                 <div class="right" id="rightPanels">
                     <section class="panel">
-                        <div class="panel-header">📋 要約(リアルタイム)</div>
+                        <div class="panel-header">要約(リアルタイム)</div>
                         <div class="panel-body" id="summaryContent">
                             <div class="summary-detail" id="summarySection"></div>
                         </div>
@@ -1938,6 +1924,11 @@
                     dropdown.appendChild(option);
                 });
                 
+                // デフォルトで最初のマイクを選択
+                if (availableMicrophones.length > 0) {
+                    dropdown.value = availableMicrophones[0].deviceId;
+                }
+                
                 console.log('マイクリストをドロップダウンに設定:', availableMicrophones);
             } catch (error) {
                 console.error('Failed to load microphones:', error);
@@ -2060,6 +2051,30 @@
             if (savedParticipantMics) {
                 participantMicrophones = JSON.parse(savedParticipantMics);
                 console.log('保存済み参加者マイク情報を復元:', participantMicrophones);
+            } else {
+                // 初回の場合、デフォルト参加者を自動追加
+                console.log('First time entry - adding default participant');
+                // マイク情報を取得
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const mics = devices.filter(d => d.kind === 'audioinput');
+                    
+                    const participantId = 'participant_' + Date.now();
+                    const firstMic = mics.length > 0 ? mics[0] : null;
+                    
+                    participantMicrophones[participantId] = {
+                        name: '新しい参加者',
+                        microphoneId: firstMic ? firstMic.deviceId : null,
+                        microphoneLabel: firstMic ? (firstMic.label || 'マイク') : 'マイクなし',
+                        groupId: firstMic ? firstMic.groupId : null
+                    };
+                    
+                    // localStorageに保存
+                    localStorage.setItem(`participantMicrophones_${meetingId}`, JSON.stringify(participantMicrophones));
+                    console.log('Default participant added:', participantMicrophones[participantId]);
+                } catch (error) {
+                    console.error('Failed to get devices:', error);
+                }
             }
             
             // ユーザー名選択ドロップダウンを初期化
@@ -2074,6 +2089,9 @@
             
             await loadMeetingData();
             console.log('loadMeetingData completed');
+            
+            // 参加者一覧を描画（デフォルト参加者を表示）
+            renderParticipants();
             
             // 「参加者を追加」ボタンのイベントリスナー
             document.getElementById('addParticipantBtn').addEventListener('click', () => {
@@ -2475,13 +2493,46 @@
                     <div class="participant-header">
                         <div class="participant-icon">🎤</div>
                         <div class="participant-info">
-                            <div class="participant-name" style="font-size: 15px; font-weight: 600; color: white;">${participantInfo.name}</div>
+                            <div class="participant-name" data-participant-id="${participantId}" data-original-name="${participantInfo.name}" style="font-size: 15px; font-weight: 600; color: white; cursor: pointer; border-radius: 4px; padding: 2px 4px; transition: background 0.2s;">${participantInfo.name}</div>
                             <div class="participant-role" style="font-size: 12px; color: rgba(255,255,255,0.7);">${participantInfo.microphoneLabel}</div>
                         </div>
                         <button class="participant-remove-btn" data-participant-id="${participantId}" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">×</button>
                     </div>
                 `;
                 participantsList.appendChild(participantCard);
+                
+                // 名前変更イベント
+                const nameElement = participantCard.querySelector('.participant-name');
+                nameElement.addEventListener('click', () => {
+                    // 既に編集中なら処理しない
+                    if (nameElement.querySelector('input')) return;
+                    
+                    const currentName = nameElement.textContent;
+                    nameElement.innerHTML = `<input type="text" value="${currentName}" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 4px; padding: 4px 8px; font-size: 15px; font-weight: 600; width: 100%; font-family: inherit;">`;
+                    const input = nameElement.querySelector('input');
+                    input.focus();
+                    input.select();
+                    
+                    function saveEdit() {
+                        const newName = input.value.trim();
+                        if (newName && newName !== nameElement.dataset.originalName) {
+                            participantMicrophones[participantId].name = newName;
+                            localStorage.setItem(`participantMicrophones_${meetingId}`, JSON.stringify(participantMicrophones));
+                            nameElement.dataset.originalName = newName;
+                            nameElement.textContent = newName;
+                        } else {
+                            nameElement.textContent = nameElement.dataset.originalName;
+                        }
+                    }
+                    
+                    input.addEventListener('blur', saveEdit);
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') saveEdit();
+                        else if (e.key === 'Escape') {
+                            nameElement.textContent = nameElement.dataset.originalName;
+                        }
+                    });
+                });
                 
                 // 削除ボタンのイベントリスナー
                 const removeBtn = participantCard.querySelector('.participant-remove-btn');
@@ -3313,6 +3364,33 @@
             };
             
             body.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVoxスピーカー</label>
+                        <select class="facilitator-voicevox-speaker" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                            <option value="">スピーカーを選択...</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVoxスタイル</label>
+                        <select class="facilitator-voicevox-style" style="width: 100%; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                            <option value="">スタイルを選択...</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <button class="facilitator-voicevox-advanced-toggle" style="width: 100%; padding: 6px 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; color: #374151; cursor: pointer; font-size: 13px; font-weight: 500;">▶ 速度・ピッチを設定</button>
+                        <div class="facilitator-voicevox-advanced" style="display: none; margin-top: 10px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                            <div style="margin-bottom: 10px;">
+                                <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVox速度 <span class="facilitator-voicevox-speed-value" style="float: right; color: #6b7280;">1.0</span></label>
+                                <input type="range" class="facilitator-voicevox-speed" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%; cursor: pointer;">
+                            </div>
+                            <div style="margin-bottom: 0;">
+                                <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px;">VoiceVoxピッチ <span class="facilitator-voicevox-pitch-value" style="float: right; color: #6b7280;">0.0</span></label>
+                                <input type="range" class="facilitator-voicevox-pitch" min="-0.15" max="0.15" step="0.05" value="0.0" style="width: 100%; cursor: pointer;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <button class="toggle-settings-btn" id="toggle-${panelId}">
                     <span class="arrow">▼</span>
                     <span class="toggle-text">時間設定を隠す</span>
@@ -3361,8 +3439,93 @@
             const countdownTimeDisplay = body.querySelector(`#countdown-time-${panelId}`);
             const progressBar = body.querySelector(`#progress-bar-${panelId}`);
             const progressText = body.querySelector(`#progress-text-${panelId}`);
+            const voicevoxSpeakerSelect = body.querySelector('.facilitator-voicevox-speaker');
+            const voicevoxStyleSelect = body.querySelector('.facilitator-voicevox-style');
+            const voicevoxAdvancedToggle = body.querySelector('.facilitator-voicevox-advanced-toggle');
+            const voicevoxAdvancedDiv = body.querySelector('.facilitator-voicevox-advanced');
+            const voicevoxSpeedInput = body.querySelector('.facilitator-voicevox-speed');
+            const voicevoxSpeedValue = body.querySelector('.facilitator-voicevox-speed-value');
+            const voicevoxPitchInput = body.querySelector('.facilitator-voicevox-pitch');
+            const voicevoxPitchValue = body.querySelector('.facilitator-voicevox-pitch-value');
             
             let settingsCollapsed = false;
+            let facilitatorVoicevoxSpeakers = [];  // VoiceVoxスピーカー一覧をキャッシュ
+            
+            // アコーディオン機能（VoiceVox設定用）
+            voicevoxAdvancedToggle.addEventListener('click', () => {
+                const isHidden = voicevoxAdvancedDiv.style.display === 'none';
+                voicevoxAdvancedDiv.style.display = isHidden ? 'block' : 'none';
+                voicevoxAdvancedToggle.textContent = isHidden ? '▼ 速度・ピッチを設定' : '▶ 速度・ピッチを設定';
+            });
+            
+            // スピーカー選択変更時にスタイルを更新
+            voicevoxSpeakerSelect.addEventListener('change', (e) => {
+                const speakerId = e.target.value;
+                
+                if (!speakerId || speakerId === '') {
+                    voicevoxStyleSelect.innerHTML = '<option value="">スタイルを選択...</option>';
+                    return;
+                }
+                
+                const selectedSpeaker = facilitatorVoicevoxSpeakers.find(s => String(s.id) === String(speakerId));
+                voicevoxStyleSelect.innerHTML = '<option value="">スタイルを選択...</option>';
+                
+                if (selectedSpeaker && selectedSpeaker.styles && Array.isArray(selectedSpeaker.styles)) {
+                    selectedSpeaker.styles.forEach((style) => {
+                        const option = document.createElement('option');
+                        option.value = style.style_id;
+                        option.textContent = style.style_name;
+                        voicevoxStyleSelect.appendChild(option);
+                    });
+                    if (selectedSpeaker.styles.length > 0) {
+                        voicevoxStyleSelect.value = selectedSpeaker.styles[0].style_id;
+                    }
+                }
+            });
+            
+            // VoiceVoxスライダーのイベントリスナー
+            voicevoxSpeedInput.addEventListener('input', (e) => {
+                voicevoxSpeedValue.textContent = parseFloat(e.target.value).toFixed(1);
+            });
+            voicevoxPitchInput.addEventListener('input', (e) => {
+                voicevoxPitchValue.textContent = parseFloat(e.target.value).toFixed(2);
+            });
+            
+            // VoiceVoxスピーカー一覧を読み込む
+            function loadFacilitatorVoicevoxSpeakers() {
+                if (facilitatorVoicevoxSpeakers.length > 0) {
+                    return Promise.resolve();
+                }
+                
+                return fetch('/voicevox/speakers/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            facilitatorVoicevoxSpeakers = data.speakers;
+                            
+                            if (voicevoxSpeakerSelect) {
+                                voicevoxSpeakerSelect.innerHTML = '<option value="">スピーカーを選択...</option>';
+                                facilitatorVoicevoxSpeakers.forEach((speaker) => {
+                                    const option = document.createElement('option');
+                                    option.value = String(speaker.id);
+                                    option.textContent = speaker.name;
+                                    voicevoxSpeakerSelect.appendChild(option);
+                                });
+                                
+                                if (facilitatorVoicevoxSpeakers.length > 0) {
+                                    voicevoxSpeakerSelect.value = String(facilitatorVoicevoxSpeakers[0].id);
+                                    voicevoxSpeakerSelect.dispatchEvent(new Event('change'));
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Failed to load VoiceVox speakers:', error);
+                    });
+            }
+            
+            // VoiceVoxスピーカーを初期ロード
+            loadFacilitatorVoicevoxSpeakers();
             
             function updateDisplayTime() {
                 facilitatorData.durationMinutes = parseInt(minutesInput.value) || 60;
@@ -3448,13 +3611,24 @@
                 facilitatorData.interval = setInterval(updateCountdown, 1000);
                 updateCountdown();  // 即座に最初の更新
                 
-                // サーバーに facilitator 機能の有効化を送信
+                // サーバーに facilitator 機能の有効化を送信（VoiceVox設定を含む）
                 if (socket && socket.readyState === WebSocket.OPEN) {
+                    const facilitatorVoiceConfig = {
+                        voicevox_speaker_id: parseInt(voicevoxSpeakerSelect.value) || 1,
+                        voicevox_style_id: parseInt(voicevoxStyleSelect.value) || 0,
+                        voicevox_speed: parseFloat(voicevoxSpeedInput.value) || 1.0,
+                        voicevox_pitch: parseFloat(voicevoxPitchInput.value) || 0.0
+                    };
+                    
                     socket.send(JSON.stringify({
                         type: 'enable_facilitator',
-                        duration_seconds: facilitatorData.totalSeconds
+                        duration_seconds: facilitatorData.totalSeconds,
+                        voicevox_speaker_id: facilitatorVoiceConfig.voicevox_speaker_id,
+                        voicevox_style_id: facilitatorVoiceConfig.voicevox_style_id,
+                        voicevox_speed: facilitatorVoiceConfig.voicevox_speed,
+                        voicevox_pitch: facilitatorVoiceConfig.voicevox_pitch
                     }));
-                    console.log('Facilitator enabled with duration:', facilitatorData.totalSeconds);
+                    console.log('Facilitator enabled with duration:', facilitatorData.totalSeconds, 'VoiceVox config:', facilitatorVoiceConfig);
                 }
                 
                 // UI を更新

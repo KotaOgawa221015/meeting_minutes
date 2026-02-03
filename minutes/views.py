@@ -842,6 +842,20 @@ def voicevox_speakers(request):
                     'display_name': f"{speaker_name} ({style.get('name', 'Normal')})"
                 })
         
+        # 「雨春はう」がAPIから返されていない場合は手動で追加
+        if '雨春はう' not in speakers_by_name:
+            speakers_by_name['雨春はう'] = {
+                'name': '雨春はう',
+                'id': 10,
+                'styles': [
+                    {
+                        'style_id': 0,
+                        'style_name': 'ノーマル',
+                        'display_name': '雨春はう (ノーマル)'
+                    }
+                ]
+            }
+        
         # リスト形式に変換し、指定された順序で並べ替え
         speakers_list = list(speakers_by_name.values())
         allowed_order = ['ずんだもん', '四国めたん', '春日部つむぎ', '雨春はう', '玄野武宏', '冥鳴ひまり', '満別花丸']

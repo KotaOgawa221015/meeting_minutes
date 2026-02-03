@@ -33,3 +33,10 @@ voicevox_speaker_id parsed: 11
 
 About to create AI member with voicevox_speaker_id=11
 Created AI member 0: id=47, voicevox_speaker_id=11
+=== add_ai_member called ===
+Raw data: {'personality': 'idea', 'count': 1, 'voicevox_speaker_id': 3, 'voicevox_style_id': 3, 'voicevox_speed': 1, 'voicevox_pitch': 0}
+voicevox_speaker_id from request: 3
+voicevox_speaker_id parsed: 3
+
+About to create AI member with voicevox_speaker_id=3
+Created AI member 0: id=48, voicevox_speaker_id=3
