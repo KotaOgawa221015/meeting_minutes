@@ -4154,8 +4154,20 @@
                 
                 console.log('[DEBUG K] Final voicevoxSpeakerId to send:', voicevoxSpeakerId);
                 
-                // スタイルIDを取得
-                const voicevoxStyleId = parseInt(voicevoxStyleSelect.value) || 0;
+                // スタイルIDを取得（選択されていない場合は、選択されたスピーカーの最初のスタイルIDを使用）
+                let voicevoxStyleId = parseInt(voicevoxStyleSelect.value);
+                if (isNaN(voicevoxStyleId) || voicevoxStyleSelect.value === '') {
+                    // スタイルが選択されていない場合、スピーカーの最初のスタイルを使用
+                    const selectedSpeaker = voicevoxSpeakers.find(s => s.id === voicevoxSpeakerId);
+                    if (selectedSpeaker && selectedSpeaker.styles && selectedSpeaker.styles.length > 0) {
+                        voicevoxStyleId = selectedSpeaker.styles[0].style_id;
+                        console.log('[DEBUG] Using first style_id for speaker:', voicevoxStyleId);
+                    } else {
+                        // フォールバック：ずんだもんのノーマル（style_id=3）
+                        voicevoxStyleId = 3;
+                        console.log('[DEBUG] Using fallback style_id: 3 (ずんだもん ノーマル)');
+                    }
+                }
                 
                 // 8人に達しているかチェック
                 if (aiMembers.length >= 8) {
