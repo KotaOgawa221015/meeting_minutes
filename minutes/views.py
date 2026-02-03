@@ -773,6 +773,15 @@ VOICEVOX_BASE_URL = 'http://127.0.0.1:50021'
 VOICEVOX_SPEAKERS_CACHE = {}
 VOICEVOX_SPEAKERS_CACHE_TIME = 0
 
+# プロキシ設定がない環境でのタイムアウトを防ぐため、プロキシ無効化セッションを作成
+# システムのプロキシ設定を無視してローカル接続を高速化
+def _get_voicevox_session():
+    """VOICEVOX用のプロキシ無効化セッションを取得"""
+    session = requests.Session()
+    session.trust_env = False  # 環境変数のプロキシ設定を無視
+    session.proxies = {'http': None, 'https': None}
+    return session
+
 
 @require_http_methods(["GET"])
 def voicevox_speakers(request):
@@ -789,10 +798,10 @@ def voicevox_speakers(request):
             })
         
         # VOICEVOX API から スピーカー一覧を取得
-        response = requests.get(
+        session = _get_voicevox_session()
+        response = session.get(
             f'{VOICEVOX_BASE_URL}/speakers',
-            timeout=5,
-            proxies={'http': None, 'https': None}
+            timeout=5
         )
         
         if response.status_code != 200:
@@ -856,8 +865,8 @@ def voicevox_speakers(request):
             'speakers': speakers
         })
         
-    except requests.exceptions.ConnectionError:
-        # VOICEVOXが起動していない場合は、デフォルトスピーカーを返す
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        # VOICEVOXが起動していない、またはタイムアウトした場合は、デフォルトスピーカーを返す
         # 実装対象：ずんだもん、四国めたん、春日部つむぎ、雨春はう、玄野武宏、冥鳴ひまり、満別花丸
         default_speakers = [
             {
@@ -932,8 +941,9 @@ def voicevox_speakers(request):
 def tts_ping(request):
     """VOICEVOXエンジンが起動しているか確認"""
     try:
+        session = _get_voicevox_session()
         # まず /version を試す
-        response = requests.get(f'{VOICEVOX_BASE_URL}/version', timeout=2, proxies={'http': None, 'https': None})
+        response = session.get(f'{VOICEVOX_BASE_URL}/version', timeout=2)
         if response.status_code == 200:
             return JsonResponse({
                 'status': 'success',
@@ -942,7 +952,7 @@ def tts_ping(request):
             })
         
         # /version が失敗した場合は /core_versions を試す
-        response = requests.get(f'{VOICEVOX_BASE_URL}/core_versions', timeout=2, proxies={'http': None, 'https': None})
+        response = session.get(f'{VOICEVOX_BASE_URL}/core_versions', timeout=2)
         if response.status_code == 200:
             return JsonResponse({
                 'status': 'success',
@@ -993,13 +1003,14 @@ def tts_speak(request):
                 'message': 'テキストが空です'
             }, status=400)
         
+        session = _get_voicevox_session()
+        
         # 1. 音声合成用のクエリを作成
         print(f"[TTS] Calling audio_query...")
-        query_response = requests.post(
+        query_response = session.post(
             f'{VOICEVOX_BASE_URL}/audio_query',
             params={'text': text, 'speaker': speaker_id},
-            timeout=15,
-            proxies={'http': None, 'https': None}
+            timeout=15
         )
         
         print(f"[TTS] audio_query response: {query_response.status_code}")
@@ -1021,12 +1032,11 @@ def tts_speak(request):
         
         # 2. 音声を合成
         print(f"[TTS] Calling synthesis...")
-        synthesis_response = requests.post(
+        synthesis_response = session.post(
             f'{VOICEVOX_BASE_URL}/synthesis',
             params={'speaker': speaker_id},
             json=query_data,
-            timeout=30,
-            proxies={'http': None, 'https': None}
+            timeout=30
         )
         
         print(f"[TTS] synthesis response: {synthesis_response.status_code}, content_length={len(synthesis_response.content)}")
@@ -1081,7 +1091,8 @@ def tts_diagnose(request):
     """VOICEVOXの診断情報を取得（利用可能なスピーカー一覧など）"""
     try:
         # スピーカー一覧を取得
-        speakers_response = requests.get(f'{VOICEVOX_BASE_URL}/speakers', timeout=5, proxies={'http': None, 'https': None})
+        session = _get_voicevox_session()
+        speakers_response = session.get(f'{VOICEVOX_BASE_URL}/speakers', timeout=5)
         
         if speakers_response.status_code != 200:
             return JsonResponse({
