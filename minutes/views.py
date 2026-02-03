@@ -815,14 +815,15 @@ def voicevox_speakers(request):
         # スピーカーデータをスピーカーごとにグループ化
         # 実装対象のスピーカーのみを処理
         # スピーカー名とIDのマッピング（VOICEVOXの仕様に基づく）
+        # このIDはスピーカーを識別するためのもの（実際のstyle_idはstylesから取得）
         speaker_id_map = {
             'ずんだもん': 3,
             '四国めたん': 2,
             '春日部つむぎ': 8,
             '雨春はう': 10,
             '玄野武宏': 11,
-            '冥鳴ひまり': 12,
-            '満別花丸': 13
+            '冥鳴ひまり': 14,
+            '満別花丸': 37
         }
         
         speakers_by_name = {}
@@ -858,7 +859,7 @@ def voicevox_speakers(request):
                 'id': 10,
                 'styles': [
                     {
-                        'style_id': 0,
+                        'style_id': 10,  # VOICEVOXの実際のstyle_id
                         'style_name': 'ノーマル',
                         'display_name': '雨春はう (ノーマル)'
                     }
@@ -882,60 +883,70 @@ def voicevox_speakers(request):
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
         # VOICEVOXが起動していない、またはタイムアウトした場合は、デフォルトスピーカーを返す
         # 実装対象：ずんだもん、四国めたん、春日部つむぎ、雨春はう、玄野武宏、冥鳴ひまり、満別花丸
+        # style_id はVOICEVOXの実際のスタイルIDを使用（synthesisのspeakerパラメータに渡す値）
         default_speakers = [
             {
                 'name': 'ずんだもん',
                 'id': 3,
                 'styles': [
-                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': 'ずんだもん (ノーマル)'},
-                    {'style_id': 1, 'style_name': '喜び', 'display_name': 'ずんだもん (喜び)'},
-                    {'style_id': 2, 'style_name': '悲しみ', 'display_name': 'ずんだもん (悲しみ)'},
-                    {'style_id': 3, 'style_name': '怒り', 'display_name': 'ずんだもん (怒り)'},
+                    {'style_id': 3, 'style_name': 'ノーマル', 'display_name': 'ずんだもん (ノーマル)'},
+                    {'style_id': 1, 'style_name': 'あまあま', 'display_name': 'ずんだもん (あまあま)'},
+                    {'style_id': 7, 'style_name': 'ツンツン', 'display_name': 'ずんだもん (ツンツン)'},
+                    {'style_id': 5, 'style_name': 'セクシー', 'display_name': 'ずんだもん (セクシー)'},
+                    {'style_id': 22, 'style_name': 'ささやき', 'display_name': 'ずんだもん (ささやき)'},
                 ]
             },
             {
                 'name': '四国めたん',
                 'id': 2,
                 'styles': [
-                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '四国めたん (ノーマル)'},
-                    {'style_id': 1, 'style_name': '喜び', 'display_name': '四国めたん (喜び)'},
-                    {'style_id': 2, 'style_name': '悲しみ', 'display_name': '四国めたん (悲しみ)'},
-                    {'style_id': 3, 'style_name': '怒り', 'display_name': '四国めたん (怒り)'},
+                    {'style_id': 2, 'style_name': 'ノーマル', 'display_name': '四国めたん (ノーマル)'},
+                    {'style_id': 0, 'style_name': 'あまあま', 'display_name': '四国めたん (あまあま)'},
+                    {'style_id': 6, 'style_name': 'ツンツン', 'display_name': '四国めたん (ツンツン)'},
+                    {'style_id': 4, 'style_name': 'セクシー', 'display_name': '四国めたん (セクシー)'},
+                    {'style_id': 36, 'style_name': 'ささやき', 'display_name': '四国めたん (ささやき)'},
                 ]
             },
             {
                 'name': '春日部つむぎ',
                 'id': 8,
                 'styles': [
-                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '春日部つむぎ (ノーマル)'},
+                    {'style_id': 8, 'style_name': 'ノーマル', 'display_name': '春日部つむぎ (ノーマル)'},
                 ]
             },
             {
                 'name': '雨春はう',
                 'id': 10,
                 'styles': [
-                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '雨春はう (ノーマル)'},
+                    {'style_id': 10, 'style_name': 'ノーマル', 'display_name': '雨春はう (ノーマル)'},
                 ]
             },
             {
                 'name': '玄野武宏',
                 'id': 11,
                 'styles': [
-                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '玄野武宏 (ノーマル)'},
+                    {'style_id': 11, 'style_name': 'ノーマル', 'display_name': '玄野武宏 (ノーマル)'},
+                    {'style_id': 39, 'style_name': '喜び', 'display_name': '玄野武宏 (喜び)'},
+                    {'style_id': 40, 'style_name': 'ツンギレ', 'display_name': '玄野武宏 (ツンギレ)'},
+                    {'style_id': 41, 'style_name': '悲しみ', 'display_name': '玄野武宏 (悲しみ)'},
                 ]
             },
             {
                 'name': '冥鳴ひまり',
-                'id': 12,
+                'id': 14,
                 'styles': [
-                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '冥鳴ひまり (ノーマル)'},
+                    {'style_id': 14, 'style_name': 'ノーマル', 'display_name': '冥鳴ひまり (ノーマル)'},
                 ]
             },
             {
                 'name': '満別花丸',
-                'id': 13,
+                'id': 37,
                 'styles': [
-                    {'style_id': 0, 'style_name': 'ノーマル', 'display_name': '満別花丸 (ノーマル)'},
+                    {'style_id': 37, 'style_name': 'ノーマル', 'display_name': '満別花丸 (ノーマル)'},
+                    {'style_id': 45, 'style_name': '元気', 'display_name': '満別花丸 (元気)'},
+                    {'style_id': 46, 'style_name': 'ささやき', 'display_name': '満別花丸 (ささやき)'},
+                    {'style_id': 47, 'style_name': 'ぶりっ子', 'display_name': '満別花丸 (ぶりっ子)'},
+                    {'style_id': 48, 'style_name': 'ボーイ', 'display_name': '満別花丸 (ボーイ)'},
                 ]
             }
         ]

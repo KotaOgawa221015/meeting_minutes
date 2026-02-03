@@ -3808,8 +3808,8 @@
                     <button class="btn primary" style="width: 100%; margin-top: 10px;" id="add-ai-btn-${panelId}">AIメンバーを追加</button>
                 </div>
                 <div style="border-top: 1px solid #e5e7eb; padding-top: 15px;">
-                    <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px;">参加中のAIメンバー</h4>
-                    <div id="ai-members-list-${panelId}" style="display: flex; flex-direction: column; gap: 10px;">
+                    <h4 style="font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 12px;">参加中のAIメンバー</h4>
+                    <div id="ai-members-list-${panelId}" style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
                         <!-- AIメンバーリストがここに挿入される -->
                     </div>
                 </div>
@@ -4095,11 +4095,11 @@
                     
                     memberDiv.innerHTML = `
                         <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 12px; color: #6b7280;">${member.personality_display}</div>
-                            <div style="font-size: 11px; color: #9ca3af; margin-top: 3px;">返答数: ${member.response_count}</div>
-                            <div style="font-size: 10px; color: #d1d5db; margin-top: 2px;">VoiceVox: ${getVoicevoxDisplayName(member.voicevox_speaker_id, member.voicevox_style_id) || `ID=${member.voicevox_speaker_id}`} (速度: ${member.voicevox_speed.toFixed(1)}, ピッチ: ${member.voicevox_pitch.toFixed(2)})</div>
+                            <div style="font-size: 15px; color: #1f2937; font-weight: 600;">${member.personality_display}</div>
+                            <div style="font-size: 14px; color: #374151; margin-top: 5px;">返答数: ${member.response_count}</div>
+                            <div style="font-size: 13px; color: #4b5563; margin-top: 4px;">VoiceVox: ${getVoicevoxDisplayName(member.voicevox_speaker_id, member.voicevox_style_id) || `ID=${member.voicevox_speaker_id}`} (速度: ${member.voicevox_speed.toFixed(1)}, ピッチ: ${member.voicevox_pitch.toFixed(2)})</div>
                         </div>
-                        <button data-member-id="${member.id}" class="delete-ai-btn" style="background: ${member.personality === 'facilitator' ? '#d1d5db' : '#fee2e2'}; border: none; color: ${member.personality === 'facilitator' ? '#9ca3af' : '#ef4444'}; padding: 4px 8px; border-radius: 4px; cursor: ${member.personality === 'facilitator' ? 'not-allowed' : 'pointer'}; font-size: 12px;" ${member.personality === 'facilitator' ? 'disabled' : ''}>削除</button>
+                        <button data-member-id="${member.id}" class="delete-ai-btn" style="background: ${member.personality === 'facilitator' ? '#d1d5db' : '#fee2e2'}; border: none; color: ${member.personality === 'facilitator' ? '#9ca3af' : '#ef4444'}; padding: 6px 12px; border-radius: 4px; cursor: ${member.personality === 'facilitator' ? 'not-allowed' : 'pointer'}; font-size: 14px;" ${member.personality === 'facilitator' ? 'disabled' : ''}>削除</button>
                     `;
                     
                     const nameContainer = memberDiv.querySelector('div > div');
@@ -5213,8 +5213,9 @@
             transcriptArea.scrollTop = transcriptArea.scrollHeight;
             
             // VOICEVOX読み上げ（VoiceVox設定を使用）
+            // 注意: VOICEVOXの合成ではstyle_id（スタイルID）を使用する必要がある
             if (voicevoxEnabled) {
-                voicevoxSpeak(responseText, voicevoxSpeakerId, voicevoxSpeed, voicevoxPitch);
+                voicevoxSpeak(responseText, voicevoxStyleId, voicevoxSpeed, voicevoxPitch);
             }
         }
         
@@ -5916,7 +5917,7 @@
                 voicevoxStatus.style.display = 'block';
                 voicevoxStatus.textContent = message;
                 voicevoxStatus.style.background = isError ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)';
-                voicevoxStatus.style.color = 'white';
+                voicevoxStatus.style.color = 'black';
                 
                 // 3秒後に非エラーメッセージは消す
                 if (!isError) {

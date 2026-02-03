@@ -356,13 +356,13 @@
         }
         .keyboard-input-area .input-row {
             display: flex;
+            flex-direction: column;
             gap: 10px;
-            align-items: flex-start;
         }
         .keyboard-input-area textarea {
-            flex: 1;
-            min-height: 80px;
-            height: 80px;
+            width: 100%;
+            min-height: 100px;
+            height: 100px;
             padding: 10px;
             border: 2px solid #ddd;
             border-radius: 8px;
@@ -376,10 +376,9 @@
             border-color: #2196F3;
         }
         .keyboard-input-area button {
-            align-self: flex-start;
-            padding: 10px 20px;
-            height: 44px;
-            white-space: nowrap;
+            width: 100%;
+            padding: 12px 20px;
+            height: auto;
         }
         @media (max-width: 768px) {
             .main-content {
@@ -504,13 +503,13 @@
                                 <div class="form-group">
                                     <label>スピーカー</label>
                                     <select id="voicevoxSpeaker">
-                                        <option value="3">ずんだもん</option>
-                                        <option value="2">四国めたん</option>
-                                        <option value="8">春日部つむぎ</option>
-                                        <option value="10">雨春はう</option>
-                                        <option value="11">玄野武宏</option>
-                                        <option value="12">冥鳴ひまり</option>
-                                        <option value="13">満別花丸</option>
+                                        <option value="">スピーカーを選択...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>スタイル</label>
+                                    <select id="voicevoxStyle">
+                                        <option value="">スタイルを選択...</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1115,16 +1114,23 @@
         // VoiceVox読み上げ機能
         // ========================================
         
+        // VoiceVoxスピーカー一覧のキャッシュ
+        let voicevoxSpeakersCache = [];
+        
         function setupVoicevoxListeners() {
             const voicevoxToggle = document.getElementById('voicevoxToggle');
             const voicevoxSettingsDetail = document.getElementById('voicevoxSettingsDetail');
             const voicevoxSpeakerSelect = document.getElementById('voicevoxSpeaker');
+            const voicevoxStyleSelect = document.getElementById('voicevoxStyle');
             const voicevoxSpeedSlider = document.getElementById('voicevoxSpeed');
             const voicevoxPitchSlider = document.getElementById('voicevoxPitch');
             const speedValue = document.getElementById('speedValue');
             const pitchValue = document.getElementById('pitchValue');
             
             if (!voicevoxToggle) return;
+            
+            // ページ読み込み時にスピーカー一覧を取得
+            loadVoicevoxSpeakers();
             
             // トグルの変更イベント
             voicevoxToggle.addEventListener('change', async function() {
@@ -1137,6 +1143,8 @@
                         voicevoxEnabled = true;
                         voicevoxSettingsDetail.style.display = 'block';
                         updateVoicevoxStatus('✅ VOICEVOX接続完了', false);
+                        // スピーカー一覧を再取得（最新情報）
+                        loadVoicevoxSpeakers();
                     } else {
                         this.checked = false;
                         voicevoxEnabled = false;
@@ -1150,10 +1158,43 @@
                 }
             });
             
-            // スピーカー選択
+            // スピーカー選択変更時にスタイル一覧を更新
             if (voicevoxSpeakerSelect) {
                 voicevoxSpeakerSelect.addEventListener('change', function() {
-                    voicevoxSpeakerId = parseInt(this.value);
+                    const speakerId = this.value;
+                    
+                    if (!speakerId || speakerId === '') {
+                        voicevoxStyleSelect.innerHTML = '<option value="">スタイルを選択...</option>';
+                        return;
+                    }
+                    
+                    // 選択されたスピーカーを検索
+                    const selectedSpeaker = voicevoxSpeakersCache.find(s => String(s.id) === String(speakerId));
+                    voicevoxStyleSelect.innerHTML = '<option value="">スタイルを選択...</option>';
+                    
+                    if (selectedSpeaker && selectedSpeaker.styles && Array.isArray(selectedSpeaker.styles)) {
+                        selectedSpeaker.styles.forEach((style) => {
+                            const option = document.createElement('option');
+                            option.value = style.style_id;  // style_idを使用（これがVOICEVOXのspeakerパラメータ）
+                            option.textContent = style.style_name;
+                            voicevoxStyleSelect.appendChild(option);
+                        });
+                        // デフォルトで最初のスタイルを選択
+                        if (selectedSpeaker.styles.length > 0) {
+                            voicevoxStyleSelect.value = selectedSpeaker.styles[0].style_id;
+                            voicevoxSpeakerId = parseInt(selectedSpeaker.styles[0].style_id);
+                        }
+                    }
+                    
+                    console.log('[VoiceVox] Speaker changed:', selectedSpeaker ? selectedSpeaker.name : 'unknown');
+                });
+            }
+            
+            // スタイル選択変更時にstyle_idを更新
+            if (voicevoxStyleSelect) {
+                voicevoxStyleSelect.addEventListener('change', function() {
+                    voicevoxSpeakerId = parseInt(this.value);  // style_idがVOICEVOXのspeakerパラメータ
+                    console.log('[VoiceVox] Style changed to style_id:', voicevoxSpeakerId);
                 });
             }
             
@@ -1172,6 +1213,69 @@
                     pitchValue.textContent = voicevoxPitch.toFixed(2);
                 });
             }
+        }
+        
+        // VoiceVoxスピーカー一覧をAPIから取得
+        async function loadVoicevoxSpeakers() {
+            const voicevoxSpeakerSelect = document.getElementById('voicevoxSpeaker');
+            const voicevoxStyleSelect = document.getElementById('voicevoxStyle');
+            if (!voicevoxSpeakerSelect) return;
+            
+            try {
+                const response = await fetch('/voicevox/speakers/', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.speakers) {
+                    voicevoxSpeakersCache = data.speakers;
+                    
+                    // スピーカードロップダウンを更新
+                    voicevoxSpeakerSelect.innerHTML = '<option value="">スピーカーを選択...</option>';
+                    
+                    data.speakers.forEach(speaker => {
+                        const option = document.createElement('option');
+                        option.value = speaker.id;  // スピーカーID
+                        option.textContent = speaker.name;  // スピーカー名
+                        voicevoxSpeakerSelect.appendChild(option);
+                    });
+                    
+                    // デフォルトで最初のスピーカーを選択してスタイルを読み込む
+                    if (data.speakers.length > 0) {
+                        voicevoxSpeakerSelect.value = String(data.speakers[0].id);
+                        voicevoxSpeakerSelect.dispatchEvent(new Event('change'));
+                    }
+                    
+                    console.log('[VoiceVox] Speakers loaded:', data.speakers.length, 'speakers');
+                } else {
+                    console.error('[VoiceVox] Failed to load speakers:', data.message);
+                    // フォールバック：デフォルトオプションを設定
+                    setDefaultSpeakerOptions(voicevoxSpeakerSelect, voicevoxStyleSelect);
+                }
+            } catch (error) {
+                console.error('[VoiceVox] Error loading speakers:', error);
+                // フォールバック：デフォルトオプションを設定
+                setDefaultSpeakerOptions(voicevoxSpeakerSelect, voicevoxStyleSelect);
+            }
+        }
+        
+        // フォールバック用のデフォルトスピーカーオプション
+        function setDefaultSpeakerOptions(speakerSelect, styleSelect) {
+            speakerSelect.innerHTML = `
+                <option value="3">ずんだもん</option>
+                <option value="2">四国めたん</option>
+                <option value="8">春日部つむぎ</option>
+                <option value="10">雨春はう</option>
+                <option value="11">玄野武宏</option>
+                <option value="14">冥鳴ひまり</option>
+            `;
+            styleSelect.innerHTML = `
+                <option value="3">ノーマル</option>
+            `;
+            voicevoxSpeakerId = 3;
         }
         
         async function voicevoxPing() {
