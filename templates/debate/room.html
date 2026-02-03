@@ -304,6 +304,83 @@
         .btn-stop:hover {
             background: #cc0000;
         }
+        /* VoiceVox設定スタイル */
+        .voicevox-settings {
+            background: #FFF8E1;
+            border: 2px solid #FFB300;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .voicevox-settings h3 {
+            color: #FF6F00;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        .voicevox-settings .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .voicevox-settings .toggle-row input[type="checkbox"] {
+            transform: scale(1.3);
+            cursor: pointer;
+        }
+        .voicevox-status {
+            font-size: 0.85em;
+            margin-top: 5px;
+            padding: 5px 8px;
+            border-radius: 4px;
+        }
+        .voicevox-status.success {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+        .voicevox-status.error {
+            background: #FFEBEE;
+            color: #C62828;
+        }
+        /* キーボード入力エリア */
+        .keyboard-input-area {
+            background: #f0f8ff;
+            border: 2px solid #2196F3;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .keyboard-input-area h4 {
+            color: #1565C0;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+        .keyboard-input-area .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .keyboard-input-area textarea {
+            flex: 1;
+            min-height: 80px;
+            height: 80px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        .keyboard-input-area textarea:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        .keyboard-input-area button {
+            align-self: flex-start;
+            padding: 10px 20px;
+            height: 44px;
+            white-space: nowrap;
+        }
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -415,7 +492,40 @@
                                 </option>
                             </select>
                         </div>
-                        <button class="btn btn-primary" onclick="startDebate()">ディベート開始</button>
+                        
+                        <!-- VoiceVox読み上げ設定 -->
+                        <div class="voicevox-settings">
+                            <h3>🔊 AI読み上げ設定</h3>
+                            <div class="toggle-row">
+                                <input type="checkbox" id="voicevoxToggle">
+                                <label for="voicevoxToggle">VoiceVoxで読み上げる</label>
+                            </div>
+                            <div id="voicevoxSettingsDetail" style="display: none;">
+                                <div class="form-group">
+                                    <label>スピーカー</label>
+                                    <select id="voicevoxSpeaker">
+                                        <option value="3">ずんだもん</option>
+                                        <option value="2">四国めたん</option>
+                                        <option value="8">春日部つむぎ</option>
+                                        <option value="10">雨春はう</option>
+                                        <option value="11">玄野武宏</option>
+                                        <option value="12">冥鳴ひまり</option>
+                                        <option value="13">満別花丸</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>速度: <span id="speedValue">1.0</span></label>
+                                    <input type="range" id="voicevoxSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
+                                </div>
+                                <div class="form-group">
+                                    <label>ピッチ: <span id="pitchValue">0.0</span></label>
+                                    <input type="range" id="voicevoxPitch" min="-0.15" max="0.15" step="0.01" value="0">
+                                </div>
+                            </div>
+                            <div id="voicevoxStatus" class="voicevox-status" style="display: none;"></div>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="startDebate()" style="margin-top: 15px;">ディベート開始</button>
                     {% else %}
                         <p style="color: #999;">
                             ディベート開始後はセットアップは変更できません。
@@ -436,6 +546,33 @@
                         <button class="btn btn-stop" id="stop-recording-btn" onclick="stopUserListening()" style="display: none;">🛑 発言終了</button>
                     </div>
                     <div class="debate-messages" id="debate-messages"></div>
+                    
+                    <!-- 発言入力エリア -->
+                    <div class="keyboard-input-area" id="keyboardInputArea" style="display: none;">
+                        <h4>💬 あなたの発言</h4>
+                        
+                        <!-- 発言待機メッセージ -->
+                        <div id="waitingForUserInput" style="text-align: center; padding: 15px; background: #E8F5E9; border-radius: 8px; margin-bottom: 15px;">
+                            <p style="margin-bottom: 10px; color: #2E7D32;">✨ あなたの番です。発言方法を選んでください。</p>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button class="btn btn-primary" id="startMicBtn" onclick="startMicInput()" style="width: auto; padding: 12px 25px;">
+                                    🎙️ マイクで話す
+                                </button>
+                                <button class="btn btn-secondary" onclick="showKeyboardInput()" style="width: auto; padding: 12px 25px;">
+                                    ⌨️ キーボード入力
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- キーボード入力フォーム（初期は非表示） -->
+                        <div id="keyboardInputForm" style="display: none;">
+                            <div class="input-row">
+                                <textarea id="userStatementInput" placeholder="発言を入力してください..."></textarea>
+                                <button class="btn btn-primary" onclick="submitKeyboardInput()">送信</button>
+                            </div>
+                            <p style="font-size: 0.8em; color: #666; margin-top: 5px;">Ctrl+Enterでも送信できます</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         {% endif %}
@@ -457,12 +594,28 @@
         let mediaRecorder = null;
         let recognitionBuffer = [];
         let isListening = false;
+        
+        // VoiceVox読み上げ関連
+        let voicevoxEnabled = false;
+        let voicevoxSpeakerId = 3;
+        let voicevoxSpeed = 1.0;
+        let voicevoxPitch = 0.0;
+        let voicevoxAudioQueue = [];
+        let voicevoxIsPlaying = false;
 
         // ページ読み込み時に既存の発言を表示
         document.addEventListener('DOMContentLoaded', function() {
             if (debateStatus !== 'setup') {
                 loadDebateStatements();
+                // ディベート中の場合はキーボード入力エリアを表示
+                const keyboardInputArea = document.getElementById('keyboardInputArea');
+                if (keyboardInputArea) {
+                    keyboardInputArea.style.display = 'block';
+                }
             }
+            
+            // VoiceVox設定のイベントリスナー
+            setupVoicevoxListeners();
         });
 
         function loadDebateStatements() {
@@ -489,6 +642,12 @@
             
             debateStarted = true;
             document.querySelector('.setup-panel').innerHTML = '<p style="color: #999;">⏱️ ディベートが開始されました...</p>';
+            
+            // キーボード入力エリアを表示
+            const keyboardInputArea = document.getElementById('keyboardInputArea');
+            if (keyboardInputArea) {
+                keyboardInputArea.style.display = 'block';
+            }
             
             // ステータス更新
             document.getElementById('status-display').textContent = 'ディベート中';
@@ -522,10 +681,9 @@
                 console.log('AIが先攻です。generateAIOpeningStatement() を呼び出します。');
                 generateAIOpeningStatement();
             } else {
-                // ユーザーが先攻の場合：自動的に音声入力を開始
-                console.log('ユーザーが先攻です。自動的に音声入力を開始します。');
-                // 少し遅延させて確実に表示される様にする
-                setTimeout(() => startUserListening(), 100);
+                // ユーザーが先攻の場合：発言入力待機状態にする
+                console.log('ユーザーが先攻です。発言入力を待機します。');
+                showWaitingForInput();
             }
         }
 
@@ -551,9 +709,9 @@
                         .then(() => {
                             displayStatement('ai', data.response);
                             hideSpeakingIndicator();
-                            // ユーザーが先攻でない場合は、自動的に音声入力を開始
-                            console.log('AIの最初の意見を表示したので、ユーザーの音声入力を開始します');
-                            setTimeout(() => startUserListening(), 500);
+                            // ユーザーの発言入力を待機状態にする
+                            console.log('AIの最初の意見を表示したので、ユーザーの発言入力を待機します');
+                            showWaitingForInput();
                         });
                 } else {
                     throw new Error(data.message || 'AI応答の生成に失敗しました');
@@ -578,7 +736,7 @@
             console.log('submitUserStatementDirect() が呼ばれました:', statement);
             if (!statement || !statement.trim()) {
                 console.warn('空の文字列が送信されようとしました');
-                startUserListening();
+                showWaitingForInput();
                 return Promise.resolve();
             }
 
@@ -606,7 +764,7 @@
                 .then(() => {
                     hideSpeakingIndicator();
                     
-                    // 次のユーザー発言のため音声入力を再開
+                    // 次のユーザー発言のため音声入力を待機
                     // 設定された最大ターン数に達したか確認
                     // maxTurnsを上回る度数（ユーザー+AI各ターン）で計算
                     const totalTurns = maxTurns * 2;
@@ -614,8 +772,8 @@
                         // 次ターンを開始する代わりに判定選択画面を表示
                         showFinishOption();
                     } else {
-                        // 次のタターンを続ける
-                        setTimeout(() => startUserListening(), 500);
+                        // 次のターンを待機
+                        showWaitingForInput();
                     }
                 })
                 .catch(error => {
@@ -683,6 +841,11 @@
             
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // AIの発言はVoiceVoxで読み上げ
+            if (speaker === 'ai' && voicevoxEnabled) {
+                voicevoxSpeak(text);
+            }
         }
 
         function showFinishOption() {
@@ -900,10 +1063,10 @@
                     // 認識されたテキストを直接送信
                     await submitUserStatementDirect(data.text);
                 } else {
-                    console.log('音声が認識されませんでした。再度リスニングを開始します。');
+                    console.log('音声が認識されませんでした。入力待機に戻ります。');
                     hideSpeakingIndicator();
-                    // 次の入力のために再度リスニングを開始
-                    setTimeout(() => startUserListening(), 1000);
+                    // 入力待機状態に戻る
+                    showWaitingForInput();
                 }
             } catch (error) {
                 console.error('音声処理エラー:', error.message, error);
@@ -912,12 +1075,15 @@
                 // 文字起こしAPIが利用できない場合は、ユーザーにテキスト入力を促す
                 if (error.message.includes('JSON')) {
                     console.warn('文字起こしが利用できません。');
-                    showSpeakingIndicator('🎤 文字起こしエラー');
-                    setTimeout(() => hideSpeakingIndicator(), 3000);
+                    showSpeakingIndicator('�️ 文字起こしエラー。キーボード入力をご利用ください。');
+                    setTimeout(() => {
+                        hideSpeakingIndicator();
+                        showWaitingForInput();
+                    }, 2000);
+                } else {
+                    // 入力待機状態に戻る
+                    showWaitingForInput();
                 }
-                
-                // 次の入力のために再度リスニングを開始
-                setTimeout(() => startUserListening(), 1000);
             }
         }
 
@@ -944,6 +1110,271 @@
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
         }
+        
+        // ========================================
+        // VoiceVox読み上げ機能
+        // ========================================
+        
+        function setupVoicevoxListeners() {
+            const voicevoxToggle = document.getElementById('voicevoxToggle');
+            const voicevoxSettingsDetail = document.getElementById('voicevoxSettingsDetail');
+            const voicevoxSpeakerSelect = document.getElementById('voicevoxSpeaker');
+            const voicevoxSpeedSlider = document.getElementById('voicevoxSpeed');
+            const voicevoxPitchSlider = document.getElementById('voicevoxPitch');
+            const speedValue = document.getElementById('speedValue');
+            const pitchValue = document.getElementById('pitchValue');
+            
+            if (!voicevoxToggle) return;
+            
+            // トグルの変更イベント
+            voicevoxToggle.addEventListener('change', async function() {
+                if (this.checked) {
+                    updateVoicevoxStatus('🔄 VOICEVOXに接続中...', false);
+                    
+                    const isAvailable = await voicevoxPing();
+                    
+                    if (isAvailable) {
+                        voicevoxEnabled = true;
+                        voicevoxSettingsDetail.style.display = 'block';
+                        updateVoicevoxStatus('✅ VOICEVOX接続完了', false);
+                    } else {
+                        this.checked = false;
+                        voicevoxEnabled = false;
+                        updateVoicevoxStatus('❌ VOICEVOXが起動していません', true);
+                    }
+                } else {
+                    voicevoxEnabled = false;
+                    voicevoxSettingsDetail.style.display = 'none';
+                    voicevoxAudioQueue = [];
+                    document.getElementById('voicevoxStatus').style.display = 'none';
+                }
+            });
+            
+            // スピーカー選択
+            if (voicevoxSpeakerSelect) {
+                voicevoxSpeakerSelect.addEventListener('change', function() {
+                    voicevoxSpeakerId = parseInt(this.value);
+                });
+            }
+            
+            // 速度スライダー
+            if (voicevoxSpeedSlider) {
+                voicevoxSpeedSlider.addEventListener('input', function() {
+                    voicevoxSpeed = parseFloat(this.value);
+                    speedValue.textContent = voicevoxSpeed.toFixed(1);
+                });
+            }
+            
+            // ピッチスライダー
+            if (voicevoxPitchSlider) {
+                voicevoxPitchSlider.addEventListener('input', function() {
+                    voicevoxPitch = parseFloat(this.value);
+                    pitchValue.textContent = voicevoxPitch.toFixed(2);
+                });
+            }
+        }
+        
+        async function voicevoxPing() {
+            try {
+                const response = await fetch('/tts/ping/', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                const data = await response.json();
+                return data.available === true || data.status === 'success';
+            } catch (error) {
+                console.error('VoiceVox ping error:', error);
+                return false;
+            }
+        }
+        
+        function updateVoicevoxStatus(message, isError) {
+            const statusEl = document.getElementById('voicevoxStatus');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = 'voicevox-status ' + (isError ? 'error' : 'success');
+                statusEl.style.display = 'block';
+            }
+        }
+        
+        async function voicevoxSpeak(text) {
+            if (!voicevoxEnabled || !text) return;
+            
+            const voicevoxParams = {
+                text: text,
+                speaker_id: voicevoxSpeakerId,
+                speed: voicevoxSpeed,
+                pitch: voicevoxPitch
+            };
+            
+            voicevoxAudioQueue.push(voicevoxParams);
+            
+            if (voicevoxIsPlaying) return;
+            
+            await processVoicevoxQueue();
+        }
+        
+        async function processVoicevoxQueue() {
+            if (voicevoxIsPlaying || voicevoxAudioQueue.length === 0) return;
+            
+            voicevoxIsPlaying = true;
+            
+            while (voicevoxAudioQueue.length > 0 && voicevoxEnabled) {
+                const voicevoxParams = voicevoxAudioQueue.shift();
+                
+                try {
+                    const response = await fetch('/tts/speak/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(voicevoxParams)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success' && data.audio) {
+                        await playAudioBase64(data.audio);
+                    } else if (response.status === 503) {
+                        console.error('VOICEVOX unavailable:', data.message);
+                        updateVoicevoxStatus('❌ ' + data.message, true);
+                        voicevoxEnabled = false;
+                        const toggle = document.getElementById('voicevoxToggle');
+                        if (toggle) toggle.checked = false;
+                        voicevoxAudioQueue = [];
+                        break;
+                    } else {
+                        console.error('TTS error:', data.message);
+                    }
+                } catch (error) {
+                    console.error('VOICEVOX speak error:', error);
+                    updateVoicevoxStatus('❌ 読み上げエラー', true);
+                    voicevoxEnabled = false;
+                    const toggle = document.getElementById('voicevoxToggle');
+                    if (toggle) toggle.checked = false;
+                    voicevoxAudioQueue = [];
+                    break;
+                }
+            }
+            
+            voicevoxIsPlaying = false;
+        }
+        
+        function playAudioBase64(base64Audio) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const audioData = atob(base64Audio);
+                    const arrayBuffer = new ArrayBuffer(audioData.length);
+                    const view = new Uint8Array(arrayBuffer);
+                    for (let i = 0; i < audioData.length; i++) {
+                        view[i] = audioData.charCodeAt(i);
+                    }
+                    
+                    const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(blob);
+                    const audio = new Audio(audioUrl);
+                    
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    };
+                    
+                    audio.onerror = (error) => {
+                        URL.revokeObjectURL(audioUrl);
+                        reject(error);
+                    };
+                    
+                    audio.play().catch(reject);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+        
+        // ========================================
+        // キーボード入力機能
+        // ========================================
+        
+        function showWaitingForInput() {
+            // 発言入力エリアを表示
+            const keyboardInputArea = document.getElementById('keyboardInputArea');
+            if (keyboardInputArea) {
+                keyboardInputArea.style.display = 'block';
+            }
+            
+            // 待機メッセージを表示、キーボードフォームを非表示
+            const waitingDiv = document.getElementById('waitingForUserInput');
+            const keyboardForm = document.getElementById('keyboardInputForm');
+            
+            if (waitingDiv) waitingDiv.style.display = 'block';
+            if (keyboardForm) keyboardForm.style.display = 'none';
+            
+            // speaking indicatorを非表示
+            hideSpeakingIndicator();
+        }
+        
+        function startMicInput() {
+            // 待機メッセージを非表示
+            const waitingDiv = document.getElementById('waitingForUserInput');
+            if (waitingDiv) waitingDiv.style.display = 'none';
+            
+            // マイク入力を開始
+            startUserListening();
+        }
+        
+        function showKeyboardInput() {
+            // 待機メッセージを非表示、キーボードフォームを表示
+            const waitingDiv = document.getElementById('waitingForUserInput');
+            const keyboardForm = document.getElementById('keyboardInputForm');
+            
+            if (waitingDiv) waitingDiv.style.display = 'none';
+            if (keyboardForm) {
+                keyboardForm.style.display = 'block';
+                // テキストエリアにフォーカス
+                const inputEl = document.getElementById('userStatementInput');
+                if (inputEl) inputEl.focus();
+            }
+        }
+        
+        function submitKeyboardInput() {
+            const inputEl = document.getElementById('userStatementInput');
+            if (!inputEl) return;
+            
+            const statement = inputEl.value.trim();
+            if (!statement) {
+                alert('発言を入力してください。');
+                return;
+            }
+            
+            // 入力欄をクリア
+            inputEl.value = '';
+            
+            // キーボードフォームを非表示
+            const keyboardForm = document.getElementById('keyboardInputForm');
+            if (keyboardForm) keyboardForm.style.display = 'none';
+            
+            // 音声入力を停止（もし動いていれば）
+            if (isListening) {
+                stopUserListening();
+            }
+            
+            // 発言を送信
+            submitUserStatementDirect(statement);
+        }
+        
+        // Ctrl+Enterで送信
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                const inputEl = document.getElementById('userStatementInput');
+                if (inputEl && document.activeElement === inputEl) {
+                    e.preventDefault();
+                    submitKeyboardInput();
+                }
+            }
+        });
     </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import random
 import os
+import requests
 from .models import Debate, DebateStatement
 
 try:
@@ -12,6 +13,16 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+
+
+# プロキシ設定がない環境でのタイムアウトを防ぐため、プロキシ無効化セッションを作成
+# システムのプロキシ設定を無視してローカル接続を高速化
+def _get_voicevox_session():
+    """VOICEVOX用のプロキシ無効化セッションを取得"""
+    session = requests.Session()
+    session.trust_env = False  # 環境変数のプロキシ設定を無視
+    session.proxies = {'http': None, 'https': None}
+    return session
 
 
 def debate_index(request):
