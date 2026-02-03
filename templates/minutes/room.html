@@ -1914,6 +1914,16 @@
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 availableMicrophones = devices.filter(d => d.kind === 'audioinput');
                 
+                // 既に使用中のマイク（groupId）を集める
+                // 「既定 - マイク」「通信 - マイク」「マイク」は同じgroupIdを持つため
+                // groupIdのみで物理デバイスを判定する
+                const usedGroupIds = new Set();
+                Object.values(participantMicrophones).forEach(participant => {
+                    if (participant.microphoneId && participant.groupId) {
+                        usedGroupIds.add(participant.groupId);
+                    }
+                });
+                
                 const dropdown = document.getElementById('microphoneSelectDropdown');
                 dropdown.innerHTML = '<option value="">マイクを選択...</option>';
                 
@@ -1921,15 +1931,30 @@
                     const option = document.createElement('option');
                     option.value = mic.deviceId;
                     option.textContent = mic.label || `マイク ${index + 1}`;
+                    
+                    // 同じgroupId（物理デバイス）のマイクはdisabledにする
+                    // 「既定」「通信」など同じマイクの別表示も使用中として扱う
+                    if (mic.groupId && usedGroupIds.has(mic.groupId)) {
+                        option.disabled = true;
+                        option.textContent += ' (使用中)';
+                    }
+                    
                     dropdown.appendChild(option);
                 });
                 
-                // デフォルトで最初のマイクを選択
+                // デフォルトで最初の利用可能なマイクを選択
                 if (availableMicrophones.length > 0) {
-                    dropdown.value = availableMicrophones[0].deviceId;
+                    const firstAvailableMic = availableMicrophones.find(mic => {
+                        return !mic.groupId || !usedGroupIds.has(mic.groupId);
+                    });
+                    if (firstAvailableMic) {
+                        dropdown.value = firstAvailableMic.deviceId;
+                    } else {
+                        dropdown.value = '';
+                    }
                 }
                 
-                console.log('マイクリストをドロップダウンに設定:', availableMicrophones);
+                console.log('マイクリストをドロップダウンに設定（使用中groupId:', Array.from(usedGroupIds), '）:', availableMicrophones);
             } catch (error) {
                 console.error('Failed to load microphones:', error);
             }
@@ -1962,6 +1987,23 @@
             if (!name) {
                 alert('参加者名を入力してください。');
                 return;
+            }
+            
+            // マイクが選択されている場合、既に使用中でないかチェック
+            if (micId) {
+                const selectedMicDevice = availableMicrophones.find(m => m.deviceId === micId);
+                if (selectedMicDevice && selectedMicDevice.groupId) {
+                    // 同じgroupId（物理デバイス）をチェック
+                    // 「既定」「通信」など同じマイクの別表示も重複として検出
+                    const isAlreadyUsed = Object.values(participantMicrophones).some(participant => {
+                        return participant.groupId && participant.groupId === selectedMicDevice.groupId;
+                    });
+                    
+                    if (isAlreadyUsed) {
+                        alert('選択されたマイク（' + selectedMicDevice.label + '）と同じ物理デバイスが既に使用されています。\n別のマイクを選択してください。');
+                        return;
+                    }
+                }
             }
             
             // 参加者IDを生成
@@ -5182,18 +5224,23 @@
             
             // WebSocket経由でサーバーに送信（AI反応もトリガーされる）
             if (socket && socket.readyState === WebSocket.OPEN) {
-                // 現在記録中の参加者を取得
-                const recordingParticipantIds = currentRecordingParticipantIds.length > 0 
-                    ? currentRecordingParticipantIds 
-                    : Object.keys(participantMicrophones);
-                
-                // 最初の参加者で送信（または、最初の記録中参加者）
+                // usernameSelectで選択されたユーザーを使用
+                const selectedId = usernameSelect.value;
                 let speakerId = null;
                 let speakerName = null;
-                if (recordingParticipantIds.length > 0) {
-                    speakerId = recordingParticipantIds[0];
+                
+                if (selectedId && participantMicrophones[selectedId]) {
+                    speakerId = selectedId;
+                    speakerName = participantMicrophones[selectedId].name;
+                } else if (currentRecordingParticipantIds.length > 0) {
+                    // フォールバック：現在記録中の最初の参加者
+                    speakerId = currentRecordingParticipantIds[0];
                     const participant = participantMicrophones[speakerId];
                     speakerName = participant ? participant.name : '参加者';
+                } else if (Object.keys(participantMicrophones).length > 0) {
+                    // フォールバック：最初の参加者
+                    speakerId = Object.keys(participantMicrophones)[0];
+                    speakerName = participantMicrophones[speakerId].name;
                 }
                 
                 socket.send(JSON.stringify({
@@ -5203,7 +5250,7 @@
                     speaker_name: speakerName
                 }));
                 manualInput.value = '';
-                console.log('Sent manual transcript via WebSocket:', text);
+                console.log('Sent manual transcript via WebSocket:', text, 'Speaker:', speakerName);
             } else {
                 console.warn('WebSocket is not open, falling back to HTTP');
                 saveManualTranscript(text);
