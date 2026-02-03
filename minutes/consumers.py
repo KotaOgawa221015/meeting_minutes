@@ -1516,11 +1516,25 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
     def save_ai_response(self, ai_member_id, response_text, elapsed_time, triggered_by_ai_response_id=None):
         """AIメンバーの返答をDBに保存"""
         ai_member = AIMember.objects.get(id=ai_member_id)
+        
+        # triggered_by_ai_response_idが指定されている場合、有効かどうか確認
+        triggered_by_ai_response = None
+        if triggered_by_ai_response_id:
+            try:
+                # 同じ会議内のAIレスポンスであることを確認
+                triggered_by_ai_response = AIMemberResponse.objects.get(
+                    id=triggered_by_ai_response_id,
+                    ai_member__meeting_id=ai_member.meeting_id
+                )
+            except AIMemberResponse.DoesNotExist:
+                print(f"[Meeting {ai_member.meeting_id}] 警告: triggered_by_ai_response_id={triggered_by_ai_response_id}が見つかりません。無視します。")
+                triggered_by_ai_response = None
+        
         ai_response = AIMemberResponse.objects.create(
             ai_member=ai_member,
             response_text=response_text,
             timestamp=elapsed_time,
-            triggered_by_ai_response_id=triggered_by_ai_response_id  # AI→AIの場合のトリガーソース
+            triggered_by_ai_response=triggered_by_ai_response  # AI→AIの場合のトリガーソース
         )
         print(f"[Meeting {self.meeting_id}] AI返答DB保存: {ai_response.id}")
         
