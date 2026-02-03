@@ -1481,6 +1481,11 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
                     triggered_by_ai_response_id=last_ai_response_id
                 )
                 
+                # AIメンバーが削除されていた場合は処理を中止
+                if ai_response_id is None:
+                    print(f"[Meeting {self.meeting_id}] AIメンバーが削除されたため、レスポンス送信をスキップします")
+                    return
+                
                 # 最後のAIレスポンスIDを更新（次のAIがこれを参照する）
                 self.last_ai_response_id = ai_response_id
                 
@@ -1514,8 +1519,13 @@ JSON形式で返してください: {{"response": "あなたの発言内容"}}
 
     @database_sync_to_async
     def save_ai_response(self, ai_member_id, response_text, elapsed_time, triggered_by_ai_response_id=None):
-        """AIメンバーの返答をDBに保存"""
-        ai_member = AIMember.objects.get(id=ai_member_id)
+        """AIメンバーの返答をDBに保存（削除済みの場合はNoneを返す）"""
+        try:
+            ai_member = AIMember.objects.get(id=ai_member_id)
+        except AIMember.DoesNotExist:
+            # AIメンバーがレスポンス生成中に削除された場合
+            print(f"[Meeting {self.meeting_id}] 警告: AIメンバー(id={ai_member_id})は既に削除されています。レスポンスを破棄します。")
+            return None
         
         # triggered_by_ai_response_idが指定されている場合、有効かどうか確認
         triggered_by_ai_response = None
