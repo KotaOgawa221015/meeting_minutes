@@ -589,6 +589,10 @@
         let statementOrder = 0;
         let debateStarted = false;
         
+        // 立場情報を保存する変数
+        let userPosition = null;
+        let aiPosition = null;
+        
         // 音声入力関連
         let mediaRecorder = null;
         let recognitionBuffer = [];
@@ -663,10 +667,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
+                    // 立場情報を変数に保存
+                    userPosition = data.user_position;
+                    aiPosition = data.ai_position;
+                    
                     document.getElementById('user-position').textContent = data.user_position;
                     document.getElementById('ai-position').textContent = data.ai_position;
                     document.getElementById('positions-display').style.display = 'block';
                     console.log('立場を割り振りました:', data);
+                    console.log('userPosition:', userPosition, 'aiPosition:', aiPosition);
                 } else {
                     console.error('立場割り振りエラー:', data.message);
                 }
@@ -697,7 +706,9 @@
                 },
                 body: JSON.stringify({
                     theme: theme,
-                    user_statement: ''
+                    user_statement: '',
+                    ai_position: aiPosition,
+                    user_position: userPosition
                 })
             })
             .then(response => response.json())
@@ -814,7 +825,9 @@
                 },
                 body: JSON.stringify({
                     theme: theme,
-                    user_statement: userStatement
+                    user_statement: userStatement,
+                    ai_position: aiPosition,
+                    user_position: userPosition
                 })
             })
             .then(response => response.json())

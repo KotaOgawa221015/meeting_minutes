@@ -119,10 +119,22 @@ def get_ai_response(request, debate_id):
         
         theme = data.get('theme', '')
         user_statement = data.get('user_statement', '')
+        ai_position = data.get('ai_position', None)
+        user_position = data.get('user_position', None)
         ai_type = debate.ai_type
         
+        # 過去の議論履歴を取得
+        debate_history = list(debate.statements.order_by('order').values('speaker', 'text', 'order'))
+        
         # AIレスポンスを生成（OpenAI API を使用）
-        ai_response = generate_ai_argument(theme, user_statement, ai_type)
+        ai_response = generate_ai_argument(
+            theme, 
+            user_statement, 
+            ai_type,
+            ai_position=ai_position,
+            user_position=user_position,
+            debate_history=debate_history
+        )
         
         return JsonResponse({
             'status': 'success',
@@ -187,7 +199,7 @@ def judge_debate(request, debate_id):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
-def generate_ai_argument(theme, user_statement, ai_type):
+def generate_ai_argument(theme, user_statement, ai_type, ai_position=None, user_position=None, debate_history=None):
     """AI論者を生成（OpenAI API を使用）"""
     
     # OpenAI API キーを取得
@@ -206,21 +218,47 @@ def generate_ai_argument(theme, user_statement, ai_type):
     try:
         client = OpenAI(api_key=api_key)
         
-        # AIタイプに応じたシステムプロンプトを作成
+        # AIの立場情報を追加
+        position_info = ""
+        if ai_position:
+            position_info = f"\n\n【重要】あなたの立場は「{ai_position}」です。この立場を最後まで一貫して守ってください。"
+            if user_position:
+                position_info += f"\n相手（人間）の立場は「{user_position}」です。あなたは相手の立場とは反対の主張をしなければなりません。"
+        
+        # AIタイプに応じたシステムプロンプトを作成（難易度調整版）
+        base_rules = f"""これは人間対AIの討論バトルです。
+
+【絶対に守るべきルール】
+1. あなたは「{ai_position if ai_position else 'AI側の立場'}」を支持する立場です。絶対にこの立場を変えないでください。
+2. 相手の立場（{user_position if user_position else '人間側の立場'}）に同意してはいけません。
+3. 自分の立場と矛盾する発言をしてはいけません。
+4. ディベートを楽しむために、相手にも反論の余地を残す議論をしてください。
+5. 相手の良い点は認めつつも、自分の立場を主張してください。
+6. 回答は200文字程度に収めてください。長すぎる回答は避けてください。
+7. 完璧な論破を目指すのではなく、建設的な議論を心がけてください。"""
+        
         system_prompts = {
-            'logical': "あなたは論理的で理屈っぽいディベーター です。相手の意見に対して、論理的な矛盾点を指摘し、データや事例をもとに反論してください。",
-            'creative': "あなたは創造的で新しい視点を提供するディベーター です。相手の意見に対して、従来の考え方にとらわれない新しい可能性や視点を提示してください。",
-            'diplomatic': "あなたは相手の意見を尊重しながら、丁寧に異なる見方を提示するディベーター です。相手の意見の良い点を認めながらも、別の立場からの見方を述べてください。",
-            'aggressive': "あなたは相手の弱点を突く攻撃的なディベーター です。相手の意見の不正確さ、根拠の不足、矛盾点を鋭く指摘してください。",
+            'logical': f"{base_rules}\n\n【あなたのスタイル】論理的なディベーターとして、根拠を示しながら主張してください。ただし、相手の意見にも一理あることを認めた上で反論してください。",
+            'creative': f"{base_rules}\n\n【あなたのスタイル】創造的なディベーターとして、新しい視点を提供してください。相手の発想を尊重しながら、異なる角度からの見方を示してください。",
+            'diplomatic': f"{base_rules}\n\n【あなたのスタイル】外交的なディベーターとして、相手の意見を尊重しながら議論してください。相手の良い点を認めた上で、穏やかに自分の立場を主張してください。",
+            'aggressive': f"{base_rules}\n\n【あなたのスタイル】情熱的なディベーターとして議論してください。熱意を持って主張しますが、相手を傷つける発言は避けてください。",
         }
         
         system_prompt = system_prompts.get(ai_type, system_prompts['logical'])
         
+        # 過去の議論履歴を追加（一貫性のため）
+        history_context = ""
+        if debate_history and len(debate_history) > 0:
+            history_context = "\n\n【これまでの議論の流れ】\n"
+            for h in debate_history[-4:]:  # 直近4発言まで
+                speaker = "あなた" if h.get('speaker') == 'ai' else "相手"
+                history_context += f"{speaker}: {h.get('text', '')[:100]}...\n" if len(h.get('text', '')) > 100 else f"{speaker}: {h.get('text', '')}\n"
+        
         # ユーザーの発言がない場合（最初のターン）
         if not user_statement:
-            user_message = f"テーマ: {theme}\n\nこのテーマについて、あなたの最初の意見を述べてください。"
+            user_message = f"テーマ: {theme}{position_info}\n\nこのテーマについて、あなたの立場「{ai_position if ai_position else 'AI側'}」から最初の意見を述べてください。{history_context}"
         else:
-            user_message = f"テーマ: {theme}\n\n相手の意見: {user_statement}\n\nこの意見に対して、あなたの反論や異なる見方を述べてください。"
+            user_message = f"テーマ: {theme}{position_info}{history_context}\n\n相手の最新の意見: {user_statement}\n\nあなたの立場「{ai_position if ai_position else 'AI側'}」から、この意見に対して反論してください。ただし、完璧な論破ではなく、相手にも反論の余地を残してください。"
         
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -301,10 +339,25 @@ def judge_debate_ai(theme, ai_type, statements):
 }}
 """
         
+        fair_judge_prompt = """あなたは人間対AIのディベートバトルを審判する、完全に中立な第三者の審判です。
+
+【重要な評価基準】
+1. 論理性：主張に一貫性があり、根拠が明確か
+2. 説得力：相手の意見に対して効果的に反論できているか  
+3. 建設性：議論を前に進める発言ができているか
+4. 誠実さ：相手の良い点を認めつつ、自分の立場を守れているか
+
+【審判としての姿勢】
+- AIが参加者であることによるバイアスを排除してください
+- 人間の発言に対しても同じ基準で厳しく評価してください
+- 特にAI側が一方的に論破している場合は、それが公平な議論だったか検討してください
+- 僅差の場合は積極的にユーザーの勝利または引き分けを検討してください（AIは元々言語能力が高いため）
+- 両者の発言回数や文字数の違いも考慮してください"""
+        
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "あなたは客観的で公平なディベート審判です。両者の議論の質、論理性、説得力を総合的に評価して勝敗を判定してください。"},
+                {"role": "system", "content": fair_judge_prompt},
                 {"role": "user", "content": judgment_prompt}
             ],
             temperature=0.5,
